@@ -9,7 +9,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace ReolmarkedetG12.UI;
+namespace ReolmarkedetG12.UI.Views;
 
 /// <summary>
 /// Interaction logic for MainWindow.xaml

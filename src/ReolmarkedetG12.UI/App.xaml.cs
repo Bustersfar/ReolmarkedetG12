@@ -1,6 +1,7 @@
 using System.Windows;
 using ReolmarkedetG12.UI.Services;
 using ReolmarkedetG12.UI.ViewModels;
+using ReolmarkedetG12.UI.Views;
 
 namespace ReolmarkedetG12.UI;
 

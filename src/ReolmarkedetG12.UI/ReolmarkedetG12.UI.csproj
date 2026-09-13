@@ -1,7 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\ReolmarkedetG12.Core\ReolmarkedetG12.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+      <None Update="appsettings.json">
+	      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
   </ItemGroup>
 
   <PropertyGroup>

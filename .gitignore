@@ -6,6 +6,9 @@
 # dotenv files
 .env
 
+# Per-developer app configuration (machine-specific connection strings)
+appsettings.json
+
 # User-specific files
 *.rsuser
 *.suo

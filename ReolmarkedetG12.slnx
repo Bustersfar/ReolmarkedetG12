@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ReolmarkedetG12.Core/ReolmarkedetG12.Core.csproj" />
+    <Project Path="src/ReolmarkedetG12.UI/ReolmarkedetG12.UI.csproj" />
+  </Folder>
+</Solution>

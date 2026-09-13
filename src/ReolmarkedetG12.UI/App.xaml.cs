@@ -17,8 +17,8 @@ public partial class App : Application
         var dialogService = new MessageBoxDialogService();
 
         var mainViewModel = new MainViewModel(
-            new ReolerViewModel(),
-            new KunderViewModel());
+            new ShelfViewModel(),
+            new VendorViewModel());
 
         var mainWindow = new MainWindow { DataContext = mainViewModel };
         this.MainWindow = mainWindow;

@@ -3,11 +3,11 @@ using System.Windows.Controls;
 namespace ReolmarkedetG12.UI.Views;
 
 /// <summary>
-/// Interaction logic for KunderView.xaml
+/// Interaction logic for VendorView.xaml
 /// </summary>
-public partial class KunderView : UserControl
+public partial class VendorView : UserControl
 {
-    public KunderView()
+    public VendorView()
     {
         InitializeComponent();
     }

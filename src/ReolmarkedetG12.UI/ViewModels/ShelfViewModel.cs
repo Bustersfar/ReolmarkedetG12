@@ -2,6 +2,6 @@ using ReolmarkedetG12.UI.MVVM;
 
 namespace ReolmarkedetG12.UI.ViewModels;
 
-public class KunderViewModel : ViewModelBase
+public class ShelfViewModel : ViewModelBase
 {
 }

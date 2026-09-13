@@ -6,5 +6,5 @@ public interface IRepository<T>
     T? GetById(int id); // Read
     void Update(T item); // Update
     void Delete(int id); // Delete
-    List<T> GetAll();
+    IEnumerable<T> GetAll();
 }

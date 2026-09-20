@@ -3,11 +3,11 @@ using System.Windows.Controls;
 namespace ReolmarkedetG12.UI.Views;
 
 /// <summary>
-/// Interaction logic for ShelfView.xaml
+/// Interaction logic for RackView.xaml
 /// </summary>
-public partial class ShelfView : UserControl
+public partial class RackView : UserControl
 {
-    public ShelfView()
+    public RackView()
     {
         InitializeComponent();
     }

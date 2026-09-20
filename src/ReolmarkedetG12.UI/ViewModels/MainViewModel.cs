@@ -4,12 +4,12 @@ namespace ReolmarkedetG12.UI.ViewModels;
 
 public class MainViewModel : ViewModelBase
 {
-    public ShelfViewModel ShelfViewModel { get; }
+    public RackViewModel RackViewModel { get; }
     public VendorViewModel VendorViewModel { get; }
 
-    public MainViewModel(ShelfViewModel shelfVm, VendorViewModel vendorVm)
+    public MainViewModel(RackViewModel rackVm, VendorViewModel vendorVm)
     {
-        ShelfViewModel = shelfVm;
+        RackViewModel = rackVm;
         VendorViewModel = vendorVm;
     }
 }

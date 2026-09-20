@@ -1,6 +1,6 @@
 ﻿namespace ReolmarkedetG12.Core.Models;
 
-public enum ShelfStatus
+public enum RackStatus
 {
     Available,
     Rented,

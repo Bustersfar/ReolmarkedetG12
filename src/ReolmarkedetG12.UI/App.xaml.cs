@@ -23,12 +23,12 @@ public partial class App : Application
         string connectionString = config.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found in appsettings.json");
 
-        var shelfRepository = new ShelfRepository(connectionString);
+        var rackRepository = new RackRepository(connectionString);
 
         var dialogService = new MessageBoxDialogService();
 
         var mainViewModel = new MainViewModel(
-            new ShelfViewModel(shelfRepository),
+            new RackViewModel(rackRepository),
             new VendorViewModel());
 
         var mainWindow = new MainWindow { DataContext = mainViewModel };

@@ -5,19 +5,19 @@ using Microsoft.Data.SqlClient;
 using ReolmarkedetG12.Core.Models;
 namespace ReolmarkedetG12.Core.Repositories;
 
-public class ShelfRepository : IRepository<Shelf>
+public class RackRepository : IRepository<Rack>
 {
     private readonly string _connectionString;
 
-    public ShelfRepository(string connectionString)
+    public RackRepository(string connectionString)
     {
         _connectionString = connectionString;
     }
 
-    public IEnumerable<Shelf> GetAll()
+    public IEnumerable<Rack> GetAll()
     {
-        var shelves = new List<Shelf>();
-        string query = "SELECT * FROM SHELF";
+        var racks = new List<Rack>();
+        string query = "SELECT * FROM RACK";
 
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
@@ -28,67 +28,67 @@ public class ShelfRepository : IRepository<Shelf>
             {
                 while (reader.Read())
                 {
-                    shelves.Add(new Shelf
+                    racks.Add(new Rack
                     {
-                        ShelfId = (int)reader["ShelfId"],
+                        RackId = (int)reader["RackId"],
                         Number = (int)reader["Number"]
                     });
                 }
             }
         }
 
-        return shelves;
+        return racks;
     }
 
-    public Shelf? GetById(int id)
+    public Rack? GetById(int id)
     {
-        Shelf? shelf = null;
-        string query = "SELECT * FROM SHELF WHERE ShelfId = @ShelfId";
+        Rack? rack = null;
+        string query = "SELECT * FROM RACK WHERE RackId = @RackId";
 
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
             SqlCommand command = new SqlCommand(query, connection);
-            command.Parameters.AddWithValue("@ShelfId", id);
+            command.Parameters.AddWithValue("@RackId", id);
             connection.Open();
 
             using (SqlDataReader reader = command.ExecuteReader())
             {
                 if (reader.Read())
                 {
-                    shelf = new Shelf
+                    rack = new Rack
                     {
-                        ShelfId = (int)reader["ShelfId"],
+                        RackId = (int)reader["RackId"],
                         Number = (int)reader["Number"]
                     };
                 }
             }
         }
 
-        return shelf;
+        return rack;
     }
 
-    public void Add(Shelf shelf)
+    public void Add(Rack rack)
     {
-        string query = "INSERT INTO SHELF (Number) VALUES (@Number)";
+        string query = "INSERT INTO RACK (Number) VALUES (@Number)";
 
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
             SqlCommand command = new SqlCommand(query, connection);
-            command.Parameters.AddWithValue("@Number", shelf.Number);
+            command.Parameters.AddWithValue("@Number", rack.Number);
             connection.Open();
             command.ExecuteNonQuery();
         }
     }
 
-    public void Update(Shelf shelf)
+    public void Update(Rack rack)
     {
-        string query = "UPDATE SHELF SET Number = @Number WHERE ShelfId = @ShelfId";
+        string query = "UPDATE RACK SET Number = @Number WHERE RackId = @RackId";
 
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
             SqlCommand command = new SqlCommand(query, connection);
-            command.Parameters.AddWithValue("@Number", shelf.Number);
-            command.Parameters.AddWithValue("@ShelfId", shelf.ShelfId);
+            command.Parameters.AddWithValue("@Number", rack.Number);
+            command.Parameters.AddWithValue("@RackId", rack.RackId);
             connection.Open();
             command.ExecuteNonQuery();
         }
@@ -96,12 +96,12 @@ public class ShelfRepository : IRepository<Shelf>
 
     public void Delete(int id)
     {
-        string query = "DELETE FROM SHELF WHERE ShelfId = @ShelfId";
+        string query = "DELETE FROM RACK WHERE RackId = @RackId";
 
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
             SqlCommand command = new SqlCommand(query, connection);
-            command.Parameters.AddWithValue("@ShelfId", id);
+            command.Parameters.AddWithValue("@RackId", id);
             connection.Open();
             command.ExecuteNonQuery();
         }

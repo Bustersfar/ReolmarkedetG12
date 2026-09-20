@@ -8,7 +8,7 @@
         Title="MainWindow" Height="450" Width="800">
     <TabControl>
         <TabItem Header="Reoler">
-            <views:ShelfView DataContext="{Binding ShelfViewModel}" />
+            <views:RackView DataContext="{Binding RackViewModel}" />
         </TabItem>
         <TabItem Header="Kunder">
             <views:VendorView DataContext="{Binding VendorViewModel}" />

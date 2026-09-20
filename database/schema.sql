@@ -11,12 +11,12 @@ GO
 USE Reolmarkedet;
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'SHELF')
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'RACK')
 BEGIN
-    CREATE TABLE SHELF
+    CREATE TABLE RACK
     (
-        ShelfId INT IDENTITY(1,1) PRIMARY KEY,
-        Number  INT NOT NULL
+        RackId INT IDENTITY(1,1) PRIMARY KEY,
+        Number INT NOT NULL
     );
 END
 GO

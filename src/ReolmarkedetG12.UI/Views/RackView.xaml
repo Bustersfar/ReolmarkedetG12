@@ -4,11 +4,167 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
-             d:DesignHeight="450" d:DesignWidth="800">
-    <Grid>
-        <DataGrid ItemsSource="{Binding Racks}"
-                  AutoGenerateColumns="True"
-                  IsReadOnly="True"
-                  Margin="10" />
-    </Grid>
+             d:DesignHeight="700" d:DesignWidth="1100">
+
+    <UserControl.Resources>
+        <Style x:Key="RackButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Green"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Width" Value="60"/>
+            <Setter Property="Height" Value="45"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Rack.Status}" Value="Rented">
+                    <Setter Property="Background" Value="Red"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Rack.Status}" Value="Terminated">
+                    <Setter Property="Background" Value="Gold"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter Property="Background" Value="DeepSkyBlue"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="RackItemsControlStyle" TargetType="ItemsControl">
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="ItemTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <Button Content="{Binding Rack.Number}"
+                                Style="{StaticResource RackButtonStyle}"
+                                Command="{Binding DataContext.SelectRackCommand,
+                                          RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}"/>
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Viewbox Stretch="Uniform">
+        <Grid Margin="10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="280"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Venstre søjle: reol 13 ned til 1 -->
+            <ItemsControl Grid.Column="0"
+                          ItemsSource="{Binding LeftColumnRacks}"
+                          Style="{StaticResource RackItemsControlStyle}"/>
+
+            <!-- Midten: klynger, samme rækkefølge som plantegningen -->
+            <StackPanel Grid.Column="1" Margin="10,0" HorizontalAlignment="Left">
+
+                <ItemsControl ItemsSource="{Binding Cluster_14_18}" Style="{StaticResource RackItemsControlStyle}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="1" Columns="5"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+
+                <ItemsControl ItemsSource="{Binding Cluster_19_24}" Style="{StaticResource RackItemsControlStyle}" Margin="0,15,0,0">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="2" Columns="3"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+
+                <ItemsControl ItemsSource="{Binding Cluster_25_38}" Style="{StaticResource RackItemsControlStyle}" Margin="0,15,0,0">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="2" Columns="7"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+
+                <ItemsControl ItemsSource="{Binding Cluster_39_52}" Style="{StaticResource RackItemsControlStyle}" Margin="0,15,0,0">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="2" Columns="7"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+
+                <ItemsControl ItemsSource="{Binding Cluster_53_66}" Style="{StaticResource RackItemsControlStyle}" Margin="0,15,0,0">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="2" Columns="7"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+
+                <ItemsControl ItemsSource="{Binding Cluster_67_76}" Style="{StaticResource RackItemsControlStyle}" Margin="0,15,0,0">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="2" Columns="5"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+
+                <StackPanel Orientation="Horizontal" Margin="0,15,0,0">
+                    <ItemsControl ItemsSource="{Binding Cluster_77_78}" Style="{StaticResource RackItemsControlStyle}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Rows="1" Columns="2"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+
+                    <ItemsControl ItemsSource="{Binding Cluster_79_80}" Style="{StaticResource RackItemsControlStyle}" Margin="40,0,0,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Rows="1" Columns="2"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </StackPanel>
+
+            </StackPanel>
+
+            <!-- Højre: lejer-panel -->
+            <StackPanel Grid.Column="2" Margin="15,0,0,0">
+                <TextBlock Text="Vælg lejer:" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                <TextBox Padding="5" ToolTip="Søg på email eller tlf" Margin="0,0,0,10"/>
+
+                <Border BorderBrush="Black" BorderThickness="1" Padding="10" Margin="0,0,0,20">
+                    <StackPanel>
+                        <TextBlock Text="[Lejernavn]"/>
+                        <TextBlock Text="[Email]"/>
+                        <TextBlock Text="[Telefon]"/>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Text="Valgte reoler:" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                <Border BorderBrush="Black" BorderThickness="1" Padding="10" MinHeight="80" Margin="0,0,0,20">
+                    <ItemsControl ItemsSource="{Binding SelectedRacks}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Rack.Number, StringFormat='Reol {0}'}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+
+                <TextBlock Text="Kundens reoler:" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                <Border BorderBrush="Black" BorderThickness="1" Padding="10" MinHeight="80" Margin="0,0,0,20">
+                    <ItemsControl ItemsSource="{Binding TenantRacks}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Rack.Number, StringFormat='Reol {0}'}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+
+                <Button Content="Opret aftale" Padding="10" Margin="0,0,0,10"/>
+                <Button Content="Opsig aftale" Padding="10"/>
+            </StackPanel>
+        </Grid>
+    </Viewbox>
+
 </UserControl>

@@ -30,8 +30,8 @@ public class RackViewModel : ViewModelBase
     // Alle reoler brugeren aktuelt har markeret (understøtter flervalg)
     public ObservableCollection<RackDisplayItem> SelectedRacks => _selectedRacks;
 
-    // Reoler den aktuelt valgte kunde allerede lejer. Tom indtil Tenant/Rental-data er koblet på.
-    public ObservableCollection<RackDisplayItem> TenantRacks { get; } = new();
+    // Reoler den aktuelt valgte kunde allerede lejer. Tom indtil Renter/Rental-data er koblet på.
+    public ObservableCollection<RackDisplayItem> RenterRacks { get; } = new();
 
     public ICommand SelectRackCommand { get; }
 

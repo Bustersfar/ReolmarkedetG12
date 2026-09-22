@@ -191,7 +191,7 @@
 
                 <TextBlock Text="Kundens reoler:" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
                 <Border BorderBrush="Black" BorderThickness="1" Padding="10" MinHeight="80" Margin="0,0,0,20">
-                    <ItemsControl ItemsSource="{Binding TenantRacks}">
+                    <ItemsControl ItemsSource="{Binding RenterRacks}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding Rack.Number, StringFormat='Reol {0}'}"/>

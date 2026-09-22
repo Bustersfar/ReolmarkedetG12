@@ -32,7 +32,11 @@ namespace ReolmarkedetG12.Core.Repositories
                         renters.Add(new Renter
                         {
                             RenterId = (int)reader["RenterId"],
-                            Name = (string)reader["Name"],
+                            FirstName = (string)reader["FirstName"],
+                            LastName = (string)reader["LastName"],
+                            Address = (string)reader["Address"],
+                            PostalCode = (int)reader["PostalCode"],
+                            City = (string)reader["City"],
                             Email = (string)reader["Email"],
                             Phone = (string)reader["Phone"]
                         });
@@ -61,7 +65,11 @@ namespace ReolmarkedetG12.Core.Repositories
                         renter = new Renter
                         {
                             RenterId = (int)reader["RenterId"],
-                            Name = (string)reader["Name"],
+                            FirstName = (string)reader["FirstName"],
+                            LastName = (string)reader["LastName"],
+                            Address = (string)reader["Address"],
+                            PostalCode = (int)reader["PostalCode"],
+                            City = (string)reader["City"],
                             Email = (string)reader["Email"],
                             Phone = (string)reader["Phone"]
                         };
@@ -74,12 +82,16 @@ namespace ReolmarkedetG12.Core.Repositories
 
         public void Add(Renter renter)
         {
-            string query = "INSERT INTO RENTER (Name, Email, Phone) VALUES (@Name, @Email, @Phone)";
+            string query = "INSERT INTO RENTER (FirstName, LastName, Address, PostalCode, City, Email, Phone) VALUES (@FirstName, @LastName, @Address, @PostalCode, @City, @Email, @Phone)";
 
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 SqlCommand command = new SqlCommand(query, connection);
-                command.Parameters.AddWithValue("@Name", renter.Name);
+                command.Parameters.AddWithValue("@FirstName", renter.FirstName);
+                command.Parameters.AddWithValue("@LastName", renter.LastName);
+                command.Parameters.AddWithValue("@Address", renter.Address);
+                command.Parameters.AddWithValue("@PostalCode", renter.PostalCode);
+                command.Parameters.AddWithValue("@City", renter.City);
                 command.Parameters.AddWithValue("@Email", renter.Email);
                 command.Parameters.AddWithValue("@Phone", renter.Phone);
                 connection.Open();
@@ -89,12 +101,16 @@ namespace ReolmarkedetG12.Core.Repositories
 
         public void Update(Renter renter)
         {
-            string query = "UPDATE TENANT SET Name = @Name, Email = @Email, Phone = @Phone WHERE TenantId = @TenantId";
+            string query = "UPDATE RENTER SET FirstName = @FirstName, LastName = @LastName, Address = @Address, PostalCode = @PostalCode, City = @City, Email = @Email, Phone = @Phone WHERE RenterId = @RenterId";
 
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 SqlCommand command = new SqlCommand(query, connection);
-                command.Parameters.AddWithValue("@Name", renter.Name);
+                command.Parameters.AddWithValue("@FirstName", renter.FirstName);
+                command.Parameters.AddWithValue("@LastName", renter.LastName);
+                command.Parameters.AddWithValue("@Address", renter.Address);
+                command.Parameters.AddWithValue("@PostalCode", renter.PostalCode);
+                command.Parameters.AddWithValue("@City", renter.City);
                 command.Parameters.AddWithValue("@Email", renter.Email);
                 command.Parameters.AddWithValue("@Phone", renter.Phone);
                 command.Parameters.AddWithValue("@RenterId", renter.RenterId);

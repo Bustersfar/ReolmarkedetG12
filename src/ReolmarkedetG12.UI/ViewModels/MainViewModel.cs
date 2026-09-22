@@ -5,9 +5,9 @@ namespace ReolmarkedetG12.UI.ViewModels;
 public class MainViewModel : ViewModelBase
 {
     public RackViewModel RackViewModel { get; }
-    public VendorViewModel VendorViewModel { get; }
+    public RenterViewModel VendorViewModel { get; }
 
-    public MainViewModel(RackViewModel rackVm, VendorViewModel vendorVm)
+    public MainViewModel(RackViewModel rackVm, RenterViewModel vendorVm)
     {
         RackViewModel = rackVm;
         VendorViewModel = vendorVm;

@@ -37,3 +37,34 @@ BEGIN
     (4, NULL, 800.00);
 END
 GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'RENTER')
+BEGIN
+    CREATE TABLE RENTER
+    (
+        RenterId   INT IDENTITY(1,1) PRIMARY KEY,
+        FirstName  NVARCHAR(100) NOT NULL,
+        LastName   NVARCHAR(100) NOT NULL,
+        Address    NVARCHAR(200) NOT NULL,
+        PostalCode INT NOT NULL,
+        City       NVARCHAR(100) NOT NULL,
+        Email      NVARCHAR(200) NULL,
+        Phone      NVARCHAR(50) NULL
+    );
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'RENTAL')
+BEGIN
+    CREATE TABLE RENTAL
+    (
+        RentalId  INT IDENTITY(1,1) PRIMARY KEY,
+        RackId    INT NOT NULL,
+        RenterId  INT NOT NULL,
+        StartDate DATETIME NOT NULL,
+        EndDate   DATETIME NULL,
+        CONSTRAINT FK_Rental_Rack FOREIGN KEY (RackId) REFERENCES RACK(RackId),
+        CONSTRAINT FK_Rental_Renter FOREIGN KEY (RenterId) REFERENCES RENTER(RenterId)
+    );
+END
+GO

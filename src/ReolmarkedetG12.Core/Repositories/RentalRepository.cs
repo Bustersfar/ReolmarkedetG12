@@ -33,7 +33,7 @@ namespace ReolmarkedetG12.Core.Repositories
                         {
                             RentalId = (int)reader["RentalId"],
                             RackId = (int)reader["RackId"],
-                            TenantId = (int)reader["TenantId"],
+                            RenterId = (int)reader["RenterId"],
                             StartDate = (DateTime)reader["StartDate"],
                             EndDate = (DateTime?)reader["EndDate"]
                         });
@@ -63,7 +63,7 @@ namespace ReolmarkedetG12.Core.Repositories
                         {
                             RentalId = (int)reader["RentalId"],
                             RackId = (int)reader["RackId"],
-                            TenantId = (int)reader["TenantId"],
+                            RenterId = (int)reader["RenterId"],
                             StartDate = (DateTime)reader["StartDate"],
                             EndDate = (DateTime?)reader["EndDate"]
                         };
@@ -76,13 +76,13 @@ namespace ReolmarkedetG12.Core.Repositories
 
         public void Add(Rental rental)
         {
-            string query = "INSERT INTO RENTAL (ShelfId, TenantId, StartDate, EndDate) VALUES (@ShelfId, @TenantId, @StartDate, @EndDate)";
+            string query = "INSERT INTO RENTAL (RackId, RenterId, StartDate, EndDate) VALUES (@RackId, @RenterId, @StartDate, @EndDate)";
 
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 SqlCommand command = new SqlCommand(query, connection);
-                command.Parameters.AddWithValue("@ShelfId", rental.RackId);
-                command.Parameters.AddWithValue("@TenantId", rental.TenantId);
+                command.Parameters.AddWithValue("@RackId", rental.RackId);
+                command.Parameters.AddWithValue("@RenterId", rental.RenterId);
                 command.Parameters.AddWithValue("@StartDate", rental.StartDate);
                 command.Parameters.AddWithValue("@EndDate", rental.EndDate ?? (object)DBNull.Value);
                 connection.Open();
@@ -92,13 +92,13 @@ namespace ReolmarkedetG12.Core.Repositories
 
         public void Update(Rental rental)
         {
-            string query = "UPDATE RENTAL SET ShelfId = @ShelfId, TenantId = @TenantId, StartDate = @StartDate, EndDate = @EndDate WHERE RentalId = @RentalId";
+            string query = "UPDATE RENTAL SET RackId = @RackId, RenterId = @RenterId, StartDate = @StartDate, EndDate = @EndDate WHERE RentalId = @RentalId";
 
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 SqlCommand command = new SqlCommand(query, connection);
-                command.Parameters.AddWithValue("@ShelfId", rental.RackId);
-                command.Parameters.AddWithValue("@TenantId", rental.TenantId);
+                command.Parameters.AddWithValue("@RackId", rental.RackId);
+                command.Parameters.AddWithValue("@RenterId", rental.RenterId);
                 command.Parameters.AddWithValue("@StartDate", rental.StartDate);
                 command.Parameters.AddWithValue("@EndDate", rental.EndDate ?? (object)DBNull.Value);
                 command.Parameters.AddWithValue("@RentalId", rental.RentalId);

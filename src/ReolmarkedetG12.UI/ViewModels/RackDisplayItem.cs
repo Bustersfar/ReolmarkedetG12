@@ -18,4 +18,6 @@ public class RackDisplayItem : ViewModelBase
     {
         Rack = rack;
     }
+
+    public void RefreshStatus() => OnPropertyChanged(nameof(Rack));
 }

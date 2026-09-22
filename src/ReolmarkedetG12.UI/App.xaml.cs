@@ -24,11 +24,13 @@ public partial class App : Application
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found in appsettings.json");
 
         var rackRepository = new RackRepository(connectionString);
+        var renterRepository = new RenterRepository(connectionString);
+        var rentalRepository = new RentalRepository(connectionString);
 
         var dialogService = new MessageBoxDialogService();
 
         var mainViewModel = new MainViewModel(
-            new RackViewModel(rackRepository),
+            new RackViewModel(rackRepository, renterRepository, rentalRepository),
             new RenterViewModel());
 
         var mainWindow = new MainWindow { DataContext = mainViewModel };

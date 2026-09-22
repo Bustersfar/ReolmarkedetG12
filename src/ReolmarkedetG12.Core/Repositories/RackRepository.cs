@@ -31,7 +31,9 @@ public class RackRepository : IRepository<Rack>
                     racks.Add(new Rack
                     {
                         RackId = (int)reader["RackId"],
-                        Number = (int)reader["Number"]
+                        Number = (int)reader["Number"],
+                        Type = (RackType)(int)reader["Type"],
+                        Status = (RackStatus)(int)reader["Status"]
                     });
                 }
             }
@@ -58,7 +60,9 @@ public class RackRepository : IRepository<Rack>
                     rack = new Rack
                     {
                         RackId = (int)reader["RackId"],
-                        Number = (int)reader["Number"]
+                        Number = (int)reader["Number"],
+                        Type = (RackType)(int)reader["Type"],
+                        Status = (RackStatus)(int)reader["Status"]
                     };
                 }
             }
@@ -69,12 +73,14 @@ public class RackRepository : IRepository<Rack>
 
     public void Add(Rack rack)
     {
-        string query = "INSERT INTO RACK (Number) VALUES (@Number)";
+        string query = "INSERT INTO RACK (Number, Type, Status) VALUES (@Number, @Type, @Status)";
 
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
             SqlCommand command = new SqlCommand(query, connection);
             command.Parameters.AddWithValue("@Number", rack.Number);
+            command.Parameters.AddWithValue("@Type", (int)rack.Type);
+            command.Parameters.AddWithValue("@Status", (int)rack.Status);
             connection.Open();
             command.ExecuteNonQuery();
         }
@@ -82,12 +88,14 @@ public class RackRepository : IRepository<Rack>
 
     public void Update(Rack rack)
     {
-        string query = "UPDATE RACK SET Number = @Number WHERE RackId = @RackId";
+        string query = "UPDATE RACK SET Number = @Number, Type = @Type, Status = @Status WHERE RackId = @RackId";
 
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
             SqlCommand command = new SqlCommand(query, connection);
             command.Parameters.AddWithValue("@Number", rack.Number);
+            command.Parameters.AddWithValue("@Type", (int)rack.Type);
+            command.Parameters.AddWithValue("@Status", (int)rack.Status);
             command.Parameters.AddWithValue("@RackId", rack.RackId);
             connection.Open();
             command.ExecuteNonQuery();

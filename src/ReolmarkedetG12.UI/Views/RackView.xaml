@@ -168,13 +168,15 @@
             <!-- Højre: lejer-panel -->
             <StackPanel Grid.Column="2" Margin="15,0,0,0">
                 <TextBlock Text="Vælg lejer:" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
-                <TextBox Padding="5" ToolTip="Søg på email eller tlf" Margin="0,0,0,10"/>
+                <TextBox Padding="5" ToolTip="Søg på email eller tlf" Margin="0,0,0,10"
+                         Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"/>
 
                 <Border BorderBrush="Black" BorderThickness="1" Padding="10" Margin="0,0,0,20">
                     <StackPanel>
-                        <TextBlock Text="[Lejernavn]"/>
-                        <TextBlock Text="[Email]"/>
-                        <TextBlock Text="[Telefon]"/>
+                        <TextBlock Text="{Binding FoundRenter.FirstName}"/>
+                        <TextBlock Text="{Binding FoundRenter.LastName}"/>
+                        <TextBlock Text="{Binding FoundRenter.Email}"/>
+                        <TextBlock Text="{Binding FoundRenter.Phone}"/>
                     </StackPanel>
                 </Border>
 
@@ -200,8 +202,8 @@
                     </ItemsControl>
                 </Border>
 
-                <Button Content="Opret aftale" Padding="10" Margin="0,0,0,10"/>
-                <Button Content="Opsig aftale" Padding="10"/>
+                <Button Content="Opret aftale" Padding="10" Margin="0,0,0,10" Command="{Binding CreateRentalCommand}"/>
+                <Button Content="Opsig aftale" Padding="10" Command="{Binding TerminateRentalCommand}"/>
             </StackPanel>
         </Grid>
     </Viewbox>

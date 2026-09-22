@@ -35,7 +35,7 @@ namespace ReolmarkedetG12.Core.Repositories
                             RackId = (int)reader["RackId"],
                             RenterId = (int)reader["RenterId"],
                             StartDate = (DateTime)reader["StartDate"],
-                            EndDate = (DateTime?)reader["EndDate"]
+                            EndDate = reader["EndDate"] == DBNull.Value ? null : (DateTime?)reader["EndDate"]
                         });
                     }
                 }
@@ -65,7 +65,7 @@ namespace ReolmarkedetG12.Core.Repositories
                             RackId = (int)reader["RackId"],
                             RenterId = (int)reader["RenterId"],
                             StartDate = (DateTime)reader["StartDate"],
-                            EndDate = (DateTime?)reader["EndDate"]
+                            EndDate = reader["EndDate"] == DBNull.Value ? null : (DateTime?)reader["EndDate"]
                         };
                     }
                 }
@@ -121,4 +121,3 @@ namespace ReolmarkedetG12.Core.Repositories
         }
     }
 }
-

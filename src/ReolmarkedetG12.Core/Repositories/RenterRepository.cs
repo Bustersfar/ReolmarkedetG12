@@ -37,8 +37,8 @@ namespace ReolmarkedetG12.Core.Repositories
                             Address = (string)reader["Address"],
                             PostalCode = (int)reader["PostalCode"],
                             City = (string)reader["City"],
-                            Email = (string)reader["Email"],
-                            Phone = (string)reader["Phone"]
+                            Email = reader["Email"] == DBNull.Value ? null : (string)reader["Email"],
+                            Phone = reader["Phone"] == DBNull.Value ? null : (string)reader["Phone"]
                         });
                     }
                 }
@@ -70,8 +70,8 @@ namespace ReolmarkedetG12.Core.Repositories
                             Address = (string)reader["Address"],
                             PostalCode = (int)reader["PostalCode"],
                             City = (string)reader["City"],
-                            Email = (string)reader["Email"],
-                            Phone = (string)reader["Phone"]
+                            Email = reader["Email"] == DBNull.Value ? null : (string)reader["Email"],
+                            Phone = reader["Phone"] == DBNull.Value ? null : (string)reader["Phone"]
                         };
                     }
                 }
@@ -92,8 +92,8 @@ namespace ReolmarkedetG12.Core.Repositories
                 command.Parameters.AddWithValue("@Address", renter.Address);
                 command.Parameters.AddWithValue("@PostalCode", renter.PostalCode);
                 command.Parameters.AddWithValue("@City", renter.City);
-                command.Parameters.AddWithValue("@Email", renter.Email);
-                command.Parameters.AddWithValue("@Phone", renter.Phone);
+                command.Parameters.AddWithValue("@Email", (object?)renter.Email ?? DBNull.Value);
+                command.Parameters.AddWithValue("@Phone", (object?)renter.Phone ?? DBNull.Value);
                 connection.Open();
                 command.ExecuteNonQuery();
             }
@@ -111,8 +111,8 @@ namespace ReolmarkedetG12.Core.Repositories
                 command.Parameters.AddWithValue("@Address", renter.Address);
                 command.Parameters.AddWithValue("@PostalCode", renter.PostalCode);
                 command.Parameters.AddWithValue("@City", renter.City);
-                command.Parameters.AddWithValue("@Email", renter.Email);
-                command.Parameters.AddWithValue("@Phone", renter.Phone);
+                command.Parameters.AddWithValue("@Email", (object?)renter.Email ?? DBNull.Value);
+                command.Parameters.AddWithValue("@Phone", (object?)renter.Phone ?? DBNull.Value);
                 command.Parameters.AddWithValue("@RenterId", renter.RenterId);
                 connection.Open();
                 command.ExecuteNonQuery();

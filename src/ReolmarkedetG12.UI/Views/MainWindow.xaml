@@ -11,7 +11,7 @@
             <views:RackView DataContext="{Binding RackViewModel}" />
         </TabItem>
         <TabItem Header="Kunder">
-            <views:VendorView DataContext="{Binding VendorViewModel}" />
+            <views:RenterView DataContext="{Binding RenterViewModel}" />
         </TabItem>
     </TabControl>
 </Window>

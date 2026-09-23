@@ -14,6 +14,13 @@ public class RackDisplayItem : ViewModelBase
         set { _isSelected = value; OnPropertyChanged(); }
     }
 
+    private DateTime? _terminationDate;
+    public DateTime? TerminationDate
+    {
+        get => _terminationDate;
+        set { _terminationDate = value; OnPropertyChanged(); }
+    }
+
     public RackDisplayItem(Rack rack)
     {
         Rack = rack;

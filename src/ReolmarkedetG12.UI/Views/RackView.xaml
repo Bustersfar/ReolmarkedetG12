@@ -3,10 +3,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:local="clr-namespace:ReolmarkedetG12.UI.Converters"
              mc:Ignorable="d"
              d:DesignHeight="700" d:DesignWidth="1100">
 
     <UserControl.Resources>
+        <local:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <local:NullToInverseVisibilityConverter x:Key="NullToInverseVisibilityConverter"/>
+
         <Style x:Key="RackButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Green"/>
             <Setter Property="Foreground" Value="White"/>
@@ -19,6 +23,7 @@
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Rack.Status}" Value="Terminated">
                     <Setter Property="Background" Value="Gold"/>
+                    <Setter Property="Foreground" Value="Black"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsSelected}" Value="True">
                     <Setter Property="Background" Value="DeepSkyBlue"/>
@@ -33,6 +38,7 @@
                     <DataTemplate>
                         <Button Content="{Binding Rack.Number}"
                                 Style="{StaticResource RackButtonStyle}"
+                                ToolTip="{Binding TerminationDate, StringFormat='Opsagt til {0:dd-MM-yyyy}'}"
                                 Command="{Binding DataContext.SelectRackCommand,
                                           RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 CommandParameter="{Binding}"/>
@@ -52,6 +58,7 @@
                     <DataTemplate>
                         <Button Content="{Binding Rack.Number}"
                                 Style="{StaticResource ClusterRackButtonStyle}"
+                                ToolTip="{Binding TerminationDate, StringFormat='Opsagt til {0:dd-MM-yyyy}'}"
                                 Command="{Binding DataContext.SelectRackCommand,
                                           RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 CommandParameter="{Binding}"/>
@@ -72,6 +79,7 @@
                     <DataTemplate>
                         <Button Content="{Binding Rack.Number}"
                                 Style="{StaticResource LeftColumnRackButtonStyle}"
+                                ToolTip="{Binding TerminationDate, StringFormat='Opsagt til {0:dd-MM-yyyy}'}"
                                 Command="{Binding DataContext.SelectRackCommand,
                                           RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 CommandParameter="{Binding}"/>
@@ -171,12 +179,35 @@
                 <TextBox Padding="5" ToolTip="Søg på email eller tlf" Margin="0,0,0,10"
                          Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"/>
 
-                <Border BorderBrush="Black" BorderThickness="1" Padding="10" Margin="0,0,0,20">
+                <Border BorderBrush="Black" BorderThickness="1" Padding="10" Margin="0,0,0,20" MinHeight="80">
                     <StackPanel>
-                        <TextBlock Text="{Binding FoundRenter.FirstName}"/>
-                        <TextBlock Text="{Binding FoundRenter.LastName}"/>
-                        <TextBlock Text="{Binding FoundRenter.Email}"/>
-                        <TextBlock Text="{Binding FoundRenter.Phone}"/>
+                        <!-- Søgeresultater: vises kun hvis der endnu ikke er valgt en lejer -->
+                        <ItemsControl ItemsSource="{Binding SearchResults}"
+                                      Visibility="{Binding FoundRenter, Converter={StaticResource NullToVisibilityConverter}}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button HorizontalContentAlignment="Left"
+                                            Command="{Binding DataContext.SelectRenterCommand,
+                                                      RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}">
+                                        <TextBlock>
+                                            <Run Text="{Binding FirstName}"/>
+                                            <Run Text="{Binding LastName}"/>
+                                            <LineBreak/>
+                                            <Run Text="{Binding Email}"/>
+                                        </TextBlock>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Valgt lejer -->
+                        <StackPanel Visibility="{Binding FoundRenter, Converter={StaticResource NullToInverseVisibilityConverter}}">
+                            <TextBlock Text="{Binding FoundRenter.FirstName}"/>
+                            <TextBlock Text="{Binding FoundRenter.LastName}"/>
+                            <TextBlock Text="{Binding FoundRenter.Email}"/>
+                            <TextBlock Text="{Binding FoundRenter.Phone}"/>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 
@@ -196,7 +227,20 @@
                     <ItemsControl ItemsSource="{Binding RenterRacks}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding Rack.Number, StringFormat='Reol {0}'}"/>
+                                <StackPanel Margin="0,0,0,6">
+                                    <TextBlock FontWeight="Bold">
+                        <Run Text="{Binding RackItem.Rack.Number, StringFormat='Reol {0}'}"/>
+                                    </TextBlock>
+                                    <TextBlock FontSize="11">
+                        <Run Text="Udlejet fra "/>
+                        <Run Text="{Binding Rental.StartDate, StringFormat='{}{0:dd-MM-yyyy}'}"/>
+                                    </TextBlock>
+                                    <TextBlock FontSize="11" Foreground="DarkGoldenrod"
+                               Visibility="{Binding Rental.EndDate, Converter={StaticResource NullToInverseVisibilityConverter}}">
+                        <Run Text="Opsagt til "/>
+                        <Run Text="{Binding Rental.EndDate, StringFormat='{}{0:dd-MM-yyyy}'}"/>
+                                    </TextBlock>
+                                </StackPanel>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
@@ -204,6 +248,7 @@
 
                 <Button Content="Opret aftale" Padding="10" Margin="0,0,0,10" Command="{Binding CreateRentalCommand}"/>
                 <Button Content="Opsig aftale" Padding="10" Command="{Binding TerminateRentalCommand}"/>
+                <Button Content="Fortryd opsigelse" Padding="10" Command="{Binding CancelTerminationCommand}"/>
             </StackPanel>
         </Grid>
     </Viewbox>

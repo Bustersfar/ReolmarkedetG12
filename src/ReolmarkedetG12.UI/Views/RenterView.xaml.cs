@@ -1,4 +1,6 @@
 using System.Windows.Controls;
+using ReolmarkedetG12.Core.Repositories;
+using ReolmarkedetG12.UI.ViewModels;
 
 namespace ReolmarkedetG12.UI.Views;
 
@@ -10,5 +12,6 @@ public partial class RenterView : UserControl
     public RenterView()
     {
         InitializeComponent();
+
     }
 }

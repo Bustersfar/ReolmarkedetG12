@@ -8,8 +8,7 @@
              d:DesignHeight="700" d:DesignWidth="1100">
 
     <UserControl.Resources>
-        <local:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
-        <local:NullToInverseVisibilityConverter x:Key="NullToInverseVisibilityConverter"/>
+        <local:EmptyToVisibilityConverter x:Key="EmptyToVisibilityConverter"/>
 
         <Style x:Key="RackButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Green"/>
@@ -86,6 +85,55 @@
                     </DataTemplate>
                 </Setter.Value>
             </Setter>
+        </Style>
+
+        <!-- Nyt: "kort"-stil til lejer-panelet -->
+        <Style x:Key="PanelCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="#F1EFE8"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="MinHeight" Value="40"/>
+            <Setter Property="Margin" Value="0,0,0,20"/>
+        </Style>
+
+        <Style x:Key="PanelLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Foreground" Value="Gray"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
+        </Style>
+
+        <Style x:Key="PlaceholderTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="#A9A79E"/>
+        </Style>
+
+        <!-- "Pille"-stil til hver valgt reol -->
+        <Style x:Key="RackPillStyle" TargetType="Border">
+            <Setter Property="Background" Value="#E6F1FB"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="10,3"/>
+            <Setter Property="Margin" Value="0,0,6,6"/>
+        </Style>
+
+        <Style x:Key="PrimaryActionButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#639922"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <Style x:Key="WarningActionButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#BA7517"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <Style x:Key="NeutralActionButtonStyle" TargetType="Button">
+            <Setter Property="Padding" Value="10"/>
         </Style>
     </UserControl.Resources>
 
@@ -173,20 +221,34 @@
 
             </StackPanel>
 
-            <!-- Højre: lejer-panel -->
+            <!-- Højre: lejer-panel, redesignet -->
             <StackPanel Grid.Column="2" Margin="15,0,0,0">
-                <TextBlock Text="Vælg lejer:" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
-                <TextBox Padding="5" ToolTip="Søg på email eller tlf" Margin="0,0,0,10"
-                         Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"/>
 
-                <Border BorderBrush="Black" BorderThickness="1" Padding="10" Margin="0,0,0,20" MinHeight="80">
+                <TextBlock Text="Vælg lejer" Style="{StaticResource PanelLabelStyle}"/>
+                <Grid Margin="0,0,0,8">
+                    <TextBox Padding="6"
+                             Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="Søg efter navn, email eller tlf..."
+                               IsHitTestVisible="False"
+                               Margin="9,0,0,0"
+                               VerticalAlignment="Center"
+                               Foreground="#A9A79E"
+                               Visibility="{Binding SearchQuery, Converter={StaticResource EmptyToVisibilityConverter}}"/>
+                </Grid>
+                <Border Style="{StaticResource PanelCardStyle}">
                     <StackPanel>
-                        <!-- Søgeresultater: vises kun hvis der endnu ikke er valgt en lejer -->
+                        <!-- Placeholder: vises kun før der er søgt på noget -->
+                        <TextBlock Text="Søg efter en lejer for at komme i gang"
+                                   Style="{StaticResource PlaceholderTextStyle}"
+                                   Visibility="{Binding SearchQuery, Converter={StaticResource EmptyToVisibilityConverter}}"/>
+
+                        <!-- Søgeresultater: vises når der er søgt, men ingen lejer valgt endnu -->
                         <ItemsControl ItemsSource="{Binding SearchResults}"
-                                      Visibility="{Binding FoundRenter, Converter={StaticResource NullToVisibilityConverter}}">
+                                      Visibility="{Binding FoundRenter, Converter={StaticResource EmptyToVisibilityConverter}}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Button HorizontalContentAlignment="Left"
+                                            Style="{StaticResource NeutralActionButtonStyle}"
                                             Command="{Binding DataContext.SelectRenterCommand,
                                                       RelativeSource={RelativeSource AncestorType=UserControl}}"
                                             CommandParameter="{Binding}">
@@ -194,7 +256,7 @@
                                             <Run Text="{Binding FirstName}"/>
                                             <Run Text="{Binding LastName}"/>
                                             <LineBreak/>
-                                            <Run Text="{Binding Email}"/>
+                                            <Run Text="{Binding Email}" Foreground="Gray" FontSize="11"/>
                                         </TextBlock>
                                     </Button>
                                 </DataTemplate>
@@ -202,53 +264,77 @@
                         </ItemsControl>
 
                         <!-- Valgt lejer -->
-                        <StackPanel Visibility="{Binding FoundRenter, Converter={StaticResource NullToInverseVisibilityConverter}}">
-                            <TextBlock Text="{Binding FoundRenter.FirstName}"/>
-                            <TextBlock Text="{Binding FoundRenter.LastName}"/>
-                            <TextBlock Text="{Binding FoundRenter.Email}"/>
-                            <TextBlock Text="{Binding FoundRenter.Phone}"/>
+                        <StackPanel Visibility="{Binding FoundRenter, Converter={StaticResource EmptyToVisibilityConverter}, ConverterParameter=Invert}">
+                            <TextBlock FontWeight="Bold">
+                                <Run Text="{Binding FoundRenter.FirstName}"/>
+                                <Run Text="{Binding FoundRenter.LastName}"/>
+                            </TextBlock>
+                            <TextBlock FontSize="11" Foreground="Gray" Text="{Binding FoundRenter.Email}"/>
+                            <TextBlock FontSize="11" Foreground="Gray" Text="{Binding FoundRenter.Phone}"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
-                <TextBlock Text="Valgte reoler:" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
-                <Border BorderBrush="Black" BorderThickness="1" Padding="10" MinHeight="80" Margin="0,0,0,20">
-                    <ItemsControl ItemsSource="{Binding SelectedRacks}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Rack.Number, StringFormat='Reol {0}'}"/>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                <TextBlock Text="Valgte reoler" Style="{StaticResource PanelLabelStyle}"/>
+                <Border Style="{StaticResource PanelCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Ingen reoler valgt"
+                                   Style="{StaticResource PlaceholderTextStyle}"
+                                   Visibility="{Binding SelectedRacks.Count, Converter={StaticResource EmptyToVisibilityConverter}}"/>
+                        <ItemsControl ItemsSource="{Binding SelectedRacks}"
+                                      Visibility="{Binding SelectedRacks.Count, Converter={StaticResource EmptyToVisibilityConverter}, ConverterParameter=Invert}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource RackPillStyle}">
+                                        <TextBlock FontSize="12" Foreground="#0C447C"
+                                                   Text="{Binding Rack.Number, StringFormat='Reol {0}'}"/>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
                 </Border>
 
-                <TextBlock Text="Kundens reoler:" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
-                <Border BorderBrush="Black" BorderThickness="1" Padding="10" MinHeight="80" Margin="0,0,0,20">
-                    <ItemsControl ItemsSource="{Binding RenterRacks}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel Margin="0,0,0,6">
-                                    <TextBlock FontWeight="Bold">
-                        <Run Text="{Binding RackItem.Rack.Number, StringFormat='Reol {0}'}"/>
-                                    </TextBlock>
-                                    <TextBlock FontSize="11">
-                        <Run Text="Udlejet fra "/>
-                        <Run Text="{Binding Rental.StartDate, StringFormat='{}{0:dd-MM-yyyy}'}"/>
-                                    </TextBlock>
-                                    <TextBlock FontSize="11" Foreground="DarkGoldenrod"
-                               Visibility="{Binding Rental.EndDate, Converter={StaticResource NullToInverseVisibilityConverter}}">
-                        <Run Text="Opsagt til "/>
-                        <Run Text="{Binding Rental.EndDate, StringFormat='{}{0:dd-MM-yyyy}'}"/>
-                                    </TextBlock>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                <TextBlock Text="Kundens reoler" Style="{StaticResource PanelLabelStyle}"/>
+                <Border Style="{StaticResource PanelCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Ingen reoler endnu"
+                                   Style="{StaticResource PlaceholderTextStyle}"
+                                   Visibility="{Binding RenterRacks.Count, Converter={StaticResource EmptyToVisibilityConverter}}"/>
+                        <ItemsControl ItemsSource="{Binding RenterRacks}"
+                                      Visibility="{Binding RenterRacks.Count, Converter={StaticResource EmptyToVisibilityConverter}, ConverterParameter=Invert}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,0,0,8">
+                                        <TextBlock FontWeight="Bold">
+                                            <Run Text="{Binding RackItem.Rack.Number, StringFormat='Reol {0}'}"/>
+                                        </TextBlock>
+                                        <TextBlock FontSize="11" Foreground="Gray">
+                                            <Run Text="Udlejet fra "/>
+                                            <Run Text="{Binding Rental.StartDate, StringFormat='{}{0:dd-MM-yyyy}'}"/>
+                                            <Run Text=" · "/>
+                                            <Run Text="{Binding Rental.MonthlyRent, StringFormat='{}{0:0} kr./md.'}"/>
+                                        </TextBlock>
+                                        <TextBlock FontSize="11" Foreground="#854F0B"
+                                                   Visibility="{Binding Rental.EndDate, Converter={StaticResource EmptyToVisibilityConverter}, ConverterParameter=Invert}">
+                                            <Run Text="Opsagt til "/>
+                                            <Run Text="{Binding Rental.EndDate, StringFormat='{}{0:dd-MM-yyyy}'}"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
                 </Border>
 
-                <Button Content="Opret aftale" Padding="10" Margin="0,0,0,10" Command="{Binding CreateRentalCommand}"/>
-                <Button Content="Opsig aftale" Padding="10" Command="{Binding TerminateRentalCommand}"/>
-                <Button Content="Fortryd opsigelse" Padding="10" Command="{Binding CancelTerminationCommand}"/>
+                <Button Content="Opret aftale" Style="{StaticResource NeutralActionButtonStyle}" Margin="0,0,0,8" Command="{Binding CreateRentalCommand}"/>
+                <Button Content="Opsig aftale" Style="{StaticResource NeutralActionButtonStyle}" Margin="0,0,0,8" Command="{Binding TerminateRentalCommand}"/>
+                <Button Content="Fortryd opsigelse" Style="{StaticResource NeutralActionButtonStyle}" Command="{Binding CancelTerminationCommand}"/>
             </StackPanel>
         </Grid>
     </Viewbox>

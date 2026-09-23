@@ -1,3 +1,4 @@
+using System;
 using System.Windows;
 using Microsoft.Extensions.Configuration;
 using ReolmarkedetG12.Core.Repositories;
@@ -26,11 +27,12 @@ public partial class App : Application
         var rackRepository = new RackRepository(connectionString);
         var renterRepository = new RenterRepository(connectionString);
         var rentalRepository = new RentalRepository(connectionString);
+        var rentalPriceTierRepository = new RentalPriceTierRepository(connectionString);
 
         var dialogService = new MessageBoxDialogService();
 
         var mainViewModel = new MainViewModel(
-            new RackViewModel(rackRepository, renterRepository, rentalRepository),
+            new RackViewModel(rackRepository, renterRepository, rentalRepository, rentalPriceTierRepository),
             new RenterViewModel());
 
         var mainWindow = new MainWindow { DataContext = mainViewModel };

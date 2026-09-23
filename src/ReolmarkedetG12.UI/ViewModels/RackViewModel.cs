@@ -4,6 +4,7 @@ using System.Linq;
 using System.Windows.Input;
 using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
+using ReolmarkedetG12.Core.Services;
 using ReolmarkedetG12.UI.MVVM;
 
 namespace ReolmarkedetG12.UI.ViewModels;
@@ -13,6 +14,7 @@ public class RackViewModel : ViewModelBase
     private readonly IRepository<Rack> _rackRepository;
     private readonly IRepository<Renter> _renterRepository;
     private readonly IRepository<Rental> _rentalRepository;
+    private readonly RentalPriceTierRepository _rentalPriceTierRepository;
 
     private readonly ObservableCollection<RackDisplayItem> _selectedRacks = new();
 
@@ -59,11 +61,12 @@ public class RackViewModel : ViewModelBase
     public ICommand TerminateRentalCommand { get; }
     public ICommand CancelTerminationCommand { get; }
 
-    public RackViewModel(IRepository<Rack> rackRepository, IRepository<Renter> renterRepository, IRepository<Rental> rentalRepository)
+    public RackViewModel(IRepository<Rack> rackRepository, IRepository<Renter> renterRepository, IRepository<Rental> rentalRepository, RentalPriceTierRepository rentalPriceTierRepository)
     {
         _rackRepository = rackRepository;
         _renterRepository = renterRepository;
         _rentalRepository = rentalRepository;
+        _rentalPriceTierRepository = rentalPriceTierRepository;
 
         var allItems = _rackRepository.GetAll()
             .Select(rack => new RackDisplayItem(rack))
@@ -128,7 +131,6 @@ public class RackViewModel : ViewModelBase
             {
                 _selectedRacks.Remove(clicked);
 
-                // Ingen reoler markeret længere — ryd lejer-info, så det ikke bliver "hængende"
                 if (_selectedRacks.Count == 0)
                 {
                     ClearRenterSelection();
@@ -260,6 +262,7 @@ public class RackViewModel : ViewModelBase
             RenterRacks.Add(new RenterRackDisplayItem(item, rental));
         }
 
+        RecalculateRentPricing();
         _selectedRacks.Clear();
         ClearRenterSelection();
     }
@@ -301,6 +304,7 @@ public class RackViewModel : ViewModelBase
             RenterRacks.Add(new RenterRackDisplayItem(item, rental));
         }
 
+        RecalculateRentPricing();
         _selectedRacks.Clear();
         ClearRenterSelection();
     }
@@ -342,8 +346,31 @@ public class RackViewModel : ViewModelBase
             RenterRacks.Add(new RenterRackDisplayItem(item, rental));
         }
 
+        RecalculateRentPricing();
         _selectedRacks.Clear();
         ClearRenterSelection();
+    }
+
+    private void RecalculateRentPricing()
+    {
+        if (FoundRenter == null)
+            return;
+
+        var activeRentals = _rentalRepository.GetAll()
+            .Where(r => r.RenterId == FoundRenter.RenterId && r.EndDate == null)
+            .ToList();
+
+        if (activeRentals.Count == 0)
+            return;
+
+        var priceTiers = _rentalPriceTierRepository.GetAll();
+        var monthlyRentPerRack = RentalPriceCalculator.CalculateMonthlyRent(activeRentals.Count, priceTiers) / activeRentals.Count;
+
+        foreach (var rental in activeRentals)
+        {
+            rental.MonthlyRent = monthlyRentPerRack;
+            _rentalRepository.Update(rental);
+        }
     }
 
     private void ClearRenterSelection()

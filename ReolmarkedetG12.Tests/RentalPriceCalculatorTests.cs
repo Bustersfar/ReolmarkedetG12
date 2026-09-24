@@ -75,4 +75,14 @@ public class RentalPriceCalculatorTests
         Assert.ThrowsExactly<ArgumentException>(() =>
             RentalPriceCalculator.CalculateMonthlyRent(0, tiers));
     }
+    [TestMethod]
+    public void CalculateMonthlyRent_NoPriceTiers_ThrowsInvalidOperationException()
+    {
+        // Arrange: en tom liste uden prisregler
+        var tiers = new List<RentalPriceTier>();
+
+        // Act + Assert
+        Assert.ThrowsExactly<InvalidOperationException>(() =>
+            RentalPriceCalculator.CalculateMonthlyRent(1, tiers));
+    }
 }

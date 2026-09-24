@@ -43,7 +43,7 @@
                                 Style="{StaticResource ClusterRackButtonStyle}"
                                 ToolTip="{Binding TerminationDate, StringFormat='Opsagt til {0:dd-MM-yyyy}'}"
                                 Command="{Binding DataContext.SelectRackCommand,
-                                          RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                          RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
                                 CommandParameter="{Binding}"/>
                     </DataTemplate>
                 </Setter.Value>
@@ -64,27 +64,27 @@
                                 Style="{StaticResource LeftColumnRackButtonStyle}"
                                 ToolTip="{Binding TerminationDate, StringFormat='Opsagt til {0:dd-MM-yyyy}'}"
                                 Command="{Binding DataContext.SelectRackCommand,
-                                          RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                          RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
                                 CommandParameter="{Binding}"/>
                     </DataTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
 
-        <!-- "kort"-stil til lejer-panelet -->
+        <!-- "Kort"-stil til lejer-panelet -->
         <Style x:Key="PanelCardStyle" TargetType="Border">
             <Setter Property="Background" Value="#F1EFE8"/>
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="Padding" Value="12,10"/>
             <Setter Property="MinHeight" Value="40"/>
-            <Setter Property="Margin" Value="0,0,0,20"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
         </Style>
 
         <Style x:Key="PanelLabelStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="Foreground" Value="Gray"/>
-            <Setter Property="Margin" Value="0,0,0,6"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
         </Style>
 
         <Style x:Key="PlaceholderTextStyle" TargetType="TextBlock">
@@ -92,7 +92,6 @@
             <Setter Property="Foreground" Value="#A9A79E"/>
         </Style>
 
-        <!-- "Pille"-stil til hver valgt reol -->
         <Style x:Key="RackPillStyle" TargetType="Border">
             <Setter Property="Background" Value="#E6F1FB"/>
             <Setter Property="CornerRadius" Value="4"/>
@@ -101,116 +100,148 @@
         </Style>
 
         <Style x:Key="NeutralActionButtonStyle" TargetType="Button">
-            <Setter Property="Padding" Value="10"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="12">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </UserControl.Resources>
 
-    <Viewbox Stretch="Uniform">
-        <Grid Margin="10">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="280"/>
-            </Grid.ColumnDefinitions>
+    <Grid Margin="10" HorizontalAlignment="Center">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="300"/>
+        </Grid.ColumnDefinitions>
 
-            <!-- Venstre søjle: reol 13 ned til 1 -->
-            <ItemsControl Grid.Column="0"
-                          ItemsSource="{Binding LeftColumnRacks}"
-                          Style="{StaticResource LeftColumnItemsControlStyle}"/>
+        <!-- Reol-området med en fast reference-størrelse på den indre Grid -->
+        <Viewbox Grid.Column="0" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Top">
+            <Grid Width="700" Height="900" Margin="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
-            <!-- Midten: klynger, samme rækkefølge som plantegningen -->
-            <StackPanel Grid.Column="1" Margin="60,0" HorizontalAlignment="Left">
+                <!-- Venstre søjle -->
+                <ItemsControl Grid.Column="0"
+                              ItemsSource="{Binding LeftColumnRacks}"
+                              Style="{StaticResource LeftColumnItemsControlStyle}"/>
 
-                <ItemsControl ItemsSource="{Binding Cluster_14_18}" Style="{StaticResource ClusterItemsControlStyle}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <UniformGrid Rows="1" Columns="5"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
+                <!-- Midten: klynger -->
+                <StackPanel Grid.Column="1" Margin="40,0,0,0" HorizontalAlignment="Left">
 
-                <ItemsControl ItemsSource="{Binding Cluster_19_24}" Style="{StaticResource ClusterItemsControlStyle}" Margin="0,60,0,0">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <UniformGrid Rows="2" Columns="3"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
-
-                <ItemsControl ItemsSource="{Binding Cluster_25_38}" Style="{StaticResource ClusterItemsControlStyle}" Margin="0,60,0,0">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <UniformGrid Rows="2" Columns="7"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
-
-                <ItemsControl ItemsSource="{Binding Cluster_39_52}" Style="{StaticResource ClusterItemsControlStyle}" Margin="0,60,0,0">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <UniformGrid Rows="2" Columns="7"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
-
-                <ItemsControl ItemsSource="{Binding Cluster_53_66}" Style="{StaticResource ClusterItemsControlStyle}" Margin="0,60,0,0">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <UniformGrid Rows="2" Columns="7"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
-
-                <ItemsControl ItemsSource="{Binding Cluster_67_76}" Style="{StaticResource ClusterItemsControlStyle}" Margin="0,60,0,0">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <UniformGrid Rows="2" Columns="5"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
-
-                <StackPanel Orientation="Horizontal" Margin="0,60,0,0">
-                    <ItemsControl ItemsSource="{Binding Cluster_77_78}" Style="{StaticResource ClusterItemsControlStyle}">
+                    <ItemsControl ItemsSource="{Binding Cluster_14_18}" Style="{StaticResource ClusterItemsControlStyle}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <UniformGrid Rows="1" Columns="2"/>
+                                <UniformGrid Rows="1" Columns="5"/>
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                     </ItemsControl>
 
-                    <ItemsControl ItemsSource="{Binding Cluster_79_80}" Style="{StaticResource ClusterItemsControlStyle}" Margin="60,0,0,0">
+                    <ItemsControl ItemsSource="{Binding Cluster_19_24}" Style="{StaticResource ClusterItemsControlStyle}" Margin="0,15,0,0">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <UniformGrid Rows="1" Columns="2"/>
+                                <UniformGrid Rows="2" Columns="3"/>
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                     </ItemsControl>
+
+                    <ItemsControl ItemsSource="{Binding Cluster_25_38}" Style="{StaticResource ClusterItemsControlStyle}" Margin="0,15,0,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Rows="2" Columns="7"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+
+                    <ItemsControl ItemsSource="{Binding Cluster_39_52}" Style="{StaticResource ClusterItemsControlStyle}" Margin="0,15,0,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Rows="2" Columns="7"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+
+                    <ItemsControl ItemsSource="{Binding Cluster_53_66}" Style="{StaticResource ClusterItemsControlStyle}" Margin="0,15,0,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Rows="2" Columns="7"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+
+                    <ItemsControl ItemsSource="{Binding Cluster_67_76}" Style="{StaticResource ClusterItemsControlStyle}" Margin="0,15,0,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Rows="2" Columns="5"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,15,0,0">
+                        <ItemsControl ItemsSource="{Binding Cluster_77_78}" Style="{StaticResource ClusterItemsControlStyle}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Rows="1" Columns="2"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+
+                        <ItemsControl ItemsSource="{Binding Cluster_79_80}" Style="{StaticResource ClusterItemsControlStyle}" Margin="30,0,0,0">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Rows="1" Columns="2"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </StackPanel>
+
                 </StackPanel>
+            </Grid>
+        </Viewbox>
 
-            </StackPanel>
+        <!-- Højre side: Lejer-panel -->
+        <Grid Grid.Column="1" Margin="15,0,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="1.5*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-            <!-- Højre: lejer-panel -->
-            <StackPanel Grid.Column="2" Margin="15,0,0,0">
+            <TextBlock Grid.Row="0" Text="Vælg lejer" Style="{StaticResource PanelLabelStyle}"/>
 
-                <TextBlock Text="Vælg lejer" Style="{StaticResource PanelLabelStyle}"/>
-                <Grid Margin="0,0,0,8">
-                    <TextBox Padding="6"
-                             Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"/>
-                    <TextBlock Text="Søg efter navn, email eller tlf..."
-                               IsHitTestVisible="False"
-                               Margin="9,0,0,0"
-                               VerticalAlignment="Center"
-                               Foreground="#A9A79E"
-                               Visibility="{Binding SearchQuery, Converter={StaticResource EmptyToVisibilityConverter}}"/>
-                </Grid>
-                <Border Style="{StaticResource PanelCardStyle}">
+            <Grid Grid.Row="1" Margin="0,0,0,8">
+                <TextBox Padding="6" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Text="Søg efter navn, email eller tlf..."
+                           IsHitTestVisible="False"
+                           Margin="9,0,0,0"
+                           VerticalAlignment="Center"
+                           Foreground="#A9A79E"
+                           Visibility="{Binding SearchQuery, Converter={StaticResource EmptyToVisibilityConverter}}"/>
+            </Grid>
+
+            <Border Grid.Row="2" Style="{StaticResource PanelCardStyle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
-                        <!-- Placeholder: vises kun før der er søgt på noget -->
                         <TextBlock Text="Søg efter en lejer for at komme i gang"
                                    Style="{StaticResource PlaceholderTextStyle}"
                                    Visibility="{Binding SearchQuery, Converter={StaticResource EmptyToVisibilityConverter}}"/>
 
-                        <!-- Søgeresultater: vises når der er søgt, men ingen lejer valgt endnu -->
                         <ItemsControl ItemsSource="{Binding SearchResults}"
                                       Visibility="{Binding FoundRenter, Converter={StaticResource EmptyToVisibilityConverter}}">
                             <ItemsControl.ItemTemplate>
@@ -218,7 +249,7 @@
                                     <Button HorizontalContentAlignment="Left"
                                             Style="{StaticResource NeutralActionButtonStyle}"
                                             Command="{Binding DataContext.SelectRenterCommand,
-                                                      RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                      RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
                                             CommandParameter="{Binding}">
                                         <TextBlock>
                                             <Run Text="{Binding FirstName}"/>
@@ -231,7 +262,6 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <!-- Valgt lejer -->
                         <StackPanel Visibility="{Binding FoundRenter, Converter={StaticResource EmptyToVisibilityConverter}, ConverterParameter=Invert}">
                             <TextBlock FontWeight="Bold">
                                 <Run Text="{Binding FoundRenter.FirstName}"/>
@@ -241,14 +271,18 @@
                             <TextBlock FontSize="11" Foreground="Gray" Text="{Binding FoundRenter.Phone}"/>
                         </StackPanel>
                     </StackPanel>
-                </Border>
+                </ScrollViewer>
+            </Border>
 
-                <TextBlock Text="Valgte reoler" Style="{StaticResource PanelLabelStyle}"/>
-                <Border Style="{StaticResource PanelCardStyle}">
+            <TextBlock Grid.Row="3" Text="Valgte reoler" Style="{StaticResource PanelLabelStyle}"/>
+
+            <Border Grid.Row="4" Style="{StaticResource PanelCardStyle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
                         <TextBlock Text="Ingen reoler valgt"
                                    Style="{StaticResource PlaceholderTextStyle}"
                                    Visibility="{Binding SelectedRacks.Count, Converter={StaticResource EmptyToVisibilityConverter}}"/>
+
                         <ItemsControl ItemsSource="{Binding SelectedRacks}"
                                       Visibility="{Binding SelectedRacks.Count, Converter={StaticResource EmptyToVisibilityConverter}, ConverterParameter=Invert}">
                             <ItemsControl.ItemsPanel>
@@ -266,14 +300,18 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </StackPanel>
-                </Border>
+                </ScrollViewer>
+            </Border>
 
-                <TextBlock Text="Kundens reoler" Style="{StaticResource PanelLabelStyle}"/>
-                <Border Style="{StaticResource PanelCardStyle}">
+            <TextBlock Grid.Row="5" Text="Kundens reoler" Style="{StaticResource PanelLabelStyle}"/>
+
+            <Border Grid.Row="6" Style="{StaticResource PanelCardStyle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
                         <TextBlock Text="Ingen reoler endnu"
                                    Style="{StaticResource PlaceholderTextStyle}"
                                    Visibility="{Binding RenterRacks.Count, Converter={StaticResource EmptyToVisibilityConverter}}"/>
+
                         <ItemsControl ItemsSource="{Binding RenterRacks}"
                                       Visibility="{Binding RenterRacks.Count, Converter={StaticResource EmptyToVisibilityConverter}, ConverterParameter=Invert}">
                             <ItemsControl.ItemTemplate>
@@ -298,13 +336,15 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </StackPanel>
-                </Border>
+                </ScrollViewer>
+            </Border>
 
-                <Button Content="Opret aftale" Style="{StaticResource NeutralActionButtonStyle}" Margin="0,0,0,8" Command="{Binding CreateRentalCommand}"/>
-                <Button Content="Opsig aftale" Style="{StaticResource NeutralActionButtonStyle}" Margin="0,0,0,8" Command="{Binding TerminateRentalCommand}"/>
+            <StackPanel Grid.Row="7">
+                <Button Content="Opret aftale" Style="{StaticResource NeutralActionButtonStyle}" Margin="0,0,0,6" Command="{Binding CreateRentalCommand}"/>
+                <Button Content="Opsig aftale" Style="{StaticResource NeutralActionButtonStyle}" Margin="0,0,0,6" Command="{Binding TerminateRentalCommand}"/>
                 <Button Content="Fortryd opsigelse" Style="{StaticResource NeutralActionButtonStyle}" Command="{Binding CancelTerminationCommand}"/>
             </StackPanel>
         </Grid>
-    </Viewbox>
+    </Grid>
 
 </UserControl>

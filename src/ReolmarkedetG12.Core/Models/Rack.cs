@@ -6,6 +6,5 @@ public class Rack
 {
     public int RackId { get; set; }
     public int Number { get; set; }
-    public RackType Type { get; set; }
     public RackStatus Status { get; set; }
 }

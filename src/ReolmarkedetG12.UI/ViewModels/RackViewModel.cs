@@ -2,10 +2,12 @@ using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
+using System.Windows.Threading;
 using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
 using ReolmarkedetG12.Core.Services;
 using ReolmarkedetG12.UI.MVVM;
+using ReolmarkedetG12.UI.Services;
 
 namespace ReolmarkedetG12.UI.ViewModels;
 
@@ -15,6 +17,8 @@ public class RackViewModel : ViewModelBase
     private readonly IRepository<Renter> _renterRepository;
     private readonly IRepository<Rental> _rentalRepository;
     private readonly RentalPriceTierRepository _rentalPriceTierRepository;
+    private readonly IDialogService _dialogService;
+    private readonly DispatcherTimer _terminationCheckTimer;
 
     private readonly ObservableCollection<RackDisplayItem> _selectedRacks = new();
 
@@ -61,12 +65,13 @@ public class RackViewModel : ViewModelBase
     public ICommand TerminateRentalCommand { get; }
     public ICommand CancelTerminationCommand { get; }
 
-    public RackViewModel(IRepository<Rack> rackRepository, IRepository<Renter> renterRepository, IRepository<Rental> rentalRepository, RentalPriceTierRepository rentalPriceTierRepository)
+    public RackViewModel(IRepository<Rack> rackRepository, IRepository<Renter> renterRepository, IRepository<Rental> rentalRepository, RentalPriceTierRepository rentalPriceTierRepository, IDialogService dialogService)
     {
         _rackRepository = rackRepository;
         _renterRepository = renterRepository;
         _rentalRepository = rentalRepository;
         _rentalPriceTierRepository = rentalPriceTierRepository;
+        _dialogService = dialogService;
 
         var allItems = _rackRepository.GetAll()
             .Select(rack => new RackDisplayItem(rack))
@@ -87,8 +92,16 @@ public class RackViewModel : ViewModelBase
         AddRange(Cluster_77_78, InRange(allItems, 77, 78));
         AddRange(Cluster_79_80, InRange(allItems, 79, 80));
 
-        foreach (var item in Racks)
-            RefreshTerminationInfo(item);
+        CheckAllTerminationDates();
+
+        // Tjekker løbende, mens appen kører, om nogen opsigelsesdatoer er nået,
+        // så en gul reol ikke kan "hænge fast" i en lang session uden genstart.
+        _terminationCheckTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMinutes(1)
+        };
+        _terminationCheckTimer.Tick += (_, _) => CheckAllTerminationDates();
+        _terminationCheckTimer.Start();
 
         SelectRackCommand = new RelayCommand(item =>
         {
@@ -108,6 +121,10 @@ public class RackViewModel : ViewModelBase
                 {
                     if (FoundRenter != null && relevantRental.RenterId != FoundRenter.RenterId)
                     {
+                        _dialogService.ShowInfo(
+                            "Denne reol tilhører en anden lejer end den, du allerede har valgt. " +
+                            "Ryd søgefeltet, hvis du vil skifte til en anden lejer.",
+                            "Reol tilhører en anden lejer");
                         return;
                     }
 
@@ -156,6 +173,12 @@ public class RackViewModel : ViewModelBase
         CancelTerminationCommand = new RelayCommand(
             _ => CancelTermination(),
             _ => FoundRenter != null && _selectedRacks.Any(r => r.Rack.Status == RackStatus.Terminated));
+    }
+
+    private void CheckAllTerminationDates()
+    {
+        foreach (var item in Racks)
+            RefreshTerminationInfo(item);
     }
 
     private void RefreshTerminationInfo(RackDisplayItem item)

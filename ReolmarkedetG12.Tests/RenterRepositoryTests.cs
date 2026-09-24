@@ -1,5 +1,6 @@
 ﻿using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
+using ReolmarkedetG12.Core.Exceptions;
 
 namespace ReolmarkedetG12.Tests;
 
@@ -142,5 +143,15 @@ public class RenterRepositoryTests
 
         // Assert
         Assert.IsNull(result);
+    }
+    [TestMethod]
+    public void GetAll_ServerDoesNotExist_ThrowsDatabaseConnectionException()
+    {
+        // Arrange: en server der ikke findes
+        var repo = new RenterRepository(
+            "Server=findes-ikke;Database=x;Connect Timeout=1;Trusted_Connection=True;TrustServerCertificate=True;");
+
+        // Act + Assert
+        Assert.ThrowsExactly<DatabaseConnectionException>(() => repo.GetAll());
     }
 }

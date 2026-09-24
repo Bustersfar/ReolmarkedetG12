@@ -159,7 +159,7 @@ public class RenterViewModel : ViewModelBase
     {
         if (string.IsNullOrWhiteSpace(FirstName) || string.IsNullOrWhiteSpace(LastName) || string.IsNullOrWhiteSpace(Address) || PostalCode <= 0 || string.IsNullOrWhiteSpace(City))
         {
-            MessageBox.Show("Fornavn, Efternavn, Adresse, Postnummer og By skal udfyldes.", "Fejl", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError("Fornavn, Efternavn, Adresse, Postnummer og By skal udfyldes.", "Fejl");
             return;
         }
         var renter = new Renter
@@ -194,9 +194,7 @@ public class RenterViewModel : ViewModelBase
         if (SelectedRenter == null)
             return;
 
-        var result = MessageBox.Show($"Er du sikker på, at du vil slette lejer: {SelectedRenter.FirstName} {SelectedRenter.LastName}?", "Bekræft sletning", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-
-        if (result == MessageBoxResult.Yes)
+        if (_dialogService.Confirm($"Er du sikker på, at du vil slette lejer: {SelectedRenter.FirstName} {SelectedRenter.LastName}?", "Bekræft sletning"))
         {
             _renterRepository.Delete(SelectedRenter.RenterId);
             LoadRenters();

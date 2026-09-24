@@ -4,7 +4,7 @@ using ReolmarkedetG12.Core.Models;
 
 namespace ReolmarkedetG12.Core.Repositories;
 
-public class RentalPriceTierRepository
+public class RentalPriceTierRepository : IRentalPriceTierRepository
 {
     private readonly string _connectionString;
 

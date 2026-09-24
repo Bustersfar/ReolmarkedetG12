@@ -18,7 +18,7 @@ public class RackViewModel : ViewModelBase
     private readonly IRepository<Rack> _rackRepository;
     private readonly IRepository<Renter> _renterRepository;
     private readonly IRepository<Rental> _rentalRepository;
-    private readonly RentalPriceTierRepository _rentalPriceTierRepository;
+    private readonly IRentalPriceTierRepository _rentalPriceTierRepository;
     private readonly IDialogService _dialogService;
     private readonly DispatcherTimer _terminationCheckTimer;
 
@@ -71,7 +71,7 @@ public class RackViewModel : ViewModelBase
     public ICommand TerminateRentalCommand { get; }
     public ICommand CancelTerminationCommand { get; }
 
-    public RackViewModel(IRepository<Rack> rackRepository, IRepository<Renter> renterRepository, IRepository<Rental> rentalRepository, RentalPriceTierRepository rentalPriceTierRepository, IDialogService dialogService)
+    public RackViewModel(IRepository<Rack> rackRepository, IRepository<Renter> renterRepository, IRepository<Rental> rentalRepository, IRentalPriceTierRepository rentalPriceTierRepository, IDialogService dialogService)
     {
         _rackRepository = rackRepository;
         _renterRepository = renterRepository;
@@ -450,7 +450,7 @@ public class RackViewModel : ViewModelBase
         OnPropertyChanged(nameof(TotalMonthlyRent));
     }
 
-    private static DateTime CalculateTerminationEffectiveDate(DateTime today)
+    public static DateTime CalculateTerminationEffectiveDate(DateTime today)
     {
         var monthsToAdd = today.Day < 20 ? 1 : 2;
         var target = today.AddMonths(monthsToAdd);

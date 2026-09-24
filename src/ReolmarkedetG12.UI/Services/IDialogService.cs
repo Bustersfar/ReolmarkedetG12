@@ -4,4 +4,5 @@ public interface IDialogService
 {
     void ShowError(string message, string title);
     void ShowInfo(string message, string title);
+    bool Confirm(string message, string title);
 }

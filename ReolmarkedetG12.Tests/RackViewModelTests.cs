@@ -379,4 +379,24 @@ public class RackViewModelTests
         // Assert: fejlen vises én gang for hver gang, databasen går ned
         Assert.AreEqual(2, _dialog.ErrorCount);
     }
+    [TestMethod]
+    public void SelectRackCommand_RackBelongsToOtherRenter_ShowsInfoAndDoesNotSelect()
+    {
+        // Arrange: to lejere, som hver har en udlejet reol
+        var renterA = AddRenter();
+        var renterB = AddRenter();
+        var rackA = AddRackWithStatus(1, RackStatus.Rented);
+        var rackB = AddRackWithStatus(2, RackStatus.Rented);
+        AddRental(rackA, renterA, null);
+        AddRental(rackB, renterB, null);
+        var viewModel = CreateViewModel();
+        viewModel.SelectRenterCommand.Execute(renterA);
+
+        // Act: klik på lejer B's reol, mens lejer A er valgt
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[1]);
+
+        // Assert
+        Assert.IsNotNull(_dialog.LastInfo);
+        Assert.IsFalse(viewModel.Racks[1].IsSelected);
+    }
 }

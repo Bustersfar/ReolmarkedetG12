@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:ReolmarkedetG12.UI.Views"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="Reolmarkedet" Height="450" Width="800">
     <TabControl>
         <TabItem Header="Reoler">
             <views:RackView DataContext="{Binding RackViewModel}" />

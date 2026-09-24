@@ -1,9 +1,6 @@
 ﻿using Microsoft.Data.SqlClient;
 using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace ReolmarkedetG12.Core.Repositories
 {

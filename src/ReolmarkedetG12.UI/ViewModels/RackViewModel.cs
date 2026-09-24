@@ -1,6 +1,4 @@
-using System;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.Windows.Input;
 using System.Windows.Threading;
 using ReolmarkedetG12.Core.Exceptions;
@@ -21,6 +19,7 @@ public class RackViewModel : ViewModelBase
     private readonly IRentalPriceTierRepository _rentalPriceTierRepository;
     private readonly IDialogService _dialogService;
     private readonly DispatcherTimer _terminationCheckTimer;
+    private bool _timerCheckFailed;
 
     private readonly ObservableCollection<RackDisplayItem> _selectedRacks = new();
 
@@ -98,13 +97,13 @@ public class RackViewModel : ViewModelBase
         AddRange(Cluster_77_78, InRange(allItems, 77, 78));
         AddRange(Cluster_79_80, InRange(allItems, 79, 80));
 
-        CheckAllTerminationDates();
+        SafeExecute(RefreshAllTerminationInfo);
 
         _terminationCheckTimer = new DispatcherTimer
         {
             Interval = TimeSpan.FromMinutes(1)
         };
-        _terminationCheckTimer.Tick += (_, _) => CheckAllTerminationDates();
+        _terminationCheckTimer.Tick += (_, _) => CheckTerminationDatesFromTimer();
         _terminationCheckTimer.Start();
 
         SelectRackCommand = new RelayCommand(item =>
@@ -185,33 +184,45 @@ public class RackViewModel : ViewModelBase
             _ => FoundRenter != null && _selectedRacks.Any(r => r.Rack.Status == RackStatus.Terminated));
     }
 
-    private void SafeExecute(Action action)
+    private bool SafeExecute(Action action, bool showError = true)
     {
         try
         {
             action();
+            return true;
         }
         catch (DatabaseConnectionException ex)
         {
-            _dialogService.ShowError(
-                $"{ex.Message}\n\nTeknisk besked: {ex.InnerException?.Message ?? "ukendt"}",
-                "Forbindelsesfejl");
+            if (showError)
+            {
+                _dialogService.ShowError(
+                    $"{ex.Message}\n\nTeknisk besked: {ex.InnerException?.Message ?? "ukendt"}",
+                    "Forbindelsesfejl");
+            }
+            return false;
         }
         catch (SqlException ex)
         {
-            _dialogService.ShowError(
-                $"Der opstod en fejl i databasen.\n\nTeknisk besked: {ex.Message}",
-                "Databasefejl");
+            if (showError)
+            {
+                _dialogService.ShowError(
+                    $"Der opstod en fejl i databasen.\n\nTeknisk besked: {ex.Message}",
+                    "Databasefejl");
+            }
+            return false;
         }
     }
 
-    private void CheckAllTerminationDates()
+    private void RefreshAllTerminationInfo()
     {
-        SafeExecute(() =>
-        {
-            foreach (var item in Racks)
-                RefreshTerminationInfo(item);
-        });
+        foreach (var item in Racks)
+            RefreshTerminationInfo(item);
+    }
+
+    public void CheckTerminationDatesFromTimer()
+    {
+        // Vis kun fejlen første gang. Er databasen stadig nede, prøver vi stille igen næste minut.
+        _timerCheckFailed = !SafeExecute(RefreshAllTerminationInfo, showError: !_timerCheckFailed);
     }
 
     private void RefreshTerminationInfo(RackDisplayItem item)
@@ -261,9 +272,9 @@ public class RackViewModel : ViewModelBase
         SafeExecute(() =>
         {
             var matches = _renterRepository.GetAll()
-    .Where(r =>
-        $"{r.FirstName} {r.LastName} {r.Email} {r.Phone} {r.Address} {r.PostalCode} {r.City}"
-            .Contains(SearchQuery, StringComparison.OrdinalIgnoreCase));
+                .Where(r =>
+                    $"{r.FirstName} {r.LastName} {r.Email} {r.Phone} {r.Address} {r.PostalCode} {r.City}"
+                        .Contains(SearchQuery, StringComparison.OrdinalIgnoreCase));
 
             foreach (var renter in matches)
                 SearchResults.Add(renter);

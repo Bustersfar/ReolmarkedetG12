@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using ReolmarkedetG12.Core.Models;
+﻿using ReolmarkedetG12.Core.Models;
 
 namespace ReolmarkedetG12.Core.Services;
 

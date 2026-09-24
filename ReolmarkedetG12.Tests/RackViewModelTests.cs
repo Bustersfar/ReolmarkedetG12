@@ -340,4 +340,43 @@ public class RackViewModelTests
 
         Assert.HasCount(0, viewModel.SearchResults);
     }
+    [TestMethod]
+    public void CheckTerminationDatesFromTimer_DatabaseStaysDown_ShowsErrorOnlyOnce()
+    {
+        // Arrange: en opsagt reol, så tjekket rammer databasen
+        var renter = AddRenter();
+        var rack = AddRackWithStatus(1, RackStatus.Terminated);
+        AddRental(rack, renter, new DateTime(2100, 1, 1));
+        var viewModel = CreateViewModel();
+        _rentals.SimulateDatabaseDown = true;
+
+        // Act: timeren tikker tre gange, mens databasen er nede
+        viewModel.CheckTerminationDatesFromTimer();
+        viewModel.CheckTerminationDatesFromTimer();
+        viewModel.CheckTerminationDatesFromTimer();
+
+        // Assert
+        Assert.AreEqual(1, _dialog.ErrorCount);
+    }
+
+    [TestMethod]
+    public void CheckTerminationDatesFromTimer_DatabaseComesBackAndFailsAgain_ShowsErrorAgain()
+    {
+        // Arrange
+        var renter = AddRenter();
+        var rack = AddRackWithStatus(1, RackStatus.Terminated);
+        AddRental(rack, renter, new DateTime(2100, 1, 1));
+        var viewModel = CreateViewModel();
+
+        // Act: databasen går ned, kommer op igen, og går ned igen
+        _rentals.SimulateDatabaseDown = true;
+        viewModel.CheckTerminationDatesFromTimer();
+        _rentals.SimulateDatabaseDown = false;
+        viewModel.CheckTerminationDatesFromTimer();
+        _rentals.SimulateDatabaseDown = true;
+        viewModel.CheckTerminationDatesFromTimer();
+
+        // Assert: fejlen vises én gang for hver gang, databasen går ned
+        Assert.AreEqual(2, _dialog.ErrorCount);
+    }
 }

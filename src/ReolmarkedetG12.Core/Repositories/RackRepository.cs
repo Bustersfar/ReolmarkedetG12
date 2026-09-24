@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Microsoft.Data.SqlClient;
+﻿using Microsoft.Data.SqlClient;
 using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
 namespace ReolmarkedetG12.Core.Repositories;

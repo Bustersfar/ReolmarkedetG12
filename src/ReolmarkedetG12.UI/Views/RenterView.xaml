@@ -3,8 +3,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:converters="clr-namespace:ReolmarkedetG12.UI.Converters"
              mc:Ignorable="d"
             d:DesignHeight="700" d:DesignWidth="1100">
+
+    <UserControl.Resources>
+        <converters:EmptyToVisibilityConverter x:Key="EmptyToVisibilityConverter"/>
+    </UserControl.Resources>
     
     <Grid Margin="15">
         <Grid.RowDefinitions>
@@ -59,6 +64,22 @@
                         <Button Content="Slet" Width="100"
                             Command="{Binding DeleteCommand}" Background="White"/>
                     </WrapPanel>
+
+                    <Separator Margin="0,15,0,15"/>
+                    <TextBlock Text="Søg" FontSize="16" FontWeight="Bold"/>
+                    <Grid Margin="0,5,0,10">
+                        <TextBox Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="Søg efter fornavn, efternavn, email eller telefonnummer..."
+                        IsHitTestVisible="False"
+                        FontSize="12" Foreground="Gray" Margin="5,0,0,0"
+                        Visibility="{Binding SearchQuery, Converter={StaticResource EmptyToVisibilityConverter}}"/>
+                    </Grid>
+
+                    <WrapPanel>
+                        <Button Content="Hent alle" Width="100"
+                            Command="{Binding GetAllCommand}" Background="White"/>
+                    </WrapPanel>
+                    
                 </StackPanel>
             </Border>
 

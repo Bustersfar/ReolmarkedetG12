@@ -32,6 +32,30 @@ public class RackViewModelTests
         _renters.Add(renter);
         return renter;
     }
+    private RackViewModel CreateViewModelWithTwoRenters()
+    {
+        _renters.Add(new Renter
+        {
+            FirstName = "Anna",
+            LastName = "Andersen",
+            Address = "Testvej 2",
+            PostalCode = 4200,
+            City = "Slagelse",
+            Email = "anna@test.dk",
+            Phone = "20000001"
+        });
+        _renters.Add(new Renter
+        {
+            FirstName = "Bo",
+            LastName = "Bertelsen",
+            Address = "Havnevej 5",
+            PostalCode = 4000,
+            City = "Roskilde",
+            Email = "bo@test.dk",
+            Phone = "20000002"
+        });
+        return CreateViewModel();
+    }
     private Rack AddRackWithStatus(int number, RackStatus status)
     {
         var rack = new Rack { Number = number, Status = status };
@@ -251,5 +275,69 @@ public class RackViewModelTests
         // Assert
         Assert.IsNotNull(_dialog.LastError);
         Assert.Contains("Kunne ikke forbinde", _dialog.LastError);
+    }
+    [TestMethod]
+    public void SearchQuery_ByFirstName_FindsRenterIgnoringCase()
+    {
+        var viewModel = CreateViewModelWithTwoRenters();
+
+        viewModel.SearchQuery = "anna";
+
+        Assert.HasCount(1, viewModel.SearchResults);
+        Assert.AreEqual("Anna", viewModel.SearchResults[0].FirstName);
+    }
+
+    [TestMethod]
+    public void SearchQuery_ByFullName_FindsRenter()
+    {
+        var viewModel = CreateViewModelWithTwoRenters();
+
+        viewModel.SearchQuery = "Anna Andersen";
+
+        Assert.HasCount(1, viewModel.SearchResults);
+        Assert.AreEqual("Anna", viewModel.SearchResults[0].FirstName);
+    }
+
+    [TestMethod]
+    public void SearchQuery_ByPhone_FindsRenter()
+    {
+        var viewModel = CreateViewModelWithTwoRenters();
+
+        viewModel.SearchQuery = "20000002";
+
+        Assert.HasCount(1, viewModel.SearchResults);
+        Assert.AreEqual("Bo", viewModel.SearchResults[0].FirstName);
+    }
+
+    [TestMethod]
+    public void SearchQuery_ByAddress_FindsRenter()
+    {
+        var viewModel = CreateViewModelWithTwoRenters();
+
+        viewModel.SearchQuery = "Havnevej";
+
+        Assert.HasCount(1, viewModel.SearchResults);
+        Assert.AreEqual("Bo", viewModel.SearchResults[0].FirstName);
+    }
+
+    [TestMethod]
+    public void SearchQuery_ByCity_FindsRenter()
+    {
+        var viewModel = CreateViewModelWithTwoRenters();
+
+        viewModel.SearchQuery = "Slagelse";
+
+        Assert.HasCount(1, viewModel.SearchResults);
+        Assert.AreEqual("Anna", viewModel.SearchResults[0].FirstName);
+    }
+
+    [TestMethod]
+    public void SearchQuery_NoMatch_ReturnsEmptyList()
+    {
+        var viewModel = CreateViewModelWithTwoRenters();
+
+        viewModel.SearchQuery = "xyz";
+
+        Assert.HasCount(0, viewModel.SearchResults);
     }
 }

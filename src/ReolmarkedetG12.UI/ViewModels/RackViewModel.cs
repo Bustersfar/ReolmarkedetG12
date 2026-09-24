@@ -261,9 +261,9 @@ public class RackViewModel : ViewModelBase
         SafeExecute(() =>
         {
             var matches = _renterRepository.GetAll()
-                .Where(r =>
-                    (r.Email != null && r.Email.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)) ||
-                    (r.Phone != null && r.Phone.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)));
+    .Where(r =>
+        $"{r.FirstName} {r.LastName} {r.Email} {r.Phone} {r.Address} {r.PostalCode} {r.City}"
+            .Contains(SearchQuery, StringComparison.OrdinalIgnoreCase));
 
             foreach (var renter in matches)
                 SearchResults.Add(renter);

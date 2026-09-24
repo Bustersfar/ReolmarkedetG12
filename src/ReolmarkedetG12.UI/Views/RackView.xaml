@@ -227,7 +227,7 @@
 
             <Grid Grid.Row="1" Margin="0,0,0,8">
                 <TextBox Padding="6" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"/>
-                <TextBlock Text="Søg efter navn, email eller tlf..."
+                <TextBlock Text="Søg på navn, email, tlf eller adresse..."
                            IsHitTestVisible="False"
                            Margin="9,0,0,0"
                            VerticalAlignment="Center"
@@ -252,10 +252,18 @@
                                                       RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
                                             CommandParameter="{Binding}">
                                         <TextBlock>
-                                            <Run Text="{Binding FirstName}"/>
-                                            <Run Text="{Binding LastName}"/>
-                                            <LineBreak/>
-                                            <Run Text="{Binding Email}" Foreground="Gray" FontSize="11"/>
+    <Run Text="{Binding FirstName}"/>
+    <Run Text="{Binding LastName}"/>
+    <LineBreak/>
+    <Run Text="{Binding Email}" Foreground="Gray" FontSize="11"/>
+    <Run Text="  ·  " Foreground="Gray" FontSize="11"/>
+    <Run Text="{Binding Phone}" Foreground="Gray" FontSize="11"/>
+    <LineBreak/>
+    <Run Text="{Binding Address}" Foreground="Gray" FontSize="11"/>
+    <Run Text=", " Foreground="Gray" FontSize="11"/>
+    <Run Text="{Binding PostalCode}" Foreground="Gray" FontSize="11"/>
+    <Run Text=" " Foreground="Gray" FontSize="11"/>
+    <Run Text="{Binding City}" Foreground="Gray" FontSize="11"/>
                                         </TextBlock>
                                     </Button>
                                 </DataTemplate>

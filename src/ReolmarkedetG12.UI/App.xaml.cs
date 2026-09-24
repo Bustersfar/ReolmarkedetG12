@@ -62,6 +62,14 @@ public partial class App : Application
             Shutdown();
             return;
         }
+        catch (SqlException ex)
+        {
+            dialogService.ShowError(
+                $"Der opstod en fejl i databasen. Tjek at databasen er oprettet (database/schema.sql).\n\nTeknisk besked: {ex.Message}",
+                "Databasefejl");
+            Shutdown();
+            return;
+        }
 
         var mainViewModel = new MainViewModel(
             new RackViewModel(rackRepository, renterRepository, rentalRepository, rentalPriceTierRepository, dialogService),

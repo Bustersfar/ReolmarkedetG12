@@ -6,7 +6,7 @@ using System.Windows;
 using System.Windows.Input;
 using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.UI.Services;
-
+using Microsoft.Data.SqlClient;
 
 namespace ReolmarkedetG12.UI.ViewModels;
 
@@ -113,18 +113,24 @@ public class RenterViewModel : ViewModelBase
     }
 
     private void SafeExecute(Action action)
+{
+    try
     {
-        try
-        {
-            action();
-        }
-        catch (DatabaseConnectionException ex)
-        {
-            _dialogService.ShowError(
-                $"{ex.Message}\n\nTeknisk besked: {ex.InnerException?.Message ?? "ukendt"}",
-                "Forbindelsesfejl");
-        }
+        action();
     }
+    catch (DatabaseConnectionException ex)
+    {
+        _dialogService.ShowError(
+            $"{ex.Message}\n\nTeknisk besked: {ex.InnerException?.Message ?? "ukendt"}",
+            "Forbindelsesfejl");
+    }
+    catch (SqlException ex)
+    {
+        _dialogService.ShowError(
+            $"Der opstod en fejl i databasen.\n\nTeknisk besked: {ex.Message}",
+            "Databasefejl");
+    }
+}
 
     private void NewRenter()
     {

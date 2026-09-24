@@ -9,6 +9,7 @@ using ReolmarkedetG12.Core.Repositories;
 using ReolmarkedetG12.Core.Services;
 using ReolmarkedetG12.UI.MVVM;
 using ReolmarkedetG12.UI.Services;
+using Microsoft.Data.SqlClient;
 
 namespace ReolmarkedetG12.UI.ViewModels;
 
@@ -195,6 +196,12 @@ public class RackViewModel : ViewModelBase
             _dialogService.ShowError(
                 $"{ex.Message}\n\nTeknisk besked: {ex.InnerException?.Message ?? "ukendt"}",
                 "Forbindelsesfejl");
+        }
+        catch (SqlException ex)
+        {
+            _dialogService.ShowError(
+                $"Der opstod en fejl i databasen.\n\nTeknisk besked: {ex.Message}",
+                "Databasefejl");
         }
     }
 

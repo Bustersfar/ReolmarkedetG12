@@ -1,0 +1,22 @@
+# Reolmarkedet: sådan kører du testene
+
+## Det du skal bruge
+- Windows
+- .NET 10 SDK (gratis): https://dotnet.microsoft.com/download
+
+## Hent koden
+1. Gå til https://github.com/Bustersfar/ReolmarkedetG12/tree/MSTestBranch
+2. Tryk **Code**, og vælg **Download ZIP**.
+3. Højreklik på ZIP-filen, og vælg **Udpak alle**.
+
+## Kør testene
+Dobbeltklik på **koer-tests.bat** i den udpakkede mappe.
+Der åbner et sort vindue. Når det er færdigt, står der, hvor mange tests der er bestået. Der skal ikke stå nogen fejl.
+
+Det kører 43 tests, og de kræver ingen database.
+
+## Valgfrit: kør alle 60 tests (kræver SQL Server)
+1. Åbn `database/schema.sql` i SQL Server Management Studio.
+2. Erstat `Reolmarkedet` med `ReolmarkedetTest` (3 steder), og kør scriptet.
+3. Hedder din server ikke `localhost`, så ret navnet i `ReolmarkedetG12.Tests/TestDatabase.cs`.
+4. Dobbeltklik på **koer-alle-tests.bat**.

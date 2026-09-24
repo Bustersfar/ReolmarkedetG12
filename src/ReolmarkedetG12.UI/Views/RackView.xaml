@@ -269,6 +269,12 @@
                             </TextBlock>
                             <TextBlock FontSize="11" Foreground="Gray" Text="{Binding FoundRenter.Email}"/>
                             <TextBlock FontSize="11" Foreground="Gray" Text="{Binding FoundRenter.Phone}"/>
+                            <TextBlock FontSize="11" Foreground="Gray" Text="{Binding FoundRenter.Address}"/>
+                            <TextBlock FontSize="11" Foreground="Gray">
+                                <Run Text="{Binding FoundRenter.PostalCode}"/>
+                                <Run Text=" "/>
+                                <Run Text="{Binding FoundRenter.City}"/>
+                            </TextBlock>
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
@@ -312,6 +318,12 @@
                                    Style="{StaticResource PlaceholderTextStyle}"
                                    Visibility="{Binding RenterRacks.Count, Converter={StaticResource EmptyToVisibilityConverter}}"/>
 
+                        <TextBlock FontWeight="Bold" Margin="0,0,0,8"
+                                   Visibility="{Binding RenterRacks.Count, Converter={StaticResource EmptyToVisibilityConverter}, ConverterParameter=Invert}">
+                            <Run Text="I alt: "/>
+                            <Run Text="{Binding TotalMonthlyRent, Mode=OneWay, StringFormat='{}{0:0} kr./md.'}"/>
+                        </TextBlock>
+
                         <ItemsControl ItemsSource="{Binding RenterRacks}"
                                       Visibility="{Binding RenterRacks.Count, Converter={StaticResource EmptyToVisibilityConverter}, ConverterParameter=Invert}">
                             <ItemsControl.ItemTemplate>
@@ -323,8 +335,6 @@
                                         <TextBlock FontSize="11" Foreground="Gray">
                                             <Run Text="Udlejet fra "/>
                                             <Run Text="{Binding Rental.StartDate, StringFormat='{}{0:dd-MM-yyyy}'}"/>
-                                            <Run Text=" · "/>
-                                            <Run Text="{Binding Rental.MonthlyRent, StringFormat='{}{0:0} kr./md.'}"/>
                                         </TextBlock>
                                         <TextBlock FontSize="11" Foreground="#854F0B"
                                                    Visibility="{Binding Rental.EndDate, Converter={StaticResource EmptyToVisibilityConverter}, ConverterParameter=Invert}">

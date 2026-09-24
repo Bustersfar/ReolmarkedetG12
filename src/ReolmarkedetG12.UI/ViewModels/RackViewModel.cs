@@ -39,6 +39,10 @@ public class RackViewModel : ViewModelBase
 
     public ObservableCollection<RenterRackDisplayItem> RenterRacks { get; } = new();
 
+    // Samlet månedsbeløb for lejerens aktive/opsagte reoler — udledes af RenterRacks,
+    // ikke gemt separat. Raises OnPropertyChanged manuelt, hver gang RenterRacks ændres.
+    public decimal TotalMonthlyRent => RenterRacks.Sum(r => r.Rental.MonthlyRent);
+
     public ObservableCollection<Renter> SearchResults { get; } = new();
 
     private string _searchQuery = string.Empty;
@@ -180,8 +184,6 @@ public class RackViewModel : ViewModelBase
             _ => FoundRenter != null && _selectedRacks.Any(r => r.Rack.Status == RackStatus.Terminated));
     }
 
-    // Kører en handling, og fanger centralt enhver DatabaseConnectionException undervejs,
-    // så et forbindelsestab midt i en session viser en pæn besked i stedet for at crashe appen.
     private void SafeExecute(Action action)
     {
         try
@@ -245,6 +247,7 @@ public class RackViewModel : ViewModelBase
         {
             FoundRenter = null;
             RenterRacks.Clear();
+            OnPropertyChanged(nameof(TotalMonthlyRent));
             return;
         }
 
@@ -261,6 +264,7 @@ public class RackViewModel : ViewModelBase
 
         FoundRenter = null;
         RenterRacks.Clear();
+        OnPropertyChanged(nameof(TotalMonthlyRent));
     }
 
     private void LoadRenterRacks()
@@ -268,7 +272,10 @@ public class RackViewModel : ViewModelBase
         RenterRacks.Clear();
 
         if (FoundRenter == null)
+        {
+            OnPropertyChanged(nameof(TotalMonthlyRent));
             return;
+        }
 
         var relevantRentals = _rentalRepository.GetAll()
             .Where(r => r.RenterId == FoundRenter.RenterId &&
@@ -280,6 +287,8 @@ public class RackViewModel : ViewModelBase
             if (rackItem != null)
                 RenterRacks.Add(new RenterRackDisplayItem(rackItem, rental));
         }
+
+        OnPropertyChanged(nameof(TotalMonthlyRent));
     }
 
     private void CreateRental()
@@ -313,6 +322,7 @@ public class RackViewModel : ViewModelBase
         }
 
         RecalculateRentPricing();
+        OnPropertyChanged(nameof(TotalMonthlyRent));
         _selectedRacks.Clear();
         ClearRenterSelection();
     }
@@ -355,6 +365,7 @@ public class RackViewModel : ViewModelBase
         }
 
         RecalculateRentPricing();
+        OnPropertyChanged(nameof(TotalMonthlyRent));
         _selectedRacks.Clear();
         ClearRenterSelection();
     }
@@ -397,6 +408,7 @@ public class RackViewModel : ViewModelBase
         }
 
         RecalculateRentPricing();
+        OnPropertyChanged(nameof(TotalMonthlyRent));
         _selectedRacks.Clear();
         ClearRenterSelection();
     }
@@ -428,6 +440,7 @@ public class RackViewModel : ViewModelBase
         FoundRenter = null;
         SearchQuery = string.Empty;
         RenterRacks.Clear();
+        OnPropertyChanged(nameof(TotalMonthlyRent));
     }
 
     private static DateTime CalculateTerminationEffectiveDate(DateTime today)

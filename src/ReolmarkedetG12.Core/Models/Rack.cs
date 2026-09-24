@@ -1,6 +1,4 @@
-﻿using System.Security.AccessControl;
-
-namespace ReolmarkedetG12.Core.Models;
+﻿namespace ReolmarkedetG12.Core.Models;
 
 public class Rack
 {

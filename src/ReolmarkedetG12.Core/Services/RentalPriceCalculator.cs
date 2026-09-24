@@ -10,13 +10,21 @@ public static class RentalPriceCalculator
         if (numberOfRacks <= 0)
             throw new ArgumentException("Antal reoler skal være mindst 1.", nameof(numberOfRacks));
 
-        var matchingTier = priceTiers.FirstOrDefault(tier =>
-            numberOfRacks >= tier.MinRacks &&
-            (tier.MaxRacks == null || numberOfRacks <= tier.MaxRacks));
+        var tiers = priceTiers.ToList();
+        decimal total = 0;
 
-        if (matchingTier == null)
-            throw new InvalidOperationException($"Ingen prisregel matcher {numberOfRacks} reoler.");
+        for (int position = 1; position <= numberOfRacks; position++)
+        {
+            var matchingTier = tiers.FirstOrDefault(tier =>
+                position >= tier.MinRacks &&
+                (tier.MaxRacks == null || position <= tier.MaxRacks));
 
-        return numberOfRacks * matchingTier.PricePerRack;
+            if (matchingTier == null)
+                throw new InvalidOperationException($"Ingen prisregel matcher reol nr. {position}.");
+
+            total += matchingTier.PricePerRack;
+        }
+
+        return total;
     }
 }

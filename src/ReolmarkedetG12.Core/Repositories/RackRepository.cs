@@ -33,7 +33,7 @@ public class RackRepository : IRepository<Rack>
     public IEnumerable<Rack> GetAll()
     {
         var racks = new List<Rack>();
-        string query = "SELECT * FROM RACKx";
+        string query = "SELECT * FROM RACK";
 
         using (SqlConnection connection = OpenConnection())
         {

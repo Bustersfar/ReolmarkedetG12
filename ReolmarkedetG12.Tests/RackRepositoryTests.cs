@@ -70,4 +70,41 @@ public class RackRepositoryTests
         // Act + Assert
         Assert.ThrowsExactly<DatabaseConnectionException>(() => repo.GetAll());
     }
+    [TestMethod]
+    [TestCategory("Database")]
+    public void Update_ChangeStatus_IsSavedInDatabase()
+    {
+        // Arrange: opret en reol
+        var repo = new RackRepository(TestConnectionString);
+        repo.Add(new Rack { Number = 999, Status = RackStatus.Available });
+        var rack = repo.GetAll().First(r => r.Number == 999);
+
+        // Act: ret status, og hent reolen igen
+        rack.Status = RackStatus.Rented;
+        repo.Update(rack);
+        var updated = repo.GetById(rack.RackId);
+
+        // Oprydning
+        repo.Delete(rack.RackId);
+
+        // Assert
+        Assert.IsNotNull(updated);
+        Assert.AreEqual(RackStatus.Rented, updated.Status);
+    }
+    [TestMethod]
+    [TestCategory("Database")]
+    public void Delete_ExistingRack_RemovesItFromDatabase()
+    {
+        // Arrange: opret en reol
+        var repo = new RackRepository(TestConnectionString);
+        repo.Add(new Rack { Number = 999, Status = RackStatus.Available });
+        var rack = repo.GetAll().First(r => r.Number == 999);
+
+        // Act: slet den
+        repo.Delete(rack.RackId);
+        var result = repo.GetById(rack.RackId);
+
+        // Assert
+        Assert.IsNull(result);
+    }
 }

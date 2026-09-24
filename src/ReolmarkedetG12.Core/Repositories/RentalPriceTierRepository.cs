@@ -1,4 +1,5 @@
 ﻿using Microsoft.Data.SqlClient;
+using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
 
 namespace ReolmarkedetG12.Core.Repositories;
@@ -12,15 +13,29 @@ public class RentalPriceTierRepository
         _connectionString = connectionString;
     }
 
+    private SqlConnection OpenConnection()
+    {
+        var connection = new SqlConnection(_connectionString);
+        try
+        {
+            connection.Open();
+            return connection;
+        }
+        catch (SqlException ex)
+        {
+            connection.Dispose();
+            throw new DatabaseConnectionException("Kunne ikke forbinde til databasen.", ex);
+        }
+    }
+
     public IEnumerable<RentalPriceTier> GetAll()
     {
         var tiers = new List<RentalPriceTier>();
         string query = "SELECT * FROM RENTAL_PRICE_TIER";
 
-        using (SqlConnection connection = new SqlConnection(_connectionString))
+        using (SqlConnection connection = OpenConnection())
         {
             SqlCommand command = new SqlCommand(query, connection);
-            connection.Open();
 
             using (SqlDataReader reader = command.ExecuteReader())
             {

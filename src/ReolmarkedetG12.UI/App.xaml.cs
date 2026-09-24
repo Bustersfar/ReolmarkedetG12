@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
+using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Repositories;
 using ReolmarkedetG12.UI.Services;
 using ReolmarkedetG12.UI.ViewModels;
@@ -52,19 +53,19 @@ public partial class App : Application
             // før vi bygger resten af applikationen op omkring den.
             rackRepository.GetAll();
         }
-        catch (SqlException ex)
+        catch (DatabaseConnectionException ex)
         {
             dialogService.ShowError(
                 "Kunne ikke forbinde til databasen. Tjek at SQL Server kører, og at connection string'en i appsettings.json er korrekt.\n\n" +
-                $"Teknisk besked: {ex.Message}",
+                $"Teknisk besked: {ex.InnerException?.Message ?? ex.Message}",
                 "Databasefejl");
             Shutdown();
             return;
         }
 
         var mainViewModel = new MainViewModel(
-    new RackViewModel(rackRepository, renterRepository, rentalRepository, rentalPriceTierRepository, dialogService),
-    new RenterViewModel());
+            new RackViewModel(rackRepository, renterRepository, rentalRepository, rentalPriceTierRepository, dialogService),
+            new RenterViewModel());
 
         var mainWindow = new MainWindow { DataContext = mainViewModel };
         this.MainWindow = mainWindow;

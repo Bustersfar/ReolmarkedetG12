@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
 using System.Windows.Threading;
+using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
 using ReolmarkedetG12.Core.Services;
@@ -94,8 +95,6 @@ public class RackViewModel : ViewModelBase
 
         CheckAllTerminationDates();
 
-        // Tjekker løbende, mens appen kører, om nogen opsigelsesdatoer er nået,
-        // så en gul reol ikke kan "hænge fast" i en lang session uden genstart.
         _terminationCheckTimer = new DispatcherTimer
         {
             Interval = TimeSpan.FromMinutes(1)
@@ -105,80 +104,105 @@ public class RackViewModel : ViewModelBase
 
         SelectRackCommand = new RelayCommand(item =>
         {
-            var clicked = (RackDisplayItem)item!;
-
-            RefreshTerminationInfo(clicked);
-
-            if (!clicked.IsSelected &&
-                (clicked.Rack.Status == RackStatus.Rented || clicked.Rack.Status == RackStatus.Terminated))
+            SafeExecute(() =>
             {
-                var relevantRental = clicked.Rack.Status == RackStatus.Rented
-                    ? _rentalRepository.GetAll().FirstOrDefault(r => r.RackId == clicked.Rack.RackId && r.EndDate == null)
-                    : _rentalRepository.GetAll().Where(r => r.RackId == clicked.Rack.RackId && r.EndDate != null)
-                        .OrderByDescending(r => r.EndDate).FirstOrDefault();
+                var clicked = (RackDisplayItem)item!;
 
-                if (relevantRental != null)
+                RefreshTerminationInfo(clicked);
+
+                if (!clicked.IsSelected &&
+                    (clicked.Rack.Status == RackStatus.Rented || clicked.Rack.Status == RackStatus.Terminated))
                 {
-                    if (FoundRenter != null && relevantRental.RenterId != FoundRenter.RenterId)
-                    {
-                        _dialogService.ShowInfo(
-                            "Denne reol tilhører en anden lejer end den, du allerede har valgt. " +
-                            "Ryd søgefeltet, hvis du vil skifte til en anden lejer.",
-                            "Reol tilhører en anden lejer");
-                        return;
-                    }
+                    var relevantRental = clicked.Rack.Status == RackStatus.Rented
+                        ? _rentalRepository.GetAll().FirstOrDefault(r => r.RackId == clicked.Rack.RackId && r.EndDate == null)
+                        : _rentalRepository.GetAll().Where(r => r.RackId == clicked.Rack.RackId && r.EndDate != null)
+                            .OrderByDescending(r => r.EndDate).FirstOrDefault();
 
-                    var renter = _renterRepository.GetById(relevantRental.RenterId);
-                    if (renter != null)
+                    if (relevantRental != null)
                     {
-                        FoundRenter = renter;
-                        SearchResults.Clear();
-                        LoadRenterRacks();
+                        if (FoundRenter != null && relevantRental.RenterId != FoundRenter.RenterId)
+                        {
+                            _dialogService.ShowInfo(
+                                "Denne reol tilhører en anden lejer end den, du allerede har valgt. " +
+                                "Ryd søgefeltet, hvis du vil skifte til en anden lejer.",
+                                "Reol tilhører en anden lejer");
+                            return;
+                        }
+
+                        var renter = _renterRepository.GetById(relevantRental.RenterId);
+                        if (renter != null)
+                        {
+                            FoundRenter = renter;
+                            SearchResults.Clear();
+                            LoadRenterRacks();
+                        }
                     }
                 }
-            }
 
-            clicked.IsSelected = !clicked.IsSelected;
+                clicked.IsSelected = !clicked.IsSelected;
 
-            if (clicked.IsSelected)
-            {
-                _selectedRacks.Add(clicked);
-            }
-            else
-            {
-                _selectedRacks.Remove(clicked);
-
-                if (_selectedRacks.Count == 0)
+                if (clicked.IsSelected)
                 {
-                    ClearRenterSelection();
+                    _selectedRacks.Add(clicked);
                 }
-            }
+                else
+                {
+                    _selectedRacks.Remove(clicked);
+
+                    if (_selectedRacks.Count == 0)
+                    {
+                        ClearRenterSelection();
+                    }
+                }
+            });
         });
 
         SelectRenterCommand = new RelayCommand(item =>
         {
-            FoundRenter = (Renter)item!;
-            SearchResults.Clear();
-            LoadRenterRacks();
+            SafeExecute(() =>
+            {
+                FoundRenter = (Renter)item!;
+                SearchResults.Clear();
+                LoadRenterRacks();
+            });
         });
 
         CreateRentalCommand = new RelayCommand(
-            _ => CreateRental(),
+            _ => SafeExecute(CreateRental),
             _ => FoundRenter != null && _selectedRacks.Any(r => r.Rack.Status == RackStatus.Available));
 
         TerminateRentalCommand = new RelayCommand(
-            _ => TerminateRental(),
+            _ => SafeExecute(TerminateRental),
             _ => FoundRenter != null && _selectedRacks.Any(r => r.Rack.Status == RackStatus.Rented));
 
         CancelTerminationCommand = new RelayCommand(
-            _ => CancelTermination(),
+            _ => SafeExecute(CancelTermination),
             _ => FoundRenter != null && _selectedRacks.Any(r => r.Rack.Status == RackStatus.Terminated));
+    }
+
+    // Kører en handling, og fanger centralt enhver DatabaseConnectionException undervejs,
+    // så et forbindelsestab midt i en session viser en pæn besked i stedet for at crashe appen.
+    private void SafeExecute(Action action)
+    {
+        try
+        {
+            action();
+        }
+        catch (DatabaseConnectionException ex)
+        {
+            _dialogService.ShowError(
+                $"{ex.Message}\n\nTeknisk besked: {ex.InnerException?.Message ?? "ukendt"}",
+                "Forbindelsesfejl");
+        }
     }
 
     private void CheckAllTerminationDates()
     {
-        foreach (var item in Racks)
-            RefreshTerminationInfo(item);
+        SafeExecute(() =>
+        {
+            foreach (var item in Racks)
+                RefreshTerminationInfo(item);
+        });
     }
 
     private void RefreshTerminationInfo(RackDisplayItem item)
@@ -224,13 +248,16 @@ public class RackViewModel : ViewModelBase
             return;
         }
 
-        var matches = _renterRepository.GetAll()
-            .Where(r =>
-                (r.Email != null && r.Email.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)) ||
-                (r.Phone != null && r.Phone.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)));
+        SafeExecute(() =>
+        {
+            var matches = _renterRepository.GetAll()
+                .Where(r =>
+                    (r.Email != null && r.Email.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)) ||
+                    (r.Phone != null && r.Phone.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)));
 
-        foreach (var renter in matches)
-            SearchResults.Add(renter);
+            foreach (var renter in matches)
+                SearchResults.Add(renter);
+        });
 
         FoundRenter = null;
         RenterRacks.Clear();

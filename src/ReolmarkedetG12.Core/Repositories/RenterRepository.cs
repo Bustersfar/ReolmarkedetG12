@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
 
 namespace ReolmarkedetG12.Core.Repositories
@@ -15,15 +16,29 @@ namespace ReolmarkedetG12.Core.Repositories
             _connectionString = connectionString;
         }
 
+        private SqlConnection OpenConnection()
+        {
+            var connection = new SqlConnection(_connectionString);
+            try
+            {
+                connection.Open();
+                return connection;
+            }
+            catch (SqlException ex)
+            {
+                connection.Dispose();
+                throw new DatabaseConnectionException("Kunne ikke forbinde til databasen.", ex);
+            }
+        }
+
         public IEnumerable<Renter> GetAll()
         {
             var renters = new List<Renter>();
             string query = "SELECT * FROM RENTER";
 
-            using (SqlConnection connection = new SqlConnection(_connectionString))
+            using (SqlConnection connection = OpenConnection())
             {
                 SqlCommand command = new SqlCommand(query, connection);
-                connection.Open();
 
                 using (SqlDataReader reader = command.ExecuteReader())
                 {
@@ -52,11 +67,10 @@ namespace ReolmarkedetG12.Core.Repositories
             Renter? renter = null;
             string query = "SELECT * FROM RENTER WHERE RenterId = @RenterId";
 
-            using (SqlConnection connection = new SqlConnection(_connectionString))
+            using (SqlConnection connection = OpenConnection())
             {
                 SqlCommand command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@RenterId", id);
-                connection.Open();
 
                 using (SqlDataReader reader = command.ExecuteReader())
                 {
@@ -84,7 +98,7 @@ namespace ReolmarkedetG12.Core.Repositories
         {
             string query = "INSERT INTO RENTER (FirstName, LastName, Address, PostalCode, City, Email, Phone) VALUES (@FirstName, @LastName, @Address, @PostalCode, @City, @Email, @Phone)";
 
-            using (SqlConnection connection = new SqlConnection(_connectionString))
+            using (SqlConnection connection = OpenConnection())
             {
                 SqlCommand command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@FirstName", renter.FirstName);
@@ -94,7 +108,6 @@ namespace ReolmarkedetG12.Core.Repositories
                 command.Parameters.AddWithValue("@City", renter.City);
                 command.Parameters.AddWithValue("@Email", (object?)renter.Email ?? DBNull.Value);
                 command.Parameters.AddWithValue("@Phone", (object?)renter.Phone ?? DBNull.Value);
-                connection.Open();
                 command.ExecuteNonQuery();
             }
         }
@@ -103,7 +116,7 @@ namespace ReolmarkedetG12.Core.Repositories
         {
             string query = "UPDATE RENTER SET FirstName = @FirstName, LastName = @LastName, Address = @Address, PostalCode = @PostalCode, City = @City, Email = @Email, Phone = @Phone WHERE RenterId = @RenterId";
 
-            using (SqlConnection connection = new SqlConnection(_connectionString))
+            using (SqlConnection connection = OpenConnection())
             {
                 SqlCommand command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@FirstName", renter.FirstName);
@@ -114,7 +127,6 @@ namespace ReolmarkedetG12.Core.Repositories
                 command.Parameters.AddWithValue("@Email", (object?)renter.Email ?? DBNull.Value);
                 command.Parameters.AddWithValue("@Phone", (object?)renter.Phone ?? DBNull.Value);
                 command.Parameters.AddWithValue("@RenterId", renter.RenterId);
-                connection.Open();
                 command.ExecuteNonQuery();
             }
         }
@@ -123,11 +135,10 @@ namespace ReolmarkedetG12.Core.Repositories
         {
             string query = "DELETE FROM RENTER WHERE RenterId = @RenterId";
 
-            using (SqlConnection connection = new SqlConnection(_connectionString))
+            using (SqlConnection connection = OpenConnection())
             {
                 SqlCommand command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@RenterId", id);
-                connection.Open();
                 command.ExecuteNonQuery();
             }
         }

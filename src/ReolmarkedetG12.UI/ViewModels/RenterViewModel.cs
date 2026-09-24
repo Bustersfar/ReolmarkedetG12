@@ -4,6 +4,8 @@ using ReolmarkedetG12.UI.MVVM;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Input;
+using ReolmarkedetG12.Core.Exceptions;
+using ReolmarkedetG12.UI.Services;
 
 
 namespace ReolmarkedetG12.UI.ViewModels;
@@ -11,6 +13,7 @@ namespace ReolmarkedetG12.UI.ViewModels;
 public class RenterViewModel : ViewModelBase
 {
     private readonly IRepository<Renter> _renterRepository;
+    private readonly IDialogService _dialogService;
 
     public ObservableCollection<Renter> Renters { get; }
 
@@ -92,20 +95,35 @@ public class RenterViewModel : ViewModelBase
     public ICommand NewCommand { get; }
     public ICommand SaveCommand { get; }
     public ICommand DeleteCommand { get; }
-  
 
-    public RenterViewModel(IRepository<Renter> renterRepository)
+
+    public RenterViewModel(IRepository<Renter> renterRepository, IDialogService dialogService)
     {
         _renterRepository = renterRepository;
+        _dialogService = dialogService;
 
         Renters = new ObservableCollection<Renter>();
 
         NewCommand = new RelayCommand(_ => NewRenter());
-        SaveCommand = new RelayCommand(_ => SaveRenter());
-        DeleteCommand = new RelayCommand(_ => DeleteRenter(), _=> SelectedRenter != null && SelectedRenter.RenterId > 0);
+        SaveCommand = new RelayCommand(_ => SafeExecute(SaveRenter));
+        DeleteCommand = new RelayCommand(_ => SafeExecute(DeleteRenter), _ => SelectedRenter != null && SelectedRenter.RenterId > 0);
 
-        LoadRenters();
+        SafeExecute(LoadRenters);
         NewRenter();
+    }
+
+    private void SafeExecute(Action action)
+    {
+        try
+        {
+            action();
+        }
+        catch (DatabaseConnectionException ex)
+        {
+            _dialogService.ShowError(
+                $"{ex.Message}\n\nTeknisk besked: {ex.InnerException?.Message ?? "ukendt"}",
+                "Forbindelsesfejl");
+        }
     }
 
     private void NewRenter()
@@ -135,8 +153,8 @@ public class RenterViewModel : ViewModelBase
     {
         if (string.IsNullOrWhiteSpace(FirstName) || string.IsNullOrWhiteSpace(LastName) || string.IsNullOrWhiteSpace(Address) || PostalCode <= 0 || string.IsNullOrWhiteSpace(City))
         {
-                MessageBox.Show("Fornavn, Efternavn, Adresse, Postnummer og By skal udfyldes.", "Fejl", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
+            MessageBox.Show("Fornavn, Efternavn, Adresse, Postnummer og By skal udfyldes.", "Fejl", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
         }
         var renter = new Renter
         {
@@ -149,7 +167,7 @@ public class RenterViewModel : ViewModelBase
             Phone = string.IsNullOrWhiteSpace(Phone) ? null : Phone,
             Email = string.IsNullOrWhiteSpace(Email) ? null : Email
         };
-        
+
         if (renter.RenterId == 0)
         {
             // New renter
@@ -178,5 +196,5 @@ public class RenterViewModel : ViewModelBase
             LoadRenters();
             NewRenter();
         }
-    } 
+    }
 }

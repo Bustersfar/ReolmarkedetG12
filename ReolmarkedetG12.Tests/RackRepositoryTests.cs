@@ -1,5 +1,7 @@
-﻿using ReolmarkedetG12.Core.Models;
+﻿using ReolmarkedetG12.Core.Exceptions;
+using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
+using ReolmarkedetG12.Core.Exceptions;
 
 namespace ReolmarkedetG12.Tests;
 
@@ -44,5 +46,28 @@ public class RackRepositoryTests
 
         // Assert
         Assert.IsNotNull(saved);
+    }
+    [TestMethod]
+    [TestCategory("Database")]
+    public void GetById_NonExistingId_ReturnsNull()
+    {
+        // Arrange
+        var repo = new RackRepository(TestConnectionString);
+
+        // Act
+        var rack = repo.GetById(-1);
+
+        // Assert
+        Assert.IsNull(rack);
+    }
+    [TestMethod]
+    public void GetAll_ServerDoesNotExist_ThrowsDatabaseConnectionException()
+    {
+        // Arrange: en server der ikke findes
+        var repo = new RackRepository(
+            "Server=findes-ikke;Database=x;Connect Timeout=1;Trusted_Connection=True;TrustServerCertificate=True;");
+
+        // Act + Assert
+        Assert.ThrowsExactly<DatabaseConnectionException>(() => repo.GetAll());
     }
 }

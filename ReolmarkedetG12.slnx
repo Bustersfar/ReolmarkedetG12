@@ -3,4 +3,5 @@
     <Project Path="src/ReolmarkedetG12.Core/ReolmarkedetG12.Core.csproj" />
     <Project Path="src/ReolmarkedetG12.UI/ReolmarkedetG12.UI.csproj" />
   </Folder>
+  <Project Path="ReolmarkedetG12.Tests/ReolmarkedetG12.Tests.csproj" Id="5a3a33aa-538f-4273-9b34-4c3e22280807" />
 </Solution>

@@ -8,8 +8,7 @@ namespace ReolmarkedetG12.Tests;
 [DoNotParallelize]
 public class RentalRepositoryTests
 {
-    private const string TestConnectionString =
-        "Server=localhost;Database=ReolmarkedetTest;Trusted_Connection=True;TrustServerCertificate=True;";
+    private const string TestConnectionString = TestDatabase.ConnectionString;
 
     // En lejeaftale skal høre til en lejer, så vi opretter en testlejer
     private static Renter CreateTestRenter()

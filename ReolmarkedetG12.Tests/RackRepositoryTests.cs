@@ -9,8 +9,7 @@ namespace ReolmarkedetG12.Tests;
 [DoNotParallelize]
 public class RackRepositoryTests
 {
-    private const string TestConnectionString =
-        "Server=localhost;Database=ReolmarkedetTest;Trusted_Connection=True;TrustServerCertificate=True;";
+    private const string TestConnectionString = TestDatabase.ConnectionString;
 
     [TestMethod]
     [TestCategory("Database")]

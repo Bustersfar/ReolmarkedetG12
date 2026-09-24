@@ -19,7 +19,7 @@ public class RentalPriceTierRepositoryTests
         var tiers = repo.GetAll().ToList();
 
         // Assert
-        Assert.AreEqual(3, tiers.Count);
+        Assert.HasCount(3, tiers);
     }
 
     [TestMethod]

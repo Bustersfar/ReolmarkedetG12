@@ -22,7 +22,7 @@ public class RackRepositoryTests
         var racks = repo.GetAll().ToList();
 
         // Assert
-        Assert.AreEqual(80, racks.Count);
+        Assert.HasCount(80, racks);
     }
 
     [TestMethod]

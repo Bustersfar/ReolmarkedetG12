@@ -1,7 +1,6 @@
 ﻿using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
-using ReolmarkedetG12.Core.Exceptions;
 
 namespace ReolmarkedetG12.Tests;
 

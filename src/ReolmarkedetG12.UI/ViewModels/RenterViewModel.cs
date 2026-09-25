@@ -2,7 +2,6 @@ using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
 using ReolmarkedetG12.UI.MVVM;
 using System.Collections.ObjectModel;
-using System.Windows;
 using System.Windows.Input;
 using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.UI.Services;
@@ -16,6 +15,23 @@ public class RenterViewModel : ViewModelBase
     private readonly IDialogService _dialogService;
 
     public ObservableCollection<Renter> Renters { get; }
+
+
+
+    private string _searchQuery = string.Empty;
+    public string SearchQuery
+    {
+        get => _searchQuery;
+        set
+        {
+            if (SetProperty(ref _searchQuery, value))
+            {
+                FilterRenters();
+            }
+        }
+
+    }
+
 
     private Renter? _selectedRenter;
     public Renter? SelectedRenter
@@ -95,6 +111,7 @@ public class RenterViewModel : ViewModelBase
     public ICommand NewCommand { get; }
     public ICommand SaveCommand { get; }
     public ICommand DeleteCommand { get; }
+    public ICommand GetAllCommand { get; }
 
 
     public RenterViewModel(IRepository<Renter> renterRepository, IDialogService dialogService)
@@ -107,6 +124,7 @@ public class RenterViewModel : ViewModelBase
         NewCommand = new RelayCommand(_ => NewRenter());
         SaveCommand = new RelayCommand(_ => SafeExecute(SaveRenter));
         DeleteCommand = new RelayCommand(_ => SafeExecute(DeleteRenter), _ => SelectedRenter != null && SelectedRenter.RenterId > 0);
+        GetAllCommand = new RelayCommand(_ => SafeExecute(LoadRenters));
 
         SafeExecute(LoadRenters);
         NewRenter();
@@ -201,4 +219,29 @@ public class RenterViewModel : ViewModelBase
             NewRenter();
         }
     }
+
+    private void FilterRenters()
+    {
+        if (string.IsNullOrWhiteSpace(SearchQuery))
+        {
+            LoadRenters();
+            return;
+        }
+        
+        var search = SearchQuery.ToLower();
+
+        var results = _renterRepository.GetAll().Where(r =>
+            r.FirstName.ToLower().Contains(search) ||
+            r.LastName.ToLower().Contains(search) ||
+            (r.Phone != null && r.Phone.ToLower().Contains(search)) ||
+            (r.Email != null && r.Email.ToLower().Contains(search)));
+
+        Renters.Clear();
+        foreach (var renter in results)
+        {
+            Renters.Add(renter);
+        }
+    }
+
+
 }

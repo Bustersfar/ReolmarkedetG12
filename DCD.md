@@ -131,8 +131,73 @@ class RenterViewModel
 }
 
 
+%%======================
+%% VIEWS
+%%======================
+namespace UI.Views{
+class MainWindow
+class RackView
+class RenterView
+}
+
+%%======================
+%% RELATIONSHIPS
+%%======================
 
 Renter "1" -- "0..*" Rental : rents
 Rack "1" -- "0..*" Rental : contains
-Rack -- RackStatus : 
+Rack --> RackStatus : 
+RentalPriceCalculator --> RentalPriceTier : uses
+
+
+%%=====================
+%%REPOSITORY IMPLEMENTATIONS
+%%=====================
+IRepository~T~ <|.. RenterRepository
+IRepository~T~ <|.. RentalRepository
+IRepository~T~ <|.. RackRepository
+IRentalPriceTierRepository <|.. RentalPriceTierRepository
+
+
+%%=====================
+%%MVVM INHERITANCE
+%%=====================
+RackViewModel --|> ViewModelBase
+RenterViewModel --|> ViewModelBase
+MainViewModel --|> ViewModelBase
+
+
+%%=====================
+%% COMMANDS
+%%=====================
+RackViewModel --> RelayCommand 
+RenterViewModel --> RelayCommand
+
+%%=====================
+%% REPOSITORY USAGE
+%%=====================
+RenterViewModel --> RenterRepository
+RackViewModel --> RackRepository
+RackViewModel --> RentalRepository
+RackViewModel --> RenterRepository
+RackViewModel --> RentalPriceTierRepository
+
+%%=====================
+%% DIALOG SERVICE USAGE
+%%=====================
+RackViewModel --> IDialogService
+RenterViewModel --> IDialogService
+MessageBoxDialogService --> IDialogService
+
+%%=====================
+%% MAIN VIEWMODEL USAGE
+%%=====================
+MainViewModel --> RackViewModel
+MainViewModel --> RenterViewModel
+
+%%=====================
+DATACONTEXT
+%%=====================
+
+
 ```

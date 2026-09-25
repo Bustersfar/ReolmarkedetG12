@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="DCD.md" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/ReolmarkedetG12.Core/ReolmarkedetG12.Core.csproj" />
     <Project Path="src/ReolmarkedetG12.UI/ReolmarkedetG12.UI.csproj" />

@@ -339,7 +339,7 @@ public class RackViewModel : ViewModelBase
         var firstMonthTotal = _selectedRacks
             .Where(r => r.Rack.Status == RackStatus.Available)
             .Sum(r => r.MonthRent);
-        if (!_dialogService.Confirm($"Leje første måned udgør {firstMonthTotal:0.00} kr. Ønsker du at fortsætte?", "Oprettelse"))
+        if (!_dialogService.Confirm($"Leje første måned udgør {firstMonthTotal:0.00} kr. Modtag betaling. Ønsker du at fortsætte?", "Oprettelse"))
             return;
 
         foreach (var item in _selectedRacks.ToList())

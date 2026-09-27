@@ -1,4 +1,5 @@
 ﻿using ReolmarkedetG12.Core.Models;
+using ReolmarkedetG12.Core.Services;
 using ReolmarkedetG12.Tests.Fakes;
 using ReolmarkedetG12.UI.ViewModels;
 
@@ -11,10 +12,11 @@ public class RackViewModelTests
     private readonly FakeRackRepository _racks = new();
     private readonly FakeRenterRepository _renters = new();
     private readonly FakeRentalRepository _rentals = new();
+    private readonly FakePaymentRepository _payments = new();
     private readonly FakeDialogService _dialog = new();
 
     private RackViewModel CreateViewModel() =>
-        new RackViewModel(_racks, _renters, _rentals, new FakePriceTierRepository(), _dialog);
+        new RackViewModel(_racks, _renters, _rentals, new FakePriceTierRepository(), _payments, _dialog);
 
     private void AddRack(int number) =>
         _racks.Add(new Rack { Number = number, Status = RackStatus.Available });
@@ -181,6 +183,50 @@ public class RackViewModelTests
         Assert.HasCount(2, _rentals.Rentals);
         Assert.AreEqual(837.5m, _rentals.Rentals[0].MonthlyRent);
         Assert.AreEqual(837.5m, _rentals.Rentals[1].MonthlyRent);
+    }
+
+    [TestMethod]
+    public void CreateRentalCommand_Confirmed_CreatesFirstMonthPayment()
+    {
+        // Arrange: to ledige reoler og én lejer, brugeren svarer ja
+        AddRack(1);
+        AddRack(2);
+        var renter = AddRenter();
+        var viewModel = CreateViewModel();
+        viewModel.SelectRenterCommand.Execute(renter);
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[0]);
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[1]);
+
+        // Act
+        viewModel.CreateRentalCommand.Execute(null);
+
+        // Assert: én samlet betaling for første (del)måned af 837,50 pr. reol
+        var expectedAmount = 2 * RentalPriceCalculator.CalculatePartialMonthRent(837.5m, DateOnly.FromDateTime(DateTime.Now));
+        Assert.HasCount(1, _payments.Payments);
+        var payment = _payments.Payments[0];
+        Assert.AreEqual(renter.RenterId, payment.RenterId);
+        Assert.AreEqual(PaymentType.FirstMonthPayment, payment.Type);
+        Assert.AreEqual(PaymentMethod.MobilePay, payment.PaymentMethod);
+        Assert.AreEqual(expectedAmount, payment.Amount);
+    }
+
+    [TestMethod]
+    public void CreateRentalCommand_Declined_CreatesNoPaymentOrRental()
+    {
+        // Arrange: brugeren svarer nej i bekræftelsesdialogen
+        AddRack(1);
+        var renter = AddRenter();
+        var viewModel = CreateViewModel();
+        viewModel.SelectRenterCommand.Execute(renter);
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[0]);
+        _dialog.ConfirmResult = false;
+
+        // Act
+        viewModel.CreateRentalCommand.Execute(null);
+
+        // Assert
+        Assert.HasCount(0, _payments.Payments);
+        Assert.HasCount(0, _rentals.Rentals);
     }
     [TestMethod]
     public void CalculateTerminationEffectiveDate_On19th_ReturnsFirstOfNextMonth()

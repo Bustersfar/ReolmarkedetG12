@@ -26,4 +26,11 @@ public static class RentalPriceCalculator
 
         return total;
     }
+
+    public static decimal CalculatePartialMonthRent(decimal monthlyRent, DateOnly startDate)
+    {
+        int daysInMonth = DateTime.DaysInMonth(startDate.Year, startDate.Month);
+        int remainingDays = daysInMonth - startDate.Day + 1;
+        return monthlyRent * remainingDays / daysInMonth;
+    }
 }

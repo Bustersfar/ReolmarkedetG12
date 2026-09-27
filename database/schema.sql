@@ -138,3 +138,18 @@ BEGIN
     (10, 10, DATEADD(MONTH, -1, GETDATE()), '2026-11-01', 850.00);
 END
 GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'PAYMENT')
+BEGIN
+    CREATE TABLE PAYMENT
+    (
+        PaymentId     INT IDENTITY(1,1) PRIMARY KEY,
+        RenterId      INT NOT NULL,
+        Date          DATETIME NOT NULL,
+        Amount        DECIMAL(10,2) NOT NULL,
+        Type          INT NOT NULL,           -- 0 = FirstMonthPayment, 1 = MonthlyPayment
+        PaymentMethod INT NOT NULL DEFAULT 0, -- 0 = MobilePay, 1 = Bank
+        CONSTRAINT FK_Payment_Renter FOREIGN KEY (RenterId) REFERENCES RENTER(RenterId)
+    );
+END
+GO

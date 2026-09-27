@@ -2,7 +2,6 @@ using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
 using ReolmarkedetG12.UI.MVVM;
 using System.Collections.ObjectModel;
-using System.Windows;
 using System.Windows.Input;
 using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.UI.Services;
@@ -13,9 +12,23 @@ namespace ReolmarkedetG12.UI.ViewModels;
 public class RenterViewModel : ViewModelBase
 {
     private readonly IRepository<Renter> _renterRepository;
+    private readonly IRepository<Rental> _rentalRepository;
     private readonly IDialogService _dialogService;
 
     public ObservableCollection<Renter> Renters { get; }
+
+    private string _searchQuery = string.Empty;
+    public string SearchQuery
+    {
+        get => _searchQuery;
+        set
+        {
+            if (SetProperty(ref _searchQuery, value))
+            {
+                FilterRenters();
+            }
+        }
+    }
 
     private Renter? _selectedRenter;
     public Renter? SelectedRenter
@@ -95,11 +108,12 @@ public class RenterViewModel : ViewModelBase
     public ICommand NewCommand { get; }
     public ICommand SaveCommand { get; }
     public ICommand DeleteCommand { get; }
+    public ICommand GetAllCommand { get; }
 
-
-    public RenterViewModel(IRepository<Renter> renterRepository, IDialogService dialogService)
+    public RenterViewModel(IRepository<Renter> renterRepository, IRepository<Rental> rentalRepository, IDialogService dialogService)
     {
         _renterRepository = renterRepository;
+        _rentalRepository = rentalRepository;
         _dialogService = dialogService;
 
         Renters = new ObservableCollection<Renter>();
@@ -107,30 +121,31 @@ public class RenterViewModel : ViewModelBase
         NewCommand = new RelayCommand(_ => NewRenter());
         SaveCommand = new RelayCommand(_ => SafeExecute(SaveRenter));
         DeleteCommand = new RelayCommand(_ => SafeExecute(DeleteRenter), _ => SelectedRenter != null && SelectedRenter.RenterId > 0);
+        GetAllCommand = new RelayCommand(_ => SafeExecute(LoadRenters));
 
         SafeExecute(LoadRenters);
         NewRenter();
     }
 
     private void SafeExecute(Action action)
-{
-    try
     {
-        action();
+        try
+        {
+            action();
+        }
+        catch (DatabaseConnectionException ex)
+        {
+            _dialogService.ShowError(
+                $"{ex.Message}\n\nTeknisk besked: {ex.InnerException?.Message ?? "ukendt"}",
+                "Forbindelsesfejl");
+        }
+        catch (SqlException ex)
+        {
+            _dialogService.ShowError(
+                $"Der opstod en fejl i databasen.\n\nTeknisk besked: {ex.Message}",
+                "Databasefejl");
+        }
     }
-    catch (DatabaseConnectionException ex)
-    {
-        _dialogService.ShowError(
-            $"{ex.Message}\n\nTeknisk besked: {ex.InnerException?.Message ?? "ukendt"}",
-            "Forbindelsesfejl");
-    }
-    catch (SqlException ex)
-    {
-        _dialogService.ShowError(
-            $"Der opstod en fejl i databasen.\n\nTeknisk besked: {ex.Message}",
-            "Databasefejl");
-    }
-}
 
     private void NewRenter()
     {
@@ -194,11 +209,43 @@ public class RenterViewModel : ViewModelBase
         if (SelectedRenter == null)
             return;
 
+        var harLejemaal = _rentalRepository.GetAll().Any(r => r.RenterId == SelectedRenter.RenterId);
+        if (harLejemaal)
+        {
+            _dialogService.ShowError(
+                $"{SelectedRenter.FirstName} {SelectedRenter.LastName} har (eller har haft) lejemål og kan derfor ikke slettes.",
+                "Kan ikke slette lejer");
+            return;
+        }
+
         if (_dialogService.Confirm($"Er du sikker på, at du vil slette lejer: {SelectedRenter.FirstName} {SelectedRenter.LastName}?", "Bekræft sletning"))
         {
             _renterRepository.Delete(SelectedRenter.RenterId);
             LoadRenters();
             NewRenter();
+        }
+    }
+
+    private void FilterRenters()
+    {
+        if (string.IsNullOrWhiteSpace(SearchQuery))
+        {
+            LoadRenters();
+            return;
+        }
+
+        var search = SearchQuery.ToLower();
+
+        var results = _renterRepository.GetAll().Where(r =>
+            r.FirstName.ToLower().Contains(search) ||
+            r.LastName.ToLower().Contains(search) ||
+            (r.Phone != null && r.Phone.ToLower().Contains(search)) ||
+            (r.Email != null && r.Email.ToLower().Contains(search)));
+
+        Renters.Clear();
+        foreach (var renter in results)
+        {
+            Renters.Add(renter);
         }
     }
 }

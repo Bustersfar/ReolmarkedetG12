@@ -16,7 +16,7 @@ public class RenterViewModelTests
         repo.Add(new Renter { FirstName = "Bo", LastName = "Bertelsen", Address = "Vej 2", PostalCode = 4200, City = "Slagelse" });
 
         // Act
-        var viewModel = new RenterViewModel(repo, new FakeDialogService());
+        var viewModel = new RenterViewModel(repo, new FakeRentalRepository(), new FakeDialogService());
 
         // Assert
         Assert.HasCount(2, viewModel.Renters);
@@ -27,7 +27,7 @@ public class RenterViewModelTests
     {
         // Arrange: udfyld formularen
         var repo = new FakeRenterRepository();
-        var viewModel = new RenterViewModel(repo, new FakeDialogService());
+        var viewModel = new RenterViewModel(repo, new FakeRentalRepository(), new FakeDialogService());
         viewModel.FirstName = "Anna";
         viewModel.LastName = "Andersen";
         viewModel.Address = "Testvej 1";
@@ -48,7 +48,7 @@ public class RenterViewModelTests
         // Arrange: fornavn mangler
         var repo = new FakeRenterRepository();
         var dialog = new FakeDialogService();
-        var viewModel = new RenterViewModel(repo, dialog);
+        var viewModel = new RenterViewModel(repo, new FakeRentalRepository(), dialog);
         viewModel.LastName = "Andersen";
         viewModel.Address = "Testvej 1";
         viewModel.PostalCode = 4200;
@@ -68,7 +68,7 @@ public class RenterViewModelTests
         // Arrange: databasen er fin ved opstart, men går ned bagefter
         var repo = new FakeRenterRepository();
         var dialog = new FakeDialogService();
-        var viewModel = new RenterViewModel(repo, dialog);
+        var viewModel = new RenterViewModel(repo, new FakeRentalRepository(), dialog);
         viewModel.FirstName = "Anna";
         viewModel.LastName = "Andersen";
         viewModel.Address = "Testvej 1";
@@ -92,7 +92,7 @@ public class RenterViewModelTests
         var dialog = new FakeDialogService();
 
         // Act
-        var viewModel = new RenterViewModel(repo, dialog);
+        var viewModel = new RenterViewModel(repo, new FakeRentalRepository(), dialog);
 
         // Assert
         Assert.IsNotNull(dialog.LastError);
@@ -105,7 +105,7 @@ public class RenterViewModelTests
         var repo = new FakeRenterRepository();
         repo.Add(new Renter { FirstName = "Anna", LastName = "Andersen", Address = "Vej 1", PostalCode = 4200, City = "Slagelse" });
         var dialog = new FakeDialogService { ConfirmResult = true };
-        var viewModel = new RenterViewModel(repo, dialog);
+        var viewModel = new RenterViewModel(repo, new FakeRentalRepository(), dialog);
         viewModel.SelectedRenter = viewModel.Renters[0];
 
         // Act
@@ -122,7 +122,7 @@ public class RenterViewModelTests
         var repo = new FakeRenterRepository();
         repo.Add(new Renter { FirstName = "Anna", LastName = "Andersen", Address = "Vej 1", PostalCode = 4200, City = "Slagelse" });
         var dialog = new FakeDialogService { ConfirmResult = false };
-        var viewModel = new RenterViewModel(repo, dialog);
+        var viewModel = new RenterViewModel(repo, new FakeRentalRepository(), dialog);
         viewModel.SelectedRenter = viewModel.Renters[0];
 
         // Act
@@ -133,12 +133,33 @@ public class RenterViewModelTests
     }
 
     [TestMethod]
+    public void DeleteCommand_RenterHasRentals_ShowsErrorAndKeepsRenter()
+    {
+        // Arrange: én lejer, som har et lejemål registreret
+        var repo = new FakeRenterRepository();
+        repo.Add(new Renter { FirstName = "Anna", LastName = "Andersen", Address = "Vej 1", PostalCode = 4200, City = "Slagelse" });
+        var rentalRepo = new FakeRentalRepository();
+        rentalRepo.Add(new Rental { RackId = 1, RenterId = repo.Renters[0].RenterId, StartDate = DateTime.Now });
+        var dialog = new FakeDialogService { ConfirmResult = true };
+        var viewModel = new RenterViewModel(repo, rentalRepo, dialog);
+        viewModel.SelectedRenter = viewModel.Renters[0];
+
+        // Act
+        viewModel.DeleteCommand.Execute(null);
+
+        // Assert: lejeren slettes ikke, og der vises en forklarende fejl (ikke en rå SQL-fejl)
+        Assert.HasCount(1, repo.Renters);
+        Assert.IsNotNull(dialog.LastError);
+        Assert.Contains("kan derfor ikke slettes", dialog.LastError);
+    }
+
+    [TestMethod]
     public void SaveCommand_ExistingRenter_UpdatesInsteadOfAddingNew()
     {
         // Arrange: vælg en eksisterende lejer, og ret byen
         var repo = new FakeRenterRepository();
         repo.Add(new Renter { FirstName = "Anna", LastName = "Andersen", Address = "Vej 1", PostalCode = 4200, City = "Slagelse" });
-        var viewModel = new RenterViewModel(repo, new FakeDialogService());
+        var viewModel = new RenterViewModel(repo, new FakeRentalRepository(), new FakeDialogService());
         viewModel.SelectedRenter = viewModel.Renters[0];
         viewModel.City = "Korsør";
 

@@ -182,6 +182,28 @@ public class RackViewModelTests
         Assert.AreEqual(837.5m, _rentals.Rentals[0].MonthlyRent);
         Assert.AreEqual(837.5m, _rentals.Rentals[1].MonthlyRent);
     }
+
+    [TestMethod]
+    public void CreateRentalCommand_AfterCreating_RenterStaysSelectedAndRacksRefresh()
+    {
+        // Arrange: én ledig reol, én lejer, og begge er valgt
+        AddRack(1);
+        var renter = AddRenter();
+        var viewModel = CreateViewModel();
+        viewModel.SelectRenterCommand.Execute(renter);
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[0]);
+
+        // Act
+        viewModel.CreateRentalCommand.Execute(null);
+
+        // Assert: lejeren forbliver valgt, og "Kundens reoler" er opdateret med den nye reol
+        // og den korrekte pris — uden at man skal søge lejeren op igen
+        Assert.IsNotNull(viewModel.FoundRenter);
+        Assert.AreEqual(renter.RenterId, viewModel.FoundRenter!.RenterId);
+        Assert.HasCount(1, viewModel.RenterRacks);
+        Assert.AreEqual(850m, viewModel.TotalMonthlyRent);
+    }
+
     [TestMethod]
     public void CalculateTerminationEffectiveDate_On19th_ReturnsFirstOfNextMonth()
     {

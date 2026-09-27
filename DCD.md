@@ -121,12 +121,74 @@ class MessageBoxDialogService{
 VIEWMODELS
 %%======================
 namespace UI.ViewModels{
-class MainViewModel
+class MainViewModel{
++ RackViewModel
++ RenterViewModel
+}
 
-class RackViewModel
+class RackViewModel{
+- _rackRepository : IRepository<Rack>
+- _rentalRepository : IRepository<Rental>
+- _renterRepository : IRepository<Renter>
+- _rentalPriceTierRepository : IRentalPriceTierRepository
+- _dialogService : IDialogService
++ Racks : ObservableCollection<RackDisplayItem>
++ SelectedRacks : ObservableCollection<RackDisplayItem>
++ SearchResults : ObservableCollection<Renter>
++ FoundRenter : Renter
++ SearchQuery : string
++ TotalMonthlyRent : decimal
++ SelectRackCommand : ICommand
++ SelectRenterCommand : ICommand
++ CreateRentalCommand : ICommand
++ TerminateRentalCommand : ICommand
++ CancelTerminationCommand : ICommand
 
-class RenterViewModel
++ LoadRenterRacks()
++ CreateRental()
++ TerminateRental()
++ CancelTermination()
++ PerformSearch()
++ RecalculateRentPricing()
+}
 
+class RenterViewModel{
+- _renterRepository : IRepository<Renter>
+- _dialogService : IDialogService
++ Renters : ObservableCollection<Renter>
++ SearchQuery : string
++ SelectedRenter : Renter
++ RenterId : int
++ FirstName : string
++ LastName : string
++ Address : string
++ PostalCode : int
++ City : string
++ Phone : string
++ Email : string
++ NewCommand : ICommand
++ SaveCommand : ICommand
++ DeleteCommand : ICommand
++ GetAllCommand : ICommand
++ LoadRenters()
++ SaveRenter()
++ DeleteRenter()
++ FilterRenters()
++ NewRenter()
++ SafeExecute()
+}
+
+class RackDisplayItem{
++ Rack : Rack
++ IsSelected : bool
++ TerminationDate : DateTime?
++ RefreshStatus()
+}
+
+class RenterRackDisplayItem{
++ RackItem : RackDisplayItem
++ Rental : Rental
+}
 
 }
 
@@ -145,10 +207,15 @@ class RenterView
 %%======================
 
 Renter "1" -- "0..*" Rental : rents
-Rack "1" -- "0..*" Rental : contains
+Rack "1" -- "0..*" Rental : rented in
 Rack --> RackStatus : 
 RentalPriceCalculator --> RentalPriceTier : uses
-
+RackDisplayItem *-- Rack
+RackViewModel --> RackDisplayItem
+RackViewModel --> RenterRackDisplayItem
+RenterRackDisplayItem *-- RackDisplayItem
+RenterRackDisplayItem *-- Rental
+RackViewModel ..> RentalPriceCalculator : uses
 
 %%=====================
 %%REPOSITORY IMPLEMENTATIONS
@@ -165,39 +232,42 @@ IRentalPriceTierRepository <|.. RentalPriceTierRepository
 RackViewModel --|> ViewModelBase
 RenterViewModel --|> ViewModelBase
 MainViewModel --|> ViewModelBase
+RackDisplayItem --|> ViewModelBase
 
 
 %%=====================
 %% COMMANDS
 %%=====================
-RackViewModel --> RelayCommand 
-RenterViewModel --> RelayCommand
+RackViewModel ..> RelayCommand : uses
+RenterViewModel ..> RelayCommand : uses
 
 %%=====================
 %% REPOSITORY USAGE
 %%=====================
-RenterViewModel --> RenterRepository
-RackViewModel --> RackRepository
-RackViewModel --> RentalRepository
-RackViewModel --> RenterRepository
-RackViewModel --> RentalPriceTierRepository
+RenterViewModel ..> IRepository~Renter~
+RackViewModel ..> IRepository~Rack~
+RackViewModel ..> IRepository~Rental~
+RackViewModel ..> IRepository~Renter~
+RackViewModel ..> IRentalPriceTierRepository
 
 %%=====================
 %% DIALOG SERVICE USAGE
 %%=====================
 RackViewModel --> IDialogService
 RenterViewModel --> IDialogService
-MessageBoxDialogService --> IDialogService
+MessageBoxDialogService ..|> IDialogService
 
 %%=====================
 %% MAIN VIEWMODEL USAGE
 %%=====================
-MainViewModel --> RackViewModel
-MainViewModel --> RenterViewModel
+MainViewModel *-- RackViewModel
+MainViewModel *-- RenterViewModel
 
 %%=====================
 DATACONTEXT
 %%=====================
-
+MainWindow --> MainViewModel : DataContext
+RackView --> RackViewModel : DataContext
+RenterView --> RenterViewModel : DataContext
 
 ```

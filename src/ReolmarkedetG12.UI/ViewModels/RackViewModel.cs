@@ -17,6 +17,7 @@ public class RackViewModel : ViewModelBase
     private readonly IRepository<Renter> _renterRepository;
     private readonly IRepository<Rental> _rentalRepository;
     private readonly IRentalPriceTierRepository _rentalPriceTierRepository;
+    private readonly IRepository<Payment> _paymentRepository;
     private readonly IDialogService _dialogService;
     private readonly DispatcherTimer _terminationCheckTimer;
     private bool _timerCheckFailed;
@@ -70,12 +71,13 @@ public class RackViewModel : ViewModelBase
     public ICommand TerminateRentalCommand { get; }
     public ICommand CancelTerminationCommand { get; }
 
-    public RackViewModel(IRepository<Rack> rackRepository, IRepository<Renter> renterRepository, IRepository<Rental> rentalRepository, IRentalPriceTierRepository rentalPriceTierRepository, IDialogService dialogService)
+    public RackViewModel(IRepository<Rack> rackRepository, IRepository<Renter> renterRepository, IRepository<Rental> rentalRepository, IRentalPriceTierRepository rentalPriceTierRepository, IRepository<Payment> paymentRepository, IDialogService dialogService)
     {
         _rackRepository = rackRepository;
         _renterRepository = renterRepository;
         _rentalRepository = rentalRepository;
         _rentalPriceTierRepository = rentalPriceTierRepository;
+        _paymentRepository = paymentRepository;
         _dialogService = dialogService;
 
         List<RackDisplayItem> allItems;
@@ -150,7 +152,7 @@ public class RackViewModel : ViewModelBase
                                 "Reol tilhører en anden lejer");
                             return;
                         }
-
+                        clicked.MonthRent = relevantRental.MonthlyRent;
                         var renter = _renterRepository.GetById(relevantRental.RenterId);
                         if (renter != null)
                         {
@@ -176,6 +178,8 @@ public class RackViewModel : ViewModelBase
                         ClearRenterSelection();
                     }
                 }
+
+                UpdateSelectedRackPrices();
             });
         });
 
@@ -325,11 +329,35 @@ public class RackViewModel : ViewModelBase
         }
 
         OnPropertyChanged(nameof(TotalMonthlyRent));
+        UpdateSelectedRackPrices();
+    }
+
+    // Viser første måneds leje for hver valgt ledig reol. Prisen er gennemsnittet af
+    // pristrinnene for lejerens aktive reoler + de valgte — samme regel som RecalculateRentPricing.
+    private void UpdateSelectedRackPrices()
+    {
+        var newRacks = _selectedRacks.Where(r => r.Rack.Status == RackStatus.Available).ToList();
+        if (newRacks.Count == 0)
+            return;
+
+        int totalCount = RenterRacks.Count(r => r.Rental.EndDate == null) + newRacks.Count;
+        var priceTiers = _rentalPriceTierRepository.GetAll();
+        decimal monthlyRentPerRack = RentalPriceCalculator.CalculateMonthlyRent(totalCount, priceTiers) / totalCount;
+        decimal firstMonthRent = RentalPriceCalculator.CalculatePartialMonthRent(monthlyRentPerRack, DateOnly.FromDateTime(DateTime.Now));
+
+        foreach (var item in newRacks)
+            item.MonthRent = firstMonthRent;
     }
 
     private void CreateRental()
     {
         if (FoundRenter == null)
+            return;
+
+        var firstMonthTotal = _selectedRacks
+            .Where(r => r.Rack.Status == RackStatus.Available)
+            .Sum(r => r.MonthRent);
+        if (!_dialogService.Confirm($"Leje første måned udgør {firstMonthTotal:0.00} kr. Modtag betaling. Ønsker du at fortsætte?", "Oprettelse"))
             return;
 
         foreach (var item in _selectedRacks.ToList())
@@ -356,6 +384,14 @@ public class RackViewModel : ViewModelBase
             item.IsSelected = false;
             RenterRacks.Add(new RenterRackDisplayItem(item, rental));
         }
+
+        _paymentRepository.Add(new Payment
+        {
+            RenterId = FoundRenter.RenterId,
+            Date = DateTime.Now,
+            Amount = firstMonthTotal,
+            Type = PaymentType.FirstMonthPayment
+        });
 
         RecalculateRentPricing();
         _selectedRacks.Clear();

@@ -7,6 +7,13 @@ public class RackDisplayItem : ViewModelBase
 {
     public Rack Rack { get; }
 
+    private decimal _monthRent;
+    public decimal MonthRent
+    {
+        get => _monthRent;
+        set { _monthRent = value; OnPropertyChanged(); }
+    }
+
     private bool _isSelected;
     public bool IsSelected
     {

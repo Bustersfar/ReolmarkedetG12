@@ -307,8 +307,12 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border Style="{StaticResource RackPillStyle}">
-                                        <TextBlock FontSize="12" Foreground="#0C447C"
-                                                   Text="{Binding Rack.Number, StringFormat='Reol {0}'}"/>
+                                        <TextBlock FontSize="12" Foreground="#0C447C">
+                                          <Run Text="Reol "/>
+                                          <Run Text="{Binding Rack.Number}"/>
+                                          <Run Text=", "/>
+                                          <Run Text="{Binding MonthRent, StringFormat='{}{0:0}.-'}"/>
+                                        </TextBlock>
                                     </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>

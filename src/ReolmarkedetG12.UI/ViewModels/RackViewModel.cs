@@ -80,9 +80,27 @@ public class RackViewModel : ViewModelBase
         _paymentRepository = paymentRepository;
         _dialogService = dialogService;
 
-        var allItems = _rackRepository.GetAll()
-            .Select(rack => new RackDisplayItem(rack))
-            .ToList();
+        List<RackDisplayItem> allItems;
+        try
+        {
+            allItems = _rackRepository.GetAll()
+                .Select(rack => new RackDisplayItem(rack))
+                .ToList();
+        }
+        catch (DatabaseConnectionException ex)
+        {
+            _dialogService.ShowError(
+                $"{ex.Message}\n\nTeknisk besked: {ex.InnerException?.Message ?? "ukendt"}",
+                "Forbindelsesfejl");
+            allItems = new List<RackDisplayItem>();
+        }
+        catch (SqlException ex)
+        {
+            _dialogService.ShowError(
+                $"Der opstod en fejl i databasen.\n\nTeknisk besked: {ex.Message}",
+                "Databasefejl");
+            allItems = new List<RackDisplayItem>();
+        }
 
         foreach (var item in allItems)
             Racks.Add(item);
@@ -376,9 +394,8 @@ public class RackViewModel : ViewModelBase
         });
 
         RecalculateRentPricing();
-        OnPropertyChanged(nameof(TotalMonthlyRent));
         _selectedRacks.Clear();
-        ClearRenterSelection();
+        LoadRenterRacks();
     }
 
     private void TerminateRental()
@@ -419,9 +436,8 @@ public class RackViewModel : ViewModelBase
         }
 
         RecalculateRentPricing();
-        OnPropertyChanged(nameof(TotalMonthlyRent));
         _selectedRacks.Clear();
-        ClearRenterSelection();
+        LoadRenterRacks();
     }
 
     private void CancelTermination()
@@ -462,9 +478,8 @@ public class RackViewModel : ViewModelBase
         }
 
         RecalculateRentPricing();
-        OnPropertyChanged(nameof(TotalMonthlyRent));
         _selectedRacks.Clear();
-        ClearRenterSelection();
+        LoadRenterRacks();
     }
 
     private void RecalculateRentPricing()

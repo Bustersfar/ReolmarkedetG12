@@ -73,7 +73,7 @@ public partial class App : Application
 
         var mainViewModel = new MainViewModel(
             new RackViewModel(rackRepository, renterRepository, rentalRepository, rentalPriceTierRepository, paymentRepository, dialogService),
-            new RenterViewModel(renterRepository, dialogService));
+            new RenterViewModel(renterRepository, rentalRepository, dialogService));
 
         var mainWindow = new MainWindow { DataContext = mainViewModel };
         this.MainWindow = mainWindow;

@@ -13,7 +13,7 @@ public class MainViewModelTests
         var dialog = new FakeDialogService();
         var rackViewModel = new RackViewModel(
             new FakeRackRepository(), new FakeRenterRepository(), new FakeRentalRepository(),
-            new FakePriceTierRepository(), dialog);
+            new FakePriceTierRepository(), new FakePaymentRepository(), dialog);
         var renterViewModel = new RenterViewModel(new FakeRenterRepository(), new FakeRentalRepository(), dialog);
 
         // Act

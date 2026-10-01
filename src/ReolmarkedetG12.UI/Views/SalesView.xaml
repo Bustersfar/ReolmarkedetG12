@@ -1,0 +1,239 @@
+﻿<UserControl x:Class="ReolmarkedetG12.UI.Views.SalesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="780" d:DesignWidth="1100">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- Samme "kort"-stil som Reol-fanens lejer-panel -->
+        <Style x:Key="PanelCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="#F1EFE8"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="16,12"/>
+        </Style>
+
+        <Style x:Key="PanelLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Foreground" Value="Gray"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+
+        <Style x:Key="NeutralActionButtonStyle" TargetType="Button">
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#D7D2C8"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="12">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Lille, diskret knap til "Søg/ret tidligere salg" -->
+        <Style x:Key="LinkButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="#2F6FB0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+
+        <!-- Hvidt "kort" med runde hjørner til tabellerne -->
+        <Style x:Key="GridCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#EEE6D9"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+        </Style>
+    </UserControl.Resources>
+
+    <!-- Ydre Grid uden margin, så søg/ret-popup'en kan dække hele fanen -->
+    <Grid>
+
+        <Grid Margin="15">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!--Titel-linje med "Søg/ret"-knappen i højre side-->
+            <Grid Grid.Row="0" Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="SALG" FontSize="24" FontWeight="Bold"/>
+
+                <Button Grid.Column="1" Content="Søg/ret tidligere salg"
+                        Style="{StaticResource LinkButtonStyle}"
+                        Command="{Binding ToggleSearchPanelCommand}"/>
+            </Grid>
+
+            <!--Hovedvisning: venstre kort (tilføj+betaling) og højre side (kurven)-->
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="380"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!--Venstre: tilføj vare + betaling-->
+                <Border Grid.Column="0" Style="{StaticResource PanelCardStyle}" Margin="0,0,16,0">
+                    <StackPanel>
+                        <TextBlock Text="Modtag betaling" FontSize="18" FontWeight="Bold" Margin="0,0,0,14"/>
+
+                        <TextBlock Text="Reolnr." Style="{StaticResource PanelLabelStyle}"/>
+                        <TextBox Padding="6" Margin="0,0,0,14"
+                                 Text="{Binding NewRackNumber, UpdateSourceTrigger=PropertyChanged}"/>
+
+                        <TextBlock Text="Evt. bemærkning" Style="{StaticResource PanelLabelStyle}"/>
+                        <TextBox Padding="6" Margin="0,0,0,14"
+                                 Text="{Binding NewRemark, UpdateSourceTrigger=PropertyChanged}"/>
+
+                        <TextBlock Text="Pris" Style="{StaticResource PanelLabelStyle}"/>
+                        <TextBox Padding="6" Margin="0,0,0,14"
+                                 Text="{Binding NewPrice, UpdateSourceTrigger=PropertyChanged}"/>
+
+                        <Button Content="Tilføj" Margin="0,0,0,18"
+                                Style="{StaticResource NeutralActionButtonStyle}"
+                                Command="{Binding AddItemCommand}"/>
+
+                        <TextBlock Text="Betalingsmetode" Style="{StaticResource PanelLabelStyle}"/>
+                        <ComboBox Padding="6" Margin="0,0,0,14"
+                                  ItemsSource="{Binding PaymentMethods}"
+                                  SelectedItem="{Binding PaymentMethod}"/>
+
+                        <TextBlock Text="Modtaget kontant" Style="{StaticResource PanelLabelStyle}"/>
+                        <TextBox Padding="6" Margin="0,0,0,14"
+                                 Text="{Binding CashReceived, UpdateSourceTrigger=PropertyChanged}"/>
+
+                        <TextBlock Text="Byttepenge" Style="{StaticResource PanelLabelStyle}"/>
+                        <TextBlock Text="{Binding Change, StringFormat='{}{0:0.00} kr.'}" Margin="0,0,0,14"/>
+
+                        <Button Content="Registrer betaling"
+                                Style="{StaticResource NeutralActionButtonStyle}"
+                                Command="{Binding RegisterSaleCommand}"/>
+                    </StackPanel>
+                </Border>
+
+                <!--Højre: det igangværende salg (kurven)-->
+                <Grid Grid.Column="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="Nuværende salg" FontSize="18" FontWeight="Bold" Margin="0,0,0,14"/>
+
+                    <Border Grid.Row="1" Style="{StaticResource GridCardStyle}">
+                        <DataGrid ItemsSource="{Binding CurrentSaleItems}" AutoGenerateColumns="False"
+                                  CanUserAddRows="False" IsReadOnly="True"
+                                  BorderThickness="0" Background="Transparent" RowBackground="Transparent"
+                                  HeadersVisibility="Column" GridLinesVisibility="None">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Reolnr." Binding="{Binding RackNumber}" Width="*"/>
+                                <DataGridTextColumn Header="Bemærkning" Binding="{Binding Remark}" Width="2*"/>
+                                <DataGridTextColumn Header="Pris" Binding="{Binding Amount, StringFormat='{}{0:0.00} kr.'}" Width="*"/>
+                                <DataGridTemplateColumn Header="Handlinger" Width="Auto">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" Margin="4">
+                                                <Button Content="Rediger" Padding="6,2" Margin="0,0,6,0"
+                                                        Command="{Binding DataContext.EditItemCommand,
+                                                                  RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                                        CommandParameter="{Binding}"/>
+                                                <Button Content="Slet" Padding="6,2"
+                                                        Command="{Binding DataContext.DeleteItemCommand,
+                                                                  RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                                        CommandParameter="{Binding}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+
+                    <TextBlock Grid.Row="2" HorizontalAlignment="Right" FontWeight="Bold" Margin="0,10,0,0"
+                               Text="{Binding TotalAmount, StringFormat='I alt: {0:0.00} kr.'}"/>
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!--Søg/ret-popup: skjult indtil "Søg/ret tidligere salg" trykkes-->
+        <Grid Background="#55000000" Visibility="{Binding ShowSearchPanel, Converter={StaticResource BoolToVis}}">
+            <Border Background="White" CornerRadius="12" BorderBrush="#EEE6D9" BorderThickness="1"
+                    Width="640" MaxHeight="500" HorizontalAlignment="Center" VerticalAlignment="Top"
+                    Margin="0,70,0,0" Padding="18,16">
+                <StackPanel>
+                    <Grid Margin="0,0,0,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Søg/ret betaling" FontSize="18" FontWeight="Bold"/>
+                        <Button Grid.Column="1" Content="Luk" Padding="6,2"
+                                Style="{StaticResource LinkButtonStyle}"
+                                Command="{Binding ToggleSearchPanelCommand}"/>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                            <TextBlock Text="Reolnr." Style="{StaticResource PanelLabelStyle}"/>
+                            <TextBox Width="60" Padding="6"
+                                     Text="{Binding SearchRackNumber, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Margin="0,0,15,0">
+                            <TextBlock Text="Dato" Style="{StaticResource PanelLabelStyle}"/>
+                            <DatePicker Width="130" Padding="6" SelectedDate="{Binding SearchDate}"/>
+                        </StackPanel>
+
+                        <Button Grid.Column="2" Content="Søg" VerticalAlignment="Bottom"
+                                Style="{StaticResource NeutralActionButtonStyle}"
+                                Command="{Binding SearchCommand}"/>
+                    </Grid>
+
+                    <Border Style="{StaticResource GridCardStyle}">
+                        <DataGrid ItemsSource="{Binding SaleResults}" AutoGenerateColumns="False" CanUserAddRows="False"
+                                  BorderThickness="0" Background="Transparent" RowBackground="Transparent"
+                                  HeadersVisibility="Column" GridLinesVisibility="None" MaxHeight="220">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Reolnr." Binding="{Binding RackNumber}" Width="*" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="Dato" Binding="{Binding Date, StringFormat='{}{0:dd-MM-yyyy}'}" Width="*" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="Beløb" Binding="{Binding Amount, StringFormat='{}{0:0.00}'}" Width="*"/>
+                                <DataGridTextColumn Header="Bemærkning" Binding="{Binding Description}" Width="2*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+
+                    <Button Content="Opdater" Width="110" HorizontalAlignment="Center" Margin="0,14,0,0"
+                            Style="{StaticResource NeutralActionButtonStyle}"
+                            Command="{Binding UpdateCommand}"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+    </Grid>
+</UserControl>

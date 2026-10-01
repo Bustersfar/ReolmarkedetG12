@@ -332,21 +332,24 @@ public class RackViewModel : ViewModelBase
         UpdateSelectedRackPrices();
     }
 
-    // Viser første måneds leje for hver valgt ledig reol. Prisen er gennemsnittet af
-    // pristrinnene for lejerens aktive reoler + de valgte — samme regel som RecalculateRentPricing.
+    // Viser første (del)måneds leje for hver valgt ledig reol. Hver NY reol får sin egen
+    // pristrins-pris ud fra hvilken plads den fylder i lejerens stak af reoler (ALDRIG et gennemsnit) —
+    // lejerens eksisterende reoler beholder deres oprindelige pris og rørs ikke her.
     private void UpdateSelectedRackPrices()
     {
         var newRacks = _selectedRacks.Where(r => r.Rack.Status == RackStatus.Available).ToList();
         if (newRacks.Count == 0)
             return;
 
-        int totalCount = RenterRacks.Count(r => r.Rental.EndDate == null) + newRacks.Count;
+        int existingCount = RenterRacks.Count(r => r.Rental.EndDate == null);
         var priceTiers = _rentalPriceTierRepository.GetAll();
-        decimal monthlyRentPerRack = RentalPriceCalculator.CalculateMonthlyRent(totalCount, priceTiers) / totalCount;
-        decimal firstMonthRent = RentalPriceCalculator.CalculatePartialMonthRent(monthlyRentPerRack, DateOnly.FromDateTime(DateTime.Now));
 
-        foreach (var item in newRacks)
-            item.MonthRent = firstMonthRent;
+        for (int i = 0; i < newRacks.Count; i++)
+        {
+            int position = existingCount + i + 1;
+            decimal rackMonthlyRent = RentalPriceCalculator.CalculateRackPriceAtPosition(position, priceTiers);
+            newRacks[i].MonthRent = RentalPriceCalculator.CalculatePartialMonthRent(rackMonthlyRent, DateOnly.FromDateTime(DateTime.Now));
+        }
     }
 
     private void CreateRental()
@@ -354,26 +357,30 @@ public class RackViewModel : ViewModelBase
         if (FoundRenter == null)
             return;
 
-        var firstMonthTotal = _selectedRacks
-            .Where(r => r.Rack.Status == RackStatus.Available)
-            .Sum(r => r.MonthRent);
+        var newItems = _selectedRacks.Where(r => r.Rack.Status == RackStatus.Available).ToList();
+        if (newItems.Count == 0)
+            return;
+
+        var firstMonthTotal = newItems.Sum(r => r.MonthRent);
         if (!_dialogService.Confirm($"Leje første måned udgør {firstMonthTotal:0.00} kr. Modtag betaling. Ønsker du at fortsætte?", "Oprettelse"))
             return;
 
-        foreach (var item in _selectedRacks.ToList())
+        // Hver ny reol får sin egen faste pristrins-pris ud fra sin plads i lejerens stak —
+        // lejerens EKSISTERENDE reoler beholder deres oprindelige pris og genberegnes ikke.
+        int position = RenterRacks.Count(r => r.Rental.EndDate == null);
+        var priceTiers = _rentalPriceTierRepository.GetAll();
+
+        foreach (var item in newItems)
         {
-            if (item.Rack.Status != RackStatus.Available)
-            {
-                item.IsSelected = false;
-                continue;
-            }
+            position++;
 
             var rental = new Rental
             {
                 RackId = item.Rack.RackId,
                 RenterId = FoundRenter.RenterId,
                 StartDate = DateTime.Now,
-                EndDate = null
+                EndDate = null,
+                MonthlyRent = RentalPriceCalculator.CalculateRackPriceAtPosition(position, priceTiers)
             };
             _rentalRepository.Add(rental);
 
@@ -393,7 +400,6 @@ public class RackViewModel : ViewModelBase
             Type = PaymentType.FirstMonthPayment
         });
 
-        RecalculateRentPricing();
         _selectedRacks.Clear();
         LoadRenterRacks();
     }
@@ -435,7 +441,8 @@ public class RackViewModel : ViewModelBase
             RenterRacks.Add(new RenterRackDisplayItem(item, rental));
         }
 
-        RecalculateRentPricing();
+        // Bemærk: de resterende reolers pris genberegnes IKKE her — hver reol beholder sin egen
+        // faste pristrins-pris for evigt, uanset hvad der sker med lejerens andre reoler.
         _selectedRacks.Clear();
         LoadRenterRacks();
     }
@@ -477,31 +484,9 @@ public class RackViewModel : ViewModelBase
             RenterRacks.Add(new RenterRackDisplayItem(item, rental));
         }
 
-        RecalculateRentPricing();
+        // Samme princip som ved opsigelse: ingen genberegning af de andre reolers pris.
         _selectedRacks.Clear();
         LoadRenterRacks();
-    }
-
-    private void RecalculateRentPricing()
-    {
-        if (FoundRenter == null)
-            return;
-
-        var activeRentals = _rentalRepository.GetAll()
-            .Where(r => r.RenterId == FoundRenter.RenterId && r.EndDate == null)
-            .ToList();
-
-        if (activeRentals.Count == 0)
-            return;
-
-        var priceTiers = _rentalPriceTierRepository.GetAll();
-        var monthlyRentPerRack = RentalPriceCalculator.CalculateMonthlyRent(activeRentals.Count, priceTiers) / activeRentals.Count;
-
-        foreach (var rental in activeRentals)
-        {
-            rental.MonthlyRent = monthlyRentPerRack;
-            _rentalRepository.Update(rental);
-        }
     }
 
     private void ClearRenterSelection()

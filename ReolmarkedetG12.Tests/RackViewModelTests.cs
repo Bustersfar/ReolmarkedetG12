@@ -165,7 +165,7 @@ public class RackViewModelTests
     }
 
     [TestMethod]
-    public void CreateRentalCommand_TwoRacks_SplitsPriceEvenly()
+    public void CreateRentalCommand_TwoRacks_EachGetsItsOwnTierPrice()
     {
         // Arrange: to ledige reoler og én lejer
         AddRack(1);
@@ -179,10 +179,50 @@ public class RackViewModelTests
         // Act
         viewModel.CreateRentalCommand.Execute(null);
 
-        // Assert: 850 + 825 = 1675, delt på to reoler
+        // Assert: 1. reol = 850 (pristrin 1), 2. reol = 825 (pristrin 2) — ALDRIG et gennemsnit af de to
         Assert.HasCount(2, _rentals.Rentals);
-        Assert.AreEqual(837.5m, _rentals.Rentals[0].MonthlyRent);
-        Assert.AreEqual(837.5m, _rentals.Rentals[1].MonthlyRent);
+        Assert.AreEqual(850m, _rentals.Rentals[0].MonthlyRent);
+        Assert.AreEqual(825m, _rentals.Rentals[1].MonthlyRent);
+    }
+
+    [TestMethod]
+    public void CreateRentalCommand_FifthRackForExistingRenter_GetsTierPriceNotAverage()
+    {
+        // Arrange: lejeren har allerede 4 aktive reoler, hver med sin egen oprindelige pristrins-pris
+        var renter = AddRenter();
+        var rack1 = AddRackWithStatus(1, RackStatus.Rented);
+        var rack2 = AddRackWithStatus(2, RackStatus.Rented);
+        var rack3 = AddRackWithStatus(3, RackStatus.Rented);
+        var rack4 = AddRackWithStatus(4, RackStatus.Rented);
+
+        var rental1 = new Rental { RackId = rack1.RackId, RenterId = renter.RenterId, StartDate = new DateTime(2026, 1, 1), MonthlyRent = 850m };
+        var rental2 = new Rental { RackId = rack2.RackId, RenterId = renter.RenterId, StartDate = new DateTime(2026, 1, 1), MonthlyRent = 825m };
+        var rental3 = new Rental { RackId = rack3.RackId, RenterId = renter.RenterId, StartDate = new DateTime(2026, 1, 1), MonthlyRent = 825m };
+        var rental4 = new Rental { RackId = rack4.RackId, RenterId = renter.RenterId, StartDate = new DateTime(2026, 1, 1), MonthlyRent = 800m };
+        _rentals.Add(rental1);
+        _rentals.Add(rental2);
+        _rentals.Add(rental3);
+        _rentals.Add(rental4);
+
+        AddRack(5);
+        var viewModel = CreateViewModel();
+        viewModel.SelectRenterCommand.Execute(renter);
+        viewModel.SelectRackCommand.Execute(viewModel.Racks.Single(r => r.Rack.Number == 5));
+
+        // Act
+        viewModel.CreateRentalCommand.Execute(null);
+
+        // Assert: den 5. reol koster 800 kr. (pristrinnet "4 reoler og derover") —
+        // IKKE 820 kr. (det forkerte gennemsnit af 4100/5, som var buggen)
+        var rack5Id = viewModel.Racks.Single(r => r.Rack.Number == 5).Rack.RackId;
+        var newRental = _rentals.Rentals.Single(r => r.RackId == rack5Id);
+        Assert.AreEqual(800m, newRental.MonthlyRent);
+
+        // De 4 eksisterende reolers priser er fuldstændig uændrede
+        Assert.AreEqual(850m, rental1.MonthlyRent);
+        Assert.AreEqual(825m, rental2.MonthlyRent);
+        Assert.AreEqual(825m, rental3.MonthlyRent);
+        Assert.AreEqual(800m, rental4.MonthlyRent);
     }
 
     [TestMethod]
@@ -200,8 +240,10 @@ public class RackViewModelTests
         // Act
         viewModel.CreateRentalCommand.Execute(null);
 
-        // Assert: én samlet betaling for første (del)måned af 837,50 pr. reol
-        var expectedAmount = 2 * RentalPriceCalculator.CalculatePartialMonthRent(837.5m, DateOnly.FromDateTime(DateTime.Now));
+        // Assert: betaling for første (del)måned = summen af hver reols EGEN pristrins-pris (850 + 825), ikke et gennemsnit
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        var expectedAmount = RentalPriceCalculator.CalculatePartialMonthRent(850m, today)
+                            + RentalPriceCalculator.CalculatePartialMonthRent(825m, today);
         Assert.HasCount(1, _payments.Payments);
         var payment = _payments.Payments[0];
         Assert.AreEqual(renter.RenterId, payment.RenterId);

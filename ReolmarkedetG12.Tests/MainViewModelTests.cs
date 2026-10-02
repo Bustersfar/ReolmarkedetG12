@@ -17,7 +17,13 @@ public class MainViewModelTests
         var renterViewModel = new RenterViewModel(new FakeRenterRepository(), new FakeRentalRepository(), dialog);
 
         // Act
-        var mainViewModel = new MainViewModel(rackViewModel, renterViewModel);
+        var salesViewModel = new SalesViewModel();
+        var mainViewModel = new MainViewModel(rackViewModel, renterViewModel, salesViewModel);
+
+        // Assert
+        Assert.AreSame(rackViewModel, mainViewModel.RackViewModel);
+        Assert.AreSame(renterViewModel, mainViewModel.RenterViewModel);
+        Assert.AreSame(salesViewModel, mainViewModel.SalesViewModel);
 
         // Assert
         Assert.AreSame(rackViewModel, mainViewModel.RackViewModel);

@@ -147,3 +147,18 @@ BEGIN
     );
 END
 GO
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'SALE')
+BEGIN
+    CREATE TABLE SALE
+    (
+        SaleId      INT IDENTITY(1,1) PRIMARY KEY,
+        RackId      INT NOT NULL,
+        RenterId    INT NOT NULL,
+        Date        DATETIME NOT NULL,
+        Amount      DECIMAL(10,2) NOT NULL,
+        Description NVARCHAR(200) NULL,
+        CONSTRAINT FK_Sale_Rack FOREIGN KEY (RackId) REFERENCES RACK(RackId),
+        CONSTRAINT FK_Sale_Renter FOREIGN KEY (RenterId) REFERENCES RENTER(RenterId)
+    );
+END
+GO

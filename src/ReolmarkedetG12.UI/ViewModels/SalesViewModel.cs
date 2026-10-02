@@ -1,15 +1,17 @@
 ﻿using ReolmarkedetG12.Core.Models;
+using ReolmarkedetG12.Core.Repositories;
 using ReolmarkedetG12.UI.MVVM;
+using ReolmarkedetG12.UI.Services;
 using System.Collections.ObjectModel;
-using System.Xml.Linq;
 
 namespace ReolmarkedetG12.UI.ViewModels;
 
-// PROTOTYPE: ingen Sale-model/repository endnu. RegisterSale/Search/Update
-// arbejder kun på lister i hukommelsen, indtil vi bygger den rigtige gemning.
 public class SalesViewModel : ViewModelBase
 {
-    private readonly List<SaleDisplayItem> _allSales = new();
+    private readonly IRepository<Rack> _rackRepository;
+    private readonly IRepository<Rental> _rentalRepository;
+    private readonly IRepository<Sale> _saleRepository;
+    private readonly IDialogService _dialogService;
 
     // --- "Tilføj vare"-felterne ---
 
@@ -85,53 +87,23 @@ public class SalesViewModel : ViewModelBase
 
     public RelayCommand RegisterSaleCommand { get; }
 
-    // --- Søg/ret-panel (popup) ---
-
-    private bool _showSearchPanel;
-    public bool ShowSearchPanel
+    public SalesViewModel(
+        IRepository<Rack> rackRepository,
+        IRepository<Rental> rentalRepository,
+        IRepository<Sale> saleRepository,
+        IDialogService dialogService)
     {
-        get => _showSearchPanel;
-        set => SetProperty(ref _showSearchPanel, value);
-    }
+        _rackRepository = rackRepository;
+        _rentalRepository = rentalRepository;
+        _saleRepository = saleRepository;
+        _dialogService = dialogService;
 
-    public RelayCommand ToggleSearchPanelCommand { get; }
-
-    private int? _searchRackNumber;
-    public int? SearchRackNumber
-    {
-        get => _searchRackNumber;
-        set => SetProperty(ref _searchRackNumber, value);
-    }
-
-    private DateTime? _searchDate;
-    public DateTime? SearchDate
-    {
-        get => _searchDate;
-        set => SetProperty(ref _searchDate, value);
-    }
-
-    public ObservableCollection<SaleDisplayItem> SaleResults { get; } = new();
-
-    public RelayCommand SearchCommand { get; }
-    public RelayCommand UpdateCommand { get; }
-
-    public SalesViewModel()
-    {
         AddItemCommand = new RelayCommand(_ => AddItem());
         EditItemCommand = new RelayCommand(param => EditItem(param as CartLineItem));
         DeleteItemCommand = new RelayCommand(param => DeleteItem(param as CartLineItem));
         RegisterSaleCommand = new RelayCommand(_ => RegisterSale(), _ => CurrentSaleItems.Count > 0);
-        ToggleSearchPanelCommand = new RelayCommand(_ => ShowSearchPanel = !ShowSearchPanel);
-        SearchCommand = new RelayCommand(_ => Search());
-        UpdateCommand = new RelayCommand(_ => Update());
 
         CurrentSaleItems.CollectionChanged += (_, _) => RecalculateTotals();
-
-        // Dummy-data til søge/ret-panelet, bare så gridet ikke er tomt.
-        _allSales.Add(new SaleDisplayItem { RackNumber = 5, Date = new DateTime(2026, 9, 15), Amount = 150m, Description = "2x kaffekrus" });
-        _allSales.Add(new SaleDisplayItem { RackNumber = 12, Date = new DateTime(2026, 9, 20), Amount = 60m });
-        foreach (var sale in _allSales)
-            SaleResults.Add(sale);
     }
 
     private void AddItem()
@@ -186,37 +158,34 @@ public class SalesViewModel : ViewModelBase
 
     private void RegisterSale()
     {
-        // TODO: opret et rigtigt Sale-objekt pr. linje (RenterId slås op som
-        // reolens aktive lejer lige nu) og gem via ISaleRepository.
         foreach (var item in CurrentSaleItems)
         {
-            _allSales.Add(new SaleDisplayItem
+            var rack = _rackRepository.GetAll().FirstOrDefault(r => r.Number == item.RackNumber);
+            if (rack == null)
             {
-                RackNumber = item.RackNumber,
+                _dialogService.ShowError($"Reol {item.RackNumber} findes ikke.", "Kunne ikke registrere salg");
+                return;
+            }
+
+            var activeRental = _rentalRepository.GetAll()
+                .FirstOrDefault(r => r.RackId == rack.RackId && r.EndDate == null);
+            if (activeRental == null)
+            {
+                _dialogService.ShowError($"Reol {item.RackNumber} har ingen aktiv lejer lige nu.", "Kunne ikke registrere salg");
+                return;
+            }
+
+            _saleRepository.Add(new Sale
+            {
+                RackId = rack.RackId,
+                RenterId = activeRental.RenterId,
                 Date = DateTime.Now,
                 Amount = item.Amount,
-                Description = item.Remark
+                Description = string.IsNullOrWhiteSpace(item.Remark) ? null : item.Remark
             });
         }
 
         CurrentSaleItems.Clear();
         CashReceived = null;
-    }
-
-    private void Search()
-    {
-        // TODO: erstat med et rigtigt opslag i ISaleRepository.
-        SaleResults.Clear();
-        foreach (var sale in _allSales.Where(s =>
-                     (SearchRackNumber == null || s.RackNumber == SearchRackNumber) &&
-                     (SearchDate == null || s.Date.Date == SearchDate.Value.Date)))
-        {
-            SaleResults.Add(sale);
-        }
-    }
-
-    private void Update()
-    {
-        // TODO: gem de rettede værdier i SaleResults via ISaleRepository.Update(...).
     }
 }

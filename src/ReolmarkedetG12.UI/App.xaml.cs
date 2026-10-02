@@ -46,6 +46,7 @@ public partial class App : Application
         var rentalRepository = new RentalRepository(connectionString);
         var rentalPriceTierRepository = new RentalPriceTierRepository(connectionString);
         var paymentRepository = new PaymentRepository(connectionString);
+        var saleRepository = new SaleRepository(connectionString);
 
         try
         {
@@ -74,7 +75,7 @@ public partial class App : Application
         var mainViewModel = new MainViewModel(
             new RackViewModel(rackRepository, renterRepository, rentalRepository, rentalPriceTierRepository, paymentRepository, dialogService),
             new RenterViewModel(renterRepository, rentalRepository, dialogService),
-            new SalesViewModel());
+            new SalesViewModel(rackRepository, rentalRepository, saleRepository, dialogService));
 
         var mainWindow = new MainWindow { DataContext = mainViewModel };
         this.MainWindow = mainWindow;

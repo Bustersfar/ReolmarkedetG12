@@ -22,6 +22,7 @@ public partial class App : Application
 
         IConfigurationRoot config;
         string connectionString;
+        string searchSalesPassword;
 
         try
         {
@@ -31,6 +32,8 @@ public partial class App : Application
 
             connectionString = config.GetConnectionString("DefaultConnection")
                 ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found in appsettings.json");
+
+            searchSalesPassword = config["SearchSalesPassword"] ?? "1234";
         }
         catch (Exception ex)
         {
@@ -40,6 +43,8 @@ public partial class App : Application
             Shutdown();
             return;
         }
+
+        var secureAreaService = new SecureAreaService(searchSalesPassword);
 
         var rackRepository = new RackRepository(connectionString);
         var renterRepository = new RenterRepository(connectionString);
@@ -75,7 +80,8 @@ public partial class App : Application
         var mainViewModel = new MainViewModel(
             new RackViewModel(rackRepository, renterRepository, rentalRepository, rentalPriceTierRepository, paymentRepository, dialogService),
             new RenterViewModel(renterRepository, rentalRepository, dialogService),
-            new SalesViewModel(rackRepository, rentalRepository, saleRepository, dialogService));
+            new SalesViewModel(rackRepository, rentalRepository, saleRepository, dialogService),
+            new SearchSalesViewModel(rackRepository, saleRepository, dialogService, secureAreaService));
 
         var mainWindow = new MainWindow { DataContext = mainViewModel };
         this.MainWindow = mainWindow;

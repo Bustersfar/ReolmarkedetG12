@@ -1,4 +1,5 @@
 ﻿using ReolmarkedetG12.Tests.Fakes;
+using ReolmarkedetG12.UI.Services;
 using ReolmarkedetG12.UI.ViewModels;
 
 namespace ReolmarkedetG12.Tests;
@@ -15,18 +16,18 @@ public class MainViewModelTests
             new FakeRackRepository(), new FakeRenterRepository(), new FakeRentalRepository(),
             new FakePriceTierRepository(), new FakePaymentRepository(), dialog);
         var renterViewModel = new RenterViewModel(new FakeRenterRepository(), new FakeRentalRepository(), dialog);
+        var salesViewModel = new SalesViewModel(
+            new FakeRackRepository(), new FakeRentalRepository(), new FakeSaleRepository(), dialog);
+        var searchSalesViewModel = new SearchSalesViewModel(
+    new FakeRackRepository(), new FakeSaleRepository(), dialog, new SecureAreaService("1234"));
 
         // Act
-        var salesViewModel = new SalesViewModel();
-        var mainViewModel = new MainViewModel(rackViewModel, renterViewModel, salesViewModel);
+        var mainViewModel = new MainViewModel(rackViewModel, renterViewModel, salesViewModel, searchSalesViewModel);
 
         // Assert
         Assert.AreSame(rackViewModel, mainViewModel.RackViewModel);
         Assert.AreSame(renterViewModel, mainViewModel.RenterViewModel);
         Assert.AreSame(salesViewModel, mainViewModel.SalesViewModel);
-
-        // Assert
-        Assert.AreSame(rackViewModel, mainViewModel.RackViewModel);
-        Assert.AreSame(renterViewModel, mainViewModel.RenterViewModel);
+        Assert.AreSame(searchSalesViewModel, mainViewModel.SearchSalesViewModel);
     }
 }

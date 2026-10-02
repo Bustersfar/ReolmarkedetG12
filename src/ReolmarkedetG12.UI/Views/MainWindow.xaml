@@ -16,5 +16,8 @@
         <TabItem Header="Salg">
             <views:SalesView DataContext="{Binding SalesViewModel}" />
         </TabItem>
+        <TabItem Header="Søg/ret salg">
+            <views:SearchSalesView DataContext="{Binding SearchSalesViewModel}" />
+        </TabItem>
     </TabControl>
 </Window>

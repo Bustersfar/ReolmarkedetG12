@@ -8,12 +8,19 @@ public class MainViewModel : ViewModelBase
     public RenterViewModel RenterViewModel { get; }
     public SalesViewModel SalesViewModel { get; }
     public SearchSalesViewModel SearchSalesViewModel { get; }
+    public MonthlyStatementViewModel MonthlyStatementViewModel { get; }
 
-    public MainViewModel(RackViewModel rackVm, RenterViewModel RenterVm, SalesViewModel salesVm, SearchSalesViewModel searchSalesVm)
+    public MainViewModel(
+        RackViewModel rackVm,
+        RenterViewModel RenterVm,
+        SalesViewModel salesVm,
+        SearchSalesViewModel searchSalesVm,
+        MonthlyStatementViewModel monthlyStatementVm)
     {
         RackViewModel = rackVm;
         RenterViewModel = RenterVm;
         SalesViewModel = salesVm;
         SearchSalesViewModel = searchSalesVm;
+        MonthlyStatementViewModel = monthlyStatementVm;
     }
 }

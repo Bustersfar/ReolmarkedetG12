@@ -19,5 +19,8 @@
         <TabItem Header="Søg/ret salg">
             <views:SearchSalesView DataContext="{Binding SearchSalesViewModel}" />
         </TabItem>
+        <TabItem Header="Månedsopgørelse">
+            <views:MonthlyStatementView DataContext="{Binding MonthlyStatementViewModel}" />
+        </TabItem>
     </TabControl>
 </Window>

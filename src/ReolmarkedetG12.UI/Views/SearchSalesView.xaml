@@ -73,7 +73,9 @@
     <Grid>
 
         <!--Lås-skærm: genbrugelig view, vist indtil kodeordet er accepteret-->
-        <views:LockScreenView DataContext="{Binding Lock}" Style="{StaticResource LockScreenStyle}"/>
+        <Grid Style="{StaticResource LockScreenStyle}">
+            <views:LockScreenView DataContext="{Binding Lock}"/>
+        </Grid>
 
         <!--Det rigtige indhold: vist først når Lock.IsUnlocked er true-->
         <Grid Style="{StaticResource UnlockedContentStyle}" Margin="15">

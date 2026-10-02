@@ -19,15 +19,17 @@ public class MainViewModelTests
         var salesViewModel = new SalesViewModel(
             new FakeRackRepository(), new FakeRentalRepository(), new FakeSaleRepository(), dialog);
         var searchSalesViewModel = new SearchSalesViewModel(
-    new FakeRackRepository(), new FakeSaleRepository(), dialog, new SecureAreaService("1234"));
+            new FakeRackRepository(), new FakeSaleRepository(), dialog, new SecureAreaService("1234"));
+        var monthlyStatementViewModel = new MonthlyStatementViewModel(new SecureAreaService("1234"), dialog);
 
         // Act
-        var mainViewModel = new MainViewModel(rackViewModel, renterViewModel, salesViewModel, searchSalesViewModel);
+        var mainViewModel = new MainViewModel(rackViewModel, renterViewModel, salesViewModel, searchSalesViewModel, monthlyStatementViewModel);
 
         // Assert
         Assert.AreSame(rackViewModel, mainViewModel.RackViewModel);
         Assert.AreSame(renterViewModel, mainViewModel.RenterViewModel);
         Assert.AreSame(salesViewModel, mainViewModel.SalesViewModel);
         Assert.AreSame(searchSalesViewModel, mainViewModel.SearchSalesViewModel);
+        Assert.AreSame(monthlyStatementViewModel, mainViewModel.MonthlyStatementViewModel);
     }
 }

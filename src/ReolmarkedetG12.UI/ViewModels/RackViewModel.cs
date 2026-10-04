@@ -38,8 +38,6 @@ public class RackViewModel : ViewModelBase
     public ObservableCollection<RenterRackDisplayItem> RenterRacks { get; } = new();
     public ObservableCollection<Renter> SearchResults { get; } = new();
 
-    public Action<List<int>, decimal, string>? OnSendToCheckout { get; set; }
-
     // =========================================================================
     // MÆNGDE- OG STATUSPROPERTIES
     // =========================================================================
@@ -470,9 +468,9 @@ public class RackViewModel : ViewModelBase
 
         string message = $"Vil du oprette lejeaftale for {FoundRenter.FirstName} {FoundRenter.LastName}?\n\n" +
                          $"• Reoler: {rackNumbersText}\n" +
-                         $"• Til betaling ved kassen nu: {paymentNow:0.00} kr.\n" +
+                         $"• 1. måneds leje (bogføres nu): {paymentNow:0.00} kr.\n" +
                          $"• Fast husleje fremover: {newTotalMonthly:0.00} kr./md. ({newTotal} stk.)\n\n" +
-                         $"Tryk 'Ja' for at oprette og sende betalingen til kassen.";
+                         $"Tryk 'Ja' for at oprette og registrere lejeaftalen.";
 
         if (!_dialogService.Confirm(message, "Bekræft oprettelse"))
             return;
@@ -494,20 +492,40 @@ public class RackViewModel : ViewModelBase
                 EndDate = null,
                 MonthlyRent = tierPrice
             };
-            _rentalRepository.Add(rental);
+
+            // Punkt 1: Transaktionssikker oprettelse (både RENTAL og RACK-status i én transaktion)
+            if (_rentalRepository is RentalRepository concreteRentalRepo)
+            {
+                concreteRentalRepo.AddRentalWithRackStatus(rental, (int)RackStatus.Rented);
+            }
+            else
+            {
+                _rentalRepository.Add(rental);
+                item.Rack.Status = RackStatus.Rented;
+                _rackRepository.Update(item.Rack);
+            }
 
             item.Rack.Status = RackStatus.Rented;
-            _rackRepository.Update(item.Rack);
             item.RefreshStatus();
-
             item.IsSelected = false;
             createdRackNumbers.Add(item.Rack.Number);
+
+            // Punkt 2: Bogfør 1. måneds leje direkte som Payment i dbo.PAYMENT
+            if (paymentNow > 0)
+            {
+                decimal partialPaymentPerRack = paymentNow / newItems.Count;
+                _paymentRepository.Add(new Payment
+                {
+                    RenterId = FoundRenter.RenterId,
+                    Date = DateTime.UtcNow,
+                    Amount = partialPaymentPerRack,
+                    Type = PaymentType.FirstMonthPayment,
+                    PaymentMethod = PaymentMethod.MobilePay
+                });
+            }
         }
 
-        if (paymentNow > 0 && OnSendToCheckout != null)
-        {
-            OnSendToCheckout(createdRackNumbers, paymentNow, $"{FoundRenter.FirstName} {FoundRenter.LastName}");
-        }
+        _dialogService.ShowInfo($"Lejeaftale for {rackNumbersText} er oprettet og 1. måneds leje ({paymentNow:0.00} kr.) er registreret!", "Aftale oprettet");
 
         ClearSelectedRacks();
         LoadRenterRacks();

@@ -29,17 +29,5 @@ public class MainViewModel : ViewModelBase
         SalesViewModel = salesVm;
         SearchSalesViewModel = searchSalesVm;
         MonthlyStatementViewModel = monthlyStatementVm;
-
-        RackViewModel.OnSendToCheckout = (rackNumbers, amount, renterName) =>
-        {
-            foreach (var rackNo in rackNumbers)
-            {
-                decimal itemAmount = amount / rackNumbers.Count;
-                SalesViewModel.AddRentalPaymentItem(rackNo, itemAmount, renterName);
-            }
-
-            // Skifter direkte til Kasse / Salg-fanen (indeks 2)
-            SelectedTabIndex = 2;
-        };
     }
 }

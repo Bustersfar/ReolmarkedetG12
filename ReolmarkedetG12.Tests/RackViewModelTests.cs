@@ -226,7 +226,7 @@ public class RackViewModelTests
     }
 
     [TestMethod]
-    public void CreateRentalCommand_Confirmed_SendsAmountToCheckout()
+    public void CreateRentalCommand_Confirmed_CreatesFirstMonthPaymentInRepository()
     {
         // Arrange: to ledige reoler og én lejer, brugeren svarer ja
         AddRack(1);
@@ -237,28 +237,17 @@ public class RackViewModelTests
         viewModel.SelectRackCommand.Execute(viewModel.Racks[0]);
         viewModel.SelectRackCommand.Execute(viewModel.Racks[1]);
 
-        List<int>? sentRackNumbers = null;
-        decimal sentAmount = 0;
-        string? sentRenterName = null;
-        viewModel.OnSendToCheckout = (rackNumbers, amount, renterName) =>
-        {
-            sentRackNumbers = rackNumbers;
-            sentAmount = amount;
-            sentRenterName = renterName;
-        };
-
         // Act
         viewModel.CreateRentalCommand.Execute(null);
 
-        // Assert: beløbet sendt til kassen regnes af den SAMLEDE ekstra husleje (850 + 825 = 1675)
-        // i ét regnestykke - ligesom FirstMonthPaymentAmount selv gør det.
+        // Assert: 1. måneds leje er registreret som Payment-poster i PaymentRepository
         var today = DateOnly.FromDateTime(DateTime.Now);
-        var expectedAmount = RentalPriceCalculator.CalculatePartialMonthRent(850m + 825m, today);
+        var expectedTotal = RentalPriceCalculator.CalculatePartialMonthRent(850m + 825m, today);
 
-        Assert.IsNotNull(sentRackNumbers);
-        Assert.HasCount(2, sentRackNumbers!);
-        Assert.AreEqual(expectedAmount, sentAmount);
-        Assert.AreEqual($"{renter.FirstName} {renter.LastName}", sentRenterName);
+        Assert.HasCount(2, _payments.Payments);
+        Assert.AreEqual(expectedTotal, _payments.Payments.Sum(p => p.Amount));
+        Assert.IsTrue(_payments.Payments.All(p => p.Type == PaymentType.FirstMonthPayment));
+        Assert.IsTrue(_payments.Payments.All(p => p.RenterId == renter.RenterId));
     }
 
     [TestMethod]
@@ -279,6 +268,7 @@ public class RackViewModelTests
         Assert.HasCount(0, _payments.Payments);
         Assert.HasCount(0, _rentals.Rentals);
     }
+
     [TestMethod]
     public void CalculateTerminationEffectiveDate_On19th_ReturnsFirstOfNextMonth()
     {
@@ -373,6 +363,7 @@ public class RackViewModelTests
         Assert.IsNotNull(_dialog.LastError);
         Assert.Contains("Kunne ikke forbinde", _dialog.LastError);
     }
+
     [TestMethod]
     public void SearchQuery_ByFirstName_FindsRenterIgnoringCase()
     {
@@ -437,6 +428,7 @@ public class RackViewModelTests
 
         Assert.HasCount(0, viewModel.SearchResults);
     }
+
     [TestMethod]
     public void CheckTerminationDatesFromTimer_DatabaseStaysDown_ShowsErrorOnlyOnce()
     {
@@ -476,12 +468,6 @@ public class RackViewModelTests
         // Assert: fejlen vises én gang for hver gang, databasen går ned
         Assert.AreEqual(2, _dialog.ErrorCount);
     }
-
-    // =========================================================================
-    // NYE TESTS: kunde-kontekst må aldrig "hænge fast" efter en reol fravælges,
-    // men skal bevares når man lejer en ekstra reol ud til samme kunde, og at
-    // klikke en anden kundes reol skal ALTID bare skifte - aldrig blokere.
-    // =========================================================================
 
     [TestMethod]
     public void SelectRackCommand_RackBelongsToOtherRenter_SwitchesToThatRenter()

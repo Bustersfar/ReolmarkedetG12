@@ -161,16 +161,6 @@ public class SalesViewModel : ViewModelBase
         CurrentSaleItems.CollectionChanged += (_, _) => RecalculateTotals();
     }
 
-    public void AddRentalPaymentItem(int rackNumber, decimal amount, string renterName)
-    {
-        CurrentSaleItems.Add(new CartLineItem
-        {
-            RackNumber = rackNumber,
-            Remark = $"1. md. leje - {renterName}",
-            Amount = amount
-        });
-    }
-
     private void ValidateEnteredRack()
     {
         _activeRenterId = null;

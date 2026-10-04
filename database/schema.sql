@@ -25,14 +25,18 @@ GO
 -- 3. Opret tabeller
 
 -- RENTER (Kunder / Standlejere)
+-- Kolonnerne herunder matcher Renter.cs og RenterRepository.cs: FirstName/LastName
+-- i stedet for ét samlet Name-felt, og PostalCode som tal (INT), ikke tekst.
+-- Telefon og e-mail er valgfrie (NULL), ligesom i modellen (string?).
 CREATE TABLE dbo.RENTER (
     RenterId INT IDENTITY(1,1) PRIMARY KEY,
-    Name NVARCHAR(100) NOT NULL,
-    Phone NVARCHAR(20) NOT NULL,
-    Email NVARCHAR(100) NOT NULL,
+    FirstName NVARCHAR(100) NOT NULL,
+    LastName NVARCHAR(100) NOT NULL,
     Address NVARCHAR(200) NOT NULL,
-    PostalCode NVARCHAR(10) NOT NULL,
+    PostalCode INT NOT NULL,
     City NVARCHAR(100) NOT NULL,
+    Phone NVARCHAR(20) NULL,
+    Email NVARCHAR(100) NULL,
     CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
 );
 GO
@@ -69,16 +73,17 @@ CREATE TABLE dbo.RENTAL (
 GO
 
 -- PAYMENT (Lejeindbetalinger)
+-- Kolonnerne herunder matcher Payment.cs og PaymentRepository.cs: betalingen er
+-- knyttet til en RenterId (ikke en RentalId) og har et Date-felt (ikke
+-- DueDate/PaidDate/Status, som koden aldrig bruger).
 CREATE TABLE dbo.PAYMENT (
     PaymentId INT IDENTITY(1,1) PRIMARY KEY,
-    RentalId INT NOT NULL,
+    RenterId INT NOT NULL,
+    Date DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     Amount DECIMAL(18,2) NOT NULL,
-    DueDate DATETIME2 NOT NULL,
-    PaidDate DATETIME2 NULL,
-    Status INT NOT NULL DEFAULT 0, -- 0 = Pending, 1 = Paid, 2 = Overdue
     Type INT NOT NULL DEFAULT 0,   -- 0 = FirstMonthPayment, 1 = RegularMonthlyRent
     PaymentMethod INT NOT NULL DEFAULT 0, -- 0 = Cash, 1 = MobilePay, 2 = BankTransfer
-    CONSTRAINT FK_PAYMENT_RENTAL FOREIGN KEY (RentalId) REFERENCES dbo.RENTAL(RentalId)
+    CONSTRAINT FK_PAYMENT_RENTER FOREIGN KEY (RenterId) REFERENCES dbo.RENTER(RenterId)
 );
 GO
 
@@ -112,7 +117,7 @@ GO
 -- 4. Indekser for hurtige opslag og performance
 CREATE NONCLUSTERED INDEX IX_RENTAL_RenterId ON dbo.RENTAL(RenterId);
 CREATE NONCLUSTERED INDEX IX_RENTAL_RackId ON dbo.RENTAL(RackId);
-CREATE NONCLUSTERED INDEX IX_PAYMENT_RentalId ON dbo.PAYMENT(RentalId);
+CREATE NONCLUSTERED INDEX IX_PAYMENT_RenterId ON dbo.PAYMENT(RenterId);
 CREATE NONCLUSTERED INDEX IX_SALE_RackId ON dbo.SALE(RackId);
 CREATE NONCLUSTERED INDEX IX_SALE_RenterId ON dbo.SALE(RenterId);
 CREATE NONCLUSTERED INDEX IX_SALE_Date ON dbo.SALE(Date);

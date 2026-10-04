@@ -3,126 +3,158 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:views="clr-namespace:ReolmarkedetG12.UI.Views"
              mc:Ignorable="d" 
              d:DesignHeight="750" d:DesignWidth="1050">
-    <Grid Background="#F4F6F9" Margin="24">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="200"/>
-        </Grid.RowDefinitions>
 
-        <!-- 1. Filtrering / Søgeområde -->
-        <Border Grid.Row="0" Background="White" CornerRadius="8" Padding="16" Margin="0,0,0,16">
-            <Border.Effect>
-                <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.1"/>
-            </Border.Effect>
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="140"/>
-                    <ColumnDefinition Width="24"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="180"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+    <UserControl.Resources>
+        <!-- Vist indtil kodeordet er accepteret -->
+        <Style x:Key="LockScreenStyle" TargetType="FrameworkElement">
+            <Setter Property="Visibility" Value="Visible"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Lock.IsUnlocked}" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
 
-                <TextBlock Grid.Column="0" Text="Reolnummer:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,8,0"/>
-                <TextBox Grid.Column="1" Text="{Binding SearchRackNumber, UpdateSourceTrigger=PropertyChanged}" 
+        <!-- Vist først efter kodeordet er accepteret -->
+        <Style x:Key="UnlockedContentStyle" TargetType="Grid">
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Lock.IsUnlocked}" Value="True">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <!--Lås-skærm: genbrugelig view, vist indtil kodeordet er accepteret-->
+        <Grid Style="{StaticResource LockScreenStyle}">
+            <views:LockScreenView DataContext="{Binding Lock}"/>
+        </Grid>
+
+        <!--Det oprindelige indhold, nu kun vist når Lock.IsUnlocked er true-->
+        <Grid Style="{StaticResource UnlockedContentStyle}" Background="#F4F6F9" Margin="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="200"/>
+            </Grid.RowDefinitions>
+
+            <!-- 1. Filtrering / Søgeområde -->
+            <Border Grid.Row="0" Background="White" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.1"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="140"/>
+                        <ColumnDefinition Width="24"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="Reolnummer:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                    <TextBox Grid.Column="1" Text="{Binding SearchRackNumber, UpdateSourceTrigger=PropertyChanged}" 
                          Height="32" VerticalContentAlignment="Center" Padding="6,0"/>
 
-                <TextBlock Grid.Column="3" Text="Dato:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,8,0"/>
-                <DatePicker Grid.Column="4" SelectedDate="{Binding SearchDate}" Height="32" VerticalContentAlignment="Center"/>
+                    <TextBlock Grid.Column="3" Text="Dato:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                    <DatePicker Grid.Column="4" SelectedDate="{Binding SearchDate}" Height="32" VerticalContentAlignment="Center"/>
 
-                <!-- Knapper -->
-                <StackPanel Grid.Column="6" Orientation="Horizontal">
-                    <Button Content="Nulstil" Command="{Binding ResetSearchCommand}"
+                    <!-- Knapper -->
+                    <StackPanel Grid.Column="6" Orientation="Horizontal">
+                        <Button Content="Nulstil" Command="{Binding ResetSearchCommand}"
                             Width="90" Height="32" Margin="0,0,8,0" Background="#E2E8F0" BorderThickness="0" Cursor="Hand"/>
-                    <Button Content="Søg salg" Command="{Binding SearchCommand}"
+                        <Button Content="Søg salg" Command="{Binding SearchCommand}"
                             Width="110" Height="32" Background="#2B6CB0" Foreground="White" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand"/>
-                </StackPanel>
-            </Grid>
-        </Border>
+                    </StackPanel>
+                </Grid>
+            </Border>
 
-        <!-- 2. Resultatliste (Salg) -->
-        <Border Grid.Row="1" Background="White" CornerRadius="8" Padding="16" Margin="0,0,0,12">
-            <Border.Effect>
-                <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.1"/>
-            </Border.Effect>
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+            <!-- 2. Resultatliste (Salg) -->
+            <Border Grid.Row="1" Background="White" CornerRadius="8" Padding="16" Margin="0,0,0,12">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.1"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Text="Søgeresultater (Vælg et salg for at se revisionslog)" 
+                    <TextBlock Grid.Row="0" Text="Søgeresultater (Vælg et salg for at se revisionslog)" 
                            FontWeight="Bold" FontSize="14" Foreground="#2D3748" Margin="0,0,0,8"/>
 
-                <DataGrid Grid.Row="1" ItemsSource="{Binding SaleResults}" 
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding SaleResults}" 
                           SelectedItem="{Binding SelectedSaleItem}"
                           AutoGenerateColumns="False" CanUserAddRows="False"
                           GridLinesVisibility="Horizontal" HeadersVisibility="Column"
                           RowHeight="36" SelectionMode="Single" Background="Transparent" BorderThickness="0">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="ID" Binding="{Binding SaleId}" Width="60" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="Reol" Binding="{Binding RackNumber}" Width="70" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="Lejer" Binding="{Binding RenterName}" Width="160" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="Dato" Binding="{Binding Date, StringFormat='dd-MM-yyyy HH:mm'}" Width="140" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="Beskrivelse" Binding="{Binding Description, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
-                        <DataGridTextColumn Header="Beløb (kr.)" Binding="{Binding Amount, StringFormat='0.00', UpdateSourceTrigger=PropertyChanged}" Width="110"/>
-                        <DataGridTemplateColumn Width="90">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <Button Content="Slet" 
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="ID" Binding="{Binding SaleId}" Width="60" IsReadOnly="True"/>
+                            <DataGridTextColumn Header="Reol" Binding="{Binding RackNumber}" Width="70" IsReadOnly="True"/>
+                            <DataGridTextColumn Header="Lejer" Binding="{Binding RenterName}" Width="160" IsReadOnly="True"/>
+                            <DataGridTextColumn Header="Dato" Binding="{Binding Date, StringFormat='dd-MM-yyyy HH:mm'}" Width="140" IsReadOnly="True"/>
+                            <DataGridTextColumn Header="Beskrivelse" Binding="{Binding Description, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+                            <DataGridTextColumn Header="Beløb (kr.)" Binding="{Binding Amount, StringFormat='0.00', UpdateSourceTrigger=PropertyChanged}" Width="110"/>
+                            <DataGridTemplateColumn Width="90">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="Slet" 
                                             Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                             CommandParameter="{Binding}"
                                             Background="#E53E3E" Foreground="White" BorderThickness="0" Height="26" Padding="6,2" Cursor="Hand"/>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                    </DataGrid.Columns>
-                </DataGrid>
-            </Grid>
-        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Border>
 
-        <!-- 3. Gem-knap til salgsændringer -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,12">
-            <Button Content="Gem ændringer til salg" Command="{Binding UpdateCommand}"
+            <!-- 3. Gem-knap til salgsændringer -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,12">
+                <Button Content="Gem ændringer til salg" Command="{Binding UpdateCommand}"
                     Width="180" Height="34" Background="#38A169" Foreground="White" FontWeight="Bold" BorderThickness="0" Cursor="Hand"/>
-        </StackPanel>
+            </StackPanel>
 
-        <!-- 4. Revisionslog (Punkt 17) -->
-        <Border Grid.Row="3" Background="White" CornerRadius="8" Padding="16">
-            <Border.Effect>
-                <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.1"/>
-            </Border.Effect>
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+            <!-- 4. Revisionslog (Punkt 17) -->
+            <Border Grid.Row="3" Background="White" CornerRadius="8" Padding="16">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.1"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
-                    <TextBlock Text="Revisionslog for valgt salg" FontWeight="Bold" FontSize="14" Foreground="#2D3748"/>
-                    <TextBlock Text=" (Viser alle historiske ændringer og rettelser)" Foreground="#718096" Margin="6,0,0,0"/>
-                </StackPanel>
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Text="Revisionslog for valgt salg" FontWeight="Bold" FontSize="14" Foreground="#2D3748"/>
+                        <TextBlock Text=" (Viser alle historiske ændringer og rettelser)" Foreground="#718096" Margin="6,0,0,0"/>
+                    </StackPanel>
 
-                <DataGrid Grid.Row="1" ItemsSource="{Binding AuditLogs}" 
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding AuditLogs}" 
                           AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
                           GridLinesVisibility="Horizontal" HeadersVisibility="Column"
                           RowHeight="30" Background="Transparent" BorderThickness="0">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Tidspunkt" Binding="{Binding Timestamp, StringFormat='dd-MM-yyyy HH:mm:ss'}" Width="150"/>
-                        <DataGridTextColumn Header="Handling" Binding="{Binding ActionType}" Width="90"/>
-                        <DataGridTextColumn Header="Gammelt beløb" Binding="{Binding OldAmount, StringFormat='0.00 kr.'}" Width="110"/>
-                        <DataGridTextColumn Header="Nyt beløb" Binding="{Binding NewAmount, StringFormat='0.00 kr.'}" Width="110"/>
-                        <DataGridTextColumn Header="Gammel tekst" Binding="{Binding OldDescription}" Width="*"/>
-                        <DataGridTextColumn Header="Ny tekst" Binding="{Binding NewDescription}" Width="*"/>
-                    </DataGrid.Columns>
-                </DataGrid>
-            </Grid>
-        </Border>
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Tidspunkt" Binding="{Binding Timestamp, StringFormat='dd-MM-yyyy HH:mm:ss'}" Width="150"/>
+                            <DataGridTextColumn Header="Handling" Binding="{Binding ActionType}" Width="90"/>
+                            <DataGridTextColumn Header="Gammelt beløb" Binding="{Binding OldAmount, StringFormat='0.00 kr.'}" Width="110"/>
+                            <DataGridTextColumn Header="Nyt beløb" Binding="{Binding NewAmount, StringFormat='0.00 kr.'}" Width="110"/>
+                            <DataGridTextColumn Header="Gammel tekst" Binding="{Binding OldDescription}" Width="*"/>
+                            <DataGridTextColumn Header="Ny tekst" Binding="{Binding NewDescription}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

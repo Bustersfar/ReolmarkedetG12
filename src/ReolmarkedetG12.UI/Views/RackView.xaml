@@ -3,41 +3,77 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:converters="clr-namespace:ReolmarkedetG12.UI.Converters"
              mc:Ignorable="d" 
              d:DesignHeight="780" d:DesignWidth="1100">
-    <Grid Background="#F4F6F9" Margin="24">
+
+    <UserControl.Resources>
+        <converters:EmptyToVisibilityConverter x:Key="EmptyToVisibility"/>
+
+        <!-- Samme opbygning som "SuccessButton" i App.xaml, blot med rød farve til destruktive handlinger -->
+        <Style x:Key="DangerActionButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Background" Value="{StaticResource DangerRed}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="{StaticResource DangerRedHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#94A3B8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Background="{StaticResource AppBackground}" Margin="24">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="6*"/>
             <ColumnDefinition Width="4*"/>
         </Grid.ColumnDefinitions>
 
         <!-- Venstre side: Reoloversigt -->
-        <Border Grid.Column="0" Background="White" CornerRadius="8" Padding="16" Margin="0,0,16,0">
-            <Border.Effect>
-                <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.1"/>
-            </Border.Effect>
+        <Border Grid.Column="0" Style="{StaticResource CardPanel}" Margin="0,0,16,0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Stretch" Margin="0,0,0,12">
-                    <TextBlock Text="Oversigt over reoler" FontWeight="Bold" FontSize="16" Foreground="#2D3748" VerticalAlignment="Center"/>
-                    <Button Content="Opdater" Command="{Binding RefreshCommand}" 
-                            HorizontalAlignment="Right" Width="80" Height="28" Margin="20,0,0,0"
-                            Background="#E2E8F0" BorderThickness="0" Cursor="Hand"/>
-                </StackPanel>
+                <DockPanel Grid.Row="0" Margin="0,0,0,12">
+                    <Button Content="Opdater" Command="{Binding RefreshCommand}"
+                            Style="{StaticResource SecondaryButton}"
+                            DockPanel.Dock="Right" Width="90" Height="30" FontSize="12"/>
+                    <TextBlock Text="Oversigt over reoler" Style="{StaticResource SectionHeader}" Margin="0" VerticalAlignment="Center"/>
+                </DockPanel>
 
-                <DataGrid Grid.Row="1" ItemsSource="{Binding Racks}" SelectedItem="{Binding SelectedRack}"
+                <!-- Klik på en række markerer/afmarkerer reolen (flere reoler kan vælges på én gang) -->
+                <DataGrid Grid.Row="1" ItemsSource="{Binding Racks}"
                           AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
                           GridLinesVisibility="Horizontal" HeadersVisibility="Column"
-                          RowHeight="34" SelectionMode="Single" Background="Transparent" BorderThickness="0">
+                          RowHeight="34" SelectionMode="Single" Background="Transparent" BorderThickness="0"
+                          SelectionChanged="RacksGrid_SelectionChanged">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Reolnr." Binding="{Binding Rack.Number}" Width="80"/>
-                        <DataGridTextColumn Header="Status" Binding="{Binding Rack.Status}" Width="120"/>
-                        <DataGridTextColumn Header="Nuværende lejer" Binding="{Binding CurrentRenter}" Width="*"/>
+                        <DataGridTextColumn Header="Status" Binding="{Binding Rack.Status}" Width="*"/>
                     </DataGrid.Columns>
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <Style.Triggers>
+                                <!-- Egen markerings-farve, styret af RackDisplayItem.IsSelected (sat af RackViewModel) -->
+                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                    <Setter Property="Background" Value="#DBEAFE"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.RowStyle>
                 </DataGrid>
             </Grid>
         </Border>
@@ -50,51 +86,86 @@
             </Grid.RowDefinitions>
 
             <!-- Håndtering af udlejning -->
-            <Border Grid.Row="0" Background="White" CornerRadius="8" Padding="16" Margin="0,0,0,16">
-                <Border.Effect>
-                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.1"/>
-                </Border.Effect>
+            <Border Grid.Row="0" Style="{StaticResource CardPanel}" Margin="0,0,0,16">
                 <StackPanel>
-                    <TextBlock Text="Udlejning af reol" FontWeight="Bold" FontSize="16" Foreground="#2D3748" Margin="0,0,0,12"/>
+                    <TextBlock Text="Udlejning af reol" Style="{StaticResource SectionHeader}"/>
 
-                    <TextBlock Text="Valgt reol:" FontWeight="SemiBold" Margin="0,4,0,2"/>
-                    <TextBlock Text="{Binding SelectedRack.Rack.Number, StringFormat='Reol #{0}', FallbackValue='Ingen reol valgt'}" 
-                               FontSize="14" Foreground="#4A5568" Margin="0,0,0,10"/>
+                    <TextBlock Text="Valgte reoler:" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="Ingen reol valgt endnu — klik på en reol i listen til venstre"
+                               Visibility="{Binding SelectedRacks.Count, Converter={StaticResource EmptyToVisibility}}"
+                               FontStyle="Italic" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,10" TextWrapping="Wrap"/>
+                    <ItemsControl ItemsSource="{Binding SelectedRacks}" Margin="0,0,0,10"
+                                  Visibility="{Binding SelectedRacks.Count, Converter={StaticResource EmptyToVisibility}, ConverterParameter=Invert}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#DBEAFE" CornerRadius="4" Padding="6,2" Margin="0,0,6,6">
+                                    <TextBlock Text="{Binding Rack.Number, StringFormat='Reol #{0}'}" FontSize="12" Foreground="{StaticResource TextPrimary}"/>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
 
-                    <TextBlock Text="Vælg lejer:" FontWeight="SemiBold" Margin="0,4,0,2"/>
-                    <ComboBox ItemsSource="{Binding Renters}" SelectedItem="{Binding SelectedRenter}"
-                              Height="32" Margin="0,0,0,10" VerticalContentAlignment="Center">
-                        <ComboBox.ItemTemplate>
+                    <TextBlock Text="Søg lejer:" Style="{StaticResource FieldLabel}"/>
+                    <TextBox Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <!-- Søgeresultater: klik på en lejer for at vælge vedkommende -->
+                    <ListBox ItemsSource="{Binding SearchResults}" MaxHeight="110" Margin="0,0,0,10"
+                             Visibility="{Binding SearchResults.Count, Converter={StaticResource EmptyToVisibility}, ConverterParameter=Invert}"
+                             SelectionChanged="SearchResultsList_SelectionChanged">
+                        <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock>
                                     <Run Text="{Binding FirstName}"/>
                                     <Run Text=" "/>
                                     <Run Text="{Binding LastName}"/>
-                                    <Run Text=" (Tlf: "/>
+                                    <Run Text=" — "/>
                                     <Run Text="{Binding Phone}"/>
-                                    <Run Text=")"/>
                                 </TextBlock>
                             </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
 
-                    <TextBlock Text="Månedlig leje (kr.):" FontWeight="SemiBold" Margin="0,4,0,2"/>
-                    <TextBox Text="{Binding NewMonthlyRent, UpdateSourceTrigger=PropertyChanged, StringFormat='0.00'}" 
-                             Height="32" VerticalContentAlignment="Center" Margin="0,0,0,14" Padding="6,0"/>
+                    <TextBlock Text="Valgt lejer:" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="Ingen lejer valgt"
+                               Visibility="{Binding FoundRenter, Converter={StaticResource EmptyToVisibility}}"
+                               FontStyle="Italic" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,6"/>
+                    <TextBlock Margin="0,0,0,6" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}"
+                               Visibility="{Binding FoundRenter, Converter={StaticResource EmptyToVisibility}, ConverterParameter=Invert}">
+                        <Run Text="{Binding FoundRenter.FirstName}"/>
+                        <Run Text=" "/>
+                        <Run Text="{Binding FoundRenter.LastName}"/>
+                    </TextBlock>
 
-                    <Button Content="Opret udlejning" Command="{Binding RentOutCommand}" 
-                            Height="36" Background="#2B6CB0" Foreground="White" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Margin="0,0,0,8"/>
+                    <!-- Lejerens aktive reoler, hvis en lejer er valgt -->
+                    <ItemsControl ItemsSource="{Binding RenterRacks}" Margin="0,0,0,14"
+                                  Visibility="{Binding RenterRacks.Count, Converter={StaticResource EmptyToVisibility}, ConverterParameter=Invert}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2">
+                                    <Run Text="{Binding RackItem.Rack.Number, StringFormat='Reol #{0}'}"/>
+                                    <Run Text=" – "/>
+                                    <Run Text="{Binding Rental.MonthlyRent, StringFormat='{}{0:0} kr./md.'}"/>
+                                </TextBlock>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
 
-                    <Button Content="Afslut aktivt lejemål" Command="{Binding EndRentalCommand}" 
-                            Height="34" Background="#E53E3E" Foreground="White" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand"/>
+                    <Button Content="Opret udlejning" Command="{Binding CreateRentalCommand}"
+                            Style="{StaticResource SuccessButton}" Margin="0,0,0,8"/>
+                    <Button Content="Opsig lejemål" Command="{Binding TerminateRentalCommand}"
+                            Style="{StaticResource DangerActionButton}" Margin="0,0,0,8"/>
+                    <Button Content="Annuller opsigelse" Command="{Binding CancelTerminationCommand}"
+                            Style="{StaticResource SecondaryButton}"/>
                 </StackPanel>
             </Border>
 
             <!-- Punkt 14: Lejemålshistorik -->
-            <Border Grid.Row="1" Background="White" CornerRadius="8" Padding="16">
-                <Border.Effect>
-                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.1"/>
-                </Border.Effect>
+            <Border Grid.Row="1" Style="{StaticResource CardPanel}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -102,8 +173,8 @@
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0" Margin="0,0,0,8">
-                        <TextBlock Text="Lejemålshistorik" FontWeight="Bold" FontSize="15" Foreground="#2D3748"/>
-                        <TextBlock Text="Tidligere lejemål for valgt reol" FontSize="11" Foreground="#718096"/>
+                        <TextBlock Text="Lejemålshistorik" FontWeight="Bold" FontSize="15" Foreground="{StaticResource TextPrimary}"/>
+                        <TextBlock Text="Tidligere lejemål for valgt reol" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
                     </StackPanel>
 
                     <DataGrid Grid.Row="1" ItemsSource="{Binding RackHistory}"

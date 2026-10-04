@@ -18,8 +18,7 @@ public class SearchSalesViewModel : ViewModelBase
     private readonly IRepository<Sale> _saleRepository;
     private readonly IRepository<Renter> _renterRepository;
     private readonly IDialogService _dialogService;
-
-    public LockScreenViewModel Lock { get; }
+    private readonly ISecureAreaService? _secureAreaService;
 
     private int? _searchRackNumber;
     public int? SearchRackNumber
@@ -49,29 +48,39 @@ public class SearchSalesViewModel : ViewModelBase
         }
     }
 
-    public ObservableCollection<SaleDisplayItem> SaleResults { get; } = new();
+    public ObservableCollection<SaleDisplayItem> SaleResults { get; } = [];
 
     // Punkt 17: Liste over ændringer (audit logs) for det markerede salg
-    public ObservableCollection<SaleAuditLog> AuditLogs { get; } = new();
+    public ObservableCollection<SaleAuditLog> AuditLogs { get; } = [];
 
     public RelayCommand SearchCommand { get; }
     public RelayCommand ResetSearchCommand { get; }
     public RelayCommand UpdateCommand { get; }
     public RelayCommand DeleteCommand { get; }
 
+    // Konstruktør med 4 parametre (til enhedstests)
+    public SearchSalesViewModel(
+        IRepository<Rack> rackRepository,
+        IRepository<Sale> saleRepository,
+        IRepository<Renter> renterRepository,
+        IDialogService dialogService)
+        : this(rackRepository, saleRepository, renterRepository, dialogService, null)
+    {
+    }
+
+    // Konstruktør med 5 parametre (anvendes af App.xaml.cs)
     public SearchSalesViewModel(
         IRepository<Rack> rackRepository,
         IRepository<Sale> saleRepository,
         IRepository<Renter> renterRepository,
         IDialogService dialogService,
-        ISecureAreaService secureAreaService)
+        ISecureAreaService? secureAreaService)
     {
         _rackRepository = rackRepository;
         _saleRepository = saleRepository;
         _renterRepository = renterRepository;
         _dialogService = dialogService;
-
-        Lock = new LockScreenViewModel(secureAreaService, dialogService);
+        _secureAreaService = secureAreaService;
 
         SearchCommand = new RelayCommand(_ => SafeExecute(Search));
         ResetSearchCommand = new RelayCommand(_ => ResetSearch());
@@ -186,7 +195,6 @@ public class SearchSalesViewModel : ViewModelBase
             if (sale == null)
                 continue;
 
-            // Klon original til revisionslog
             var originalSale = new Sale
             {
                 SaleId = sale.SaleId,
@@ -215,7 +223,6 @@ public class SearchSalesViewModel : ViewModelBase
 
         _dialogService.ShowInfo($"{updatedCount} salg er opdateret i databasen.", "Gemt");
 
-        // Genindlæs revisionslog hvis et element er markeret
         LoadAuditLogsForSelectedSale();
     }
 

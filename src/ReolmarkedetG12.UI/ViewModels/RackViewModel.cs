@@ -1,13 +1,16 @@
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows.Input;
 using System.Windows.Threading;
+using Microsoft.Data.SqlClient;
 using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
 using ReolmarkedetG12.Core.Services;
 using ReolmarkedetG12.UI.MVVM;
 using ReolmarkedetG12.UI.Services;
-using Microsoft.Data.SqlClient;
 
 namespace ReolmarkedetG12.UI.ViewModels;
 
@@ -37,6 +40,9 @@ public class RackViewModel : ViewModelBase
     public ObservableCollection<RackDisplayItem> SelectedRacks { get; } = new();
     public ObservableCollection<RenterRackDisplayItem> RenterRacks { get; } = new();
     public ObservableCollection<Renter> SearchResults { get; } = new();
+
+    // Punkt 14: Historik for afsluttede lejemål på den valgte reol
+    public ObservableCollection<RackHistoryDisplayItem> RackHistory { get; } = new();
 
     // =========================================================================
     // MÆNGDE- OG STATUSPROPERTIES
@@ -190,10 +196,6 @@ public class RackViewModel : ViewModelBase
 
                 if (clicked.Rack.Status == RackStatus.Available)
                 {
-                    // LEDIG REOL: fjern evt. markerede optagne/opsagte reoler fra valget,
-                    // men behold den fundne kunde - det er netop sådan man lejer en
-                    // ekstra reol ud til en kunde man allerede har fundet (ved søgning,
-                    // eller ved at klikke en af deres nuværende reoler).
                     foreach (var r in SelectedRacks.Where(r => r.Rack.Status != RackStatus.Available).ToList())
                     {
                         r.IsSelected = false;
@@ -202,9 +204,6 @@ public class RackViewModel : ViewModelBase
                 }
                 else
                 {
-                    // OPTAGET/OPSAGT REOL: find og vis dens faktiske lejer.
-                    // Et klik her skifter ALTID roligt til den rigtige lejer -
-                    // der vises aldrig en blokerende fejl.
                     var relevantRental = clicked.Rack.Status == RackStatus.Rented
                         ? _rentalRepository.GetAll().FirstOrDefault(r => r.RackId == clicked.Rack.RackId && r.EndDate == null)
                         : _rentalRepository.GetAll().Where(r => r.RackId == clicked.Rack.RackId && r.EndDate != null)
@@ -215,8 +214,6 @@ public class RackViewModel : ViewModelBase
                         var renter = _renterRepository.GetById(relevantRental.RenterId);
                         if (renter != null)
                         {
-                            // Skifter vi til en anden kunde, giver gamle markeringer
-                            // ikke længere mening - ryd dem.
                             foreach (var r in SelectedRacks.ToList())
                             {
                                 r.IsSelected = false;
@@ -229,7 +226,6 @@ public class RackViewModel : ViewModelBase
                         }
                     }
 
-                    // Fjern ledige reoler, så vi kun har egne optagne valgt
                     foreach (var a in SelectedRacks.Where(r => r.Rack.Status == RackStatus.Available).ToList())
                     {
                         a.IsSelected = false;
@@ -237,24 +233,28 @@ public class RackViewModel : ViewModelBase
                     }
                 }
 
-                // Skift markering
                 clicked.IsSelected = !clicked.IsSelected;
 
                 if (clicked.IsSelected)
                 {
                     if (!SelectedRacks.Contains(clicked))
                         SelectedRacks.Add(clicked);
+
+                    LoadRackHistory(clicked.Rack);
                 }
                 else
                 {
                     SelectedRacks.Remove(clicked);
 
-                    // Fravalgte vi den sidste markerede reol, er der ikke længere
-                    // nogen grund til at holde kunden "åben" - nulstil helt.
                     if (SelectedRacks.Count == 0)
                     {
                         FoundRenter = null;
                         RenterRacks.Clear();
+                        RackHistory.Clear();
+                    }
+                    else
+                    {
+                        LoadRackHistory(SelectedRacks.Last().Rack);
                     }
                 }
 
@@ -296,6 +296,7 @@ public class RackViewModel : ViewModelBase
         SearchQuery = string.Empty;
         SearchResults.Clear();
         RenterRacks.Clear();
+        RackHistory.Clear();
         NotifyPriceChanges();
         CommandManager.InvalidateRequerySuggested();
     }
@@ -307,6 +308,7 @@ public class RackViewModel : ViewModelBase
             r.IsSelected = false;
         }
         SelectedRacks.Clear();
+        RackHistory.Clear();
         NotifyPriceChanges();
         CommandManager.InvalidateRequerySuggested();
     }
@@ -448,6 +450,40 @@ public class RackViewModel : ViewModelBase
         }
 
         NotifyPriceChanges();
+    }
+
+    // Punkt 14: Indlæser afsluttede lejemål for den valgte reol
+    public void LoadRackHistory(Rack rack)
+    {
+        RackHistory.Clear();
+
+        IEnumerable<Rental> completedRentals;
+        if (_rentalRepository is RentalRepository concreteRentalRepo)
+        {
+            completedRentals = concreteRentalRepo.GetCompletedRentalsByRackId(rack.RackId);
+        }
+        else
+        {
+            // Fallback til IRepository GetAll (benyttes bl.a. under enhedstests)
+            completedRentals = _rentalRepository.GetAll()
+                .Where(r => r.RackId == rack.RackId && r.EndDate != null && r.EndDate <= DateTime.Now)
+                .OrderByDescending(r => r.EndDate);
+        }
+
+        foreach (var rental in completedRentals)
+        {
+            var renter = _renterRepository.GetById(rental.RenterId);
+            RackHistory.Add(new RackHistoryDisplayItem
+            {
+                RentalId = rental.RentalId,
+                RackNumber = rack.Number,
+                RenterName = renter != null ? $"{renter.FirstName} {renter.LastName}" : "Tidligere lejer",
+                RenterContact = renter != null ? (renter.Phone ?? renter.Email ?? string.Empty) : string.Empty,
+                StartDate = rental.StartDate,
+                EndDate = rental.EndDate,
+                MonthlyRent = rental.MonthlyRent
+            });
+        }
     }
 
     private void CreateRental()

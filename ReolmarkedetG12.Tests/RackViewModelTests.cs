@@ -34,6 +34,7 @@ public class RackViewModelTests
         _renters.Add(renter);
         return renter;
     }
+
     private RackViewModel CreateViewModelWithTwoRenters()
     {
         _renters.Add(new Renter
@@ -58,6 +59,7 @@ public class RackViewModelTests
         });
         return CreateViewModel();
     }
+
     private Rack AddRackWithStatus(int number, RackStatus status)
     {
         var rack = new Rack { Number = number, Status = status };
@@ -77,6 +79,34 @@ public class RackViewModelTests
         };
         _rentals.Add(rental);
         return rental;
+    }
+
+    [TestMethod]
+    public void SelectRackCommand_WithCompletedRentals_LoadsRackHistory()
+    {
+        // Arrange
+        var renter = AddRenter();
+        var rack = AddRackWithStatus(1, RackStatus.Available);
+
+        // Et afsluttet lejemål
+        _rentals.Add(new Rental
+        {
+            RackId = rack.RackId,
+            RenterId = renter.RenterId,
+            StartDate = new DateTime(2025, 1, 1),
+            EndDate = new DateTime(2025, 6, 1),
+            MonthlyRent = 850m
+        });
+
+        var viewModel = CreateViewModel();
+
+        // Act
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[0]);
+
+        // Assert: Historikken for reol 1 er hentet
+        Assert.HasCount(1, viewModel.RackHistory);
+        Assert.AreEqual("Anna Andersen", viewModel.RackHistory[0].RenterName);
+        Assert.AreEqual(850m, viewModel.RackHistory[0].MonthlyRent);
     }
 
     [TestMethod]

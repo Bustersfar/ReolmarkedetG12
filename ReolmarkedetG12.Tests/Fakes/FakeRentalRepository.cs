@@ -1,4 +1,7 @@
-﻿using ReolmarkedetG12.Core.Exceptions;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
 
@@ -46,5 +49,32 @@ public class FakeRentalRepository : IRepository<Rental>
     {
         CheckDatabase();
         return Rentals.ToList();
+    }
+
+    public Rental? GetActiveRentalByRackId(int rackId)
+    {
+        CheckDatabase();
+        return Rentals
+            .Where(r => r.RackId == rackId && (r.EndDate == null || r.EndDate > DateTime.UtcNow))
+            .OrderByDescending(r => r.StartDate)
+            .FirstOrDefault();
+    }
+
+    public IEnumerable<Rental> GetByRenterId(int renterId)
+    {
+        CheckDatabase();
+        return Rentals
+            .Where(r => r.RenterId == renterId)
+            .OrderByDescending(r => r.StartDate)
+            .ToList();
+    }
+
+    public IEnumerable<Rental> GetCompletedRentalsByRackId(int rackId)
+    {
+        CheckDatabase();
+        return Rentals
+            .Where(r => r.RackId == rackId && r.EndDate != null && r.EndDate <= DateTime.UtcNow)
+            .OrderByDescending(r => r.EndDate)
+            .ToList();
     }
 }

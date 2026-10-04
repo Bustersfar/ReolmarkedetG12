@@ -139,6 +139,7 @@ public class SalesViewModel : ViewModelBase
         IRepository<Sale> saleRepository,
         IRepository<Renter> renterRepository,
         IDialogService dialogService)
+        : base(dialogService)
     {
         _rackRepository = rackRepository;
         _rentalRepository = rentalRepository;
@@ -363,31 +364,5 @@ public class SalesViewModel : ViewModelBase
         Change = 0;
     }
 
-    private bool SafeExecute(Action action)
-    {
-        try
-        {
-            action();
-            return true;
-        }
-        catch (DatabaseConnectionException ex)
-        {
-            _dialogService.ShowError(
-                $"{ex.Message}\n\nTeknisk besked: {ex.InnerException?.Message ?? "ukendt"}",
-                "Forbindelsesfejl");
-            return false;
-        }
-        catch (SqlException ex)
-        {
-            _dialogService.ShowError(
-                $"Der opstod en fejl i databasen.\n\nTeknisk besked: {ex.Message}",
-                "Databasefejl");
-            return false;
-        }
-        catch (Exception ex)
-        {
-            _dialogService.ShowError(ex.Message, "Fejl");
-            return false;
-        }
-    }
+    // SafeExecute ligger nu i ViewModelBase og deles af alle ViewModels.
 }

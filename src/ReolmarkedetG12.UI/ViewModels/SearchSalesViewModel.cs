@@ -53,6 +53,11 @@ public class SearchSalesViewModel : ViewModelBase
     // Punkt 17: Liste over ændringer (audit logs) for det markerede salg
     public ObservableCollection<SaleAuditLog> AuditLogs { get; } = [];
 
+    // Kodeords-lås (samme SecureAreaService som Månedsopgørelse, se ISecureAreaService).
+    // Null, hvis ViewModel'en er oprettet uden en ISecureAreaService (bruges af nogle tests),
+    // så vinduet i det tilfælde simpelthen forbliver bag låsen.
+    public LockScreenViewModel? Lock { get; }
+
     public RelayCommand SearchCommand { get; }
     public RelayCommand ResetSearchCommand { get; }
     public RelayCommand UpdateCommand { get; }
@@ -75,12 +80,17 @@ public class SearchSalesViewModel : ViewModelBase
         IRepository<Renter> renterRepository,
         IDialogService dialogService,
         ISecureAreaService? secureAreaService)
+        : base(dialogService)
     {
         _rackRepository = rackRepository;
         _saleRepository = saleRepository;
         _renterRepository = renterRepository;
         _dialogService = dialogService;
         _secureAreaService = secureAreaService;
+
+        Lock = secureAreaService != null
+            ? new LockScreenViewModel(secureAreaService, dialogService)
+            : null;
 
         SearchCommand = new RelayCommand(_ => SafeExecute(Search));
         ResetSearchCommand = new RelayCommand(_ => ResetSearch());
@@ -181,7 +191,10 @@ public class SearchSalesViewModel : ViewModelBase
 
     private void Update()
     {
-        int updatedCount = 0;
+        // Find kun de salg, hvor beløb eller beskrivelse faktisk er ændret i
+        // DataGrid'en - uden dette ville ALLE viste salg blive gemt og logget
+        // i revisionslisten igen, også dem brugeren ikke har rørt.
+        var changedItems = new List<(SaleDisplayItem Item, Sale Original, string TrimmedDescription)>();
 
         foreach (var item in SaleResults)
         {
@@ -195,6 +208,32 @@ public class SearchSalesViewModel : ViewModelBase
             if (sale == null)
                 continue;
 
+            string trimmedDescription = string.IsNullOrWhiteSpace(item.Description) ? string.Empty : item.Description.Trim();
+
+            bool amountChanged = sale.Amount != item.Amount;
+            bool descriptionChanged = (sale.Description ?? string.Empty) != trimmedDescription;
+
+            if (amountChanged || descriptionChanged)
+            {
+                changedItems.Add((item, sale, trimmedDescription));
+            }
+        }
+
+        if (changedItems.Count == 0)
+        {
+            _dialogService.ShowInfo("Ingen ændringer at gemme.", "Intet opdateret");
+            return;
+        }
+
+        bool confirmed = _dialogService.Confirm(
+            $"Gem ændringer til {changedItems.Count} salg?",
+            "Bekræft opdatering af salg");
+
+        if (!confirmed)
+            return;
+
+        foreach (var (item, sale, trimmedDescription) in changedItems)
+        {
             var originalSale = new Sale
             {
                 SaleId = sale.SaleId,
@@ -207,7 +246,7 @@ public class SearchSalesViewModel : ViewModelBase
             };
 
             sale.Amount = item.Amount;
-            sale.Description = string.IsNullOrWhiteSpace(item.Description) ? string.Empty : item.Description.Trim();
+            sale.Description = trimmedDescription;
 
             if (_saleRepository is SaleRepository concreteRepo)
             {
@@ -217,11 +256,9 @@ public class SearchSalesViewModel : ViewModelBase
             {
                 _saleRepository.Update(sale);
             }
-
-            updatedCount++;
         }
 
-        _dialogService.ShowInfo($"{updatedCount} salg er opdateret i databasen.", "Gemt");
+        _dialogService.ShowInfo($"{changedItems.Count} salg er opdateret i databasen.", "Gemt");
 
         LoadAuditLogsForSelectedSale();
     }
@@ -262,31 +299,5 @@ public class SearchSalesViewModel : ViewModelBase
         _dialogService.ShowInfo("Salget er blevet slettet.", "Slettet");
     }
 
-    private bool SafeExecute(Action action)
-    {
-        try
-        {
-            action();
-            return true;
-        }
-        catch (DatabaseConnectionException ex)
-        {
-            _dialogService.ShowError(
-                $"{ex.Message}\n\nTeknisk besked: {ex.InnerException?.Message ?? "ukendt"}",
-                "Forbindelsesfejl");
-            return false;
-        }
-        catch (SqlException ex)
-        {
-            _dialogService.ShowError(
-                $"Der opstod en fejl i databasen.\n\nTeknisk besked: {ex.Message}",
-                "Databasefejl");
-            return false;
-        }
-        catch (Exception ex)
-        {
-            _dialogService.ShowError(ex.Message, "Fejl");
-            return false;
-        }
-    }
+    // SafeExecute ligger nu i ViewModelBase og deles af alle ViewModels.
 }

@@ -111,6 +111,7 @@ public class RenterViewModel : ViewModelBase
     public ICommand GetAllCommand { get; }
 
     public RenterViewModel(IRepository<Renter> renterRepository, IRepository<Rental> rentalRepository, IDialogService dialogService)
+        : base(dialogService)
     {
         _renterRepository = renterRepository;
         _rentalRepository = rentalRepository;
@@ -127,25 +128,7 @@ public class RenterViewModel : ViewModelBase
         NewRenter();
     }
 
-    private void SafeExecute(Action action)
-    {
-        try
-        {
-            action();
-        }
-        catch (DatabaseConnectionException ex)
-        {
-            _dialogService.ShowError(
-                $"{ex.Message}\n\nTeknisk besked: {ex.InnerException?.Message ?? "ukendt"}",
-                "Forbindelsesfejl");
-        }
-        catch (SqlException ex)
-        {
-            _dialogService.ShowError(
-                $"Der opstod en fejl i databasen.\n\nTeknisk besked: {ex.Message}",
-                "Databasefejl");
-        }
-    }
+    // SafeExecute ligger nu i ViewModelBase og deles af alle ViewModels.
 
     private void NewRenter()
     {

@@ -83,6 +83,7 @@ public class RackViewModel : ViewModelBase
         IRentalPriceTierRepository? priceTierRepository,
         IRepository<Payment>? paymentRepository,
         IDialogService dialogService)
+        : base(dialogService)
     {
         _rackRepository = rackRepository;
         _renterRepository = renterRepository;
@@ -512,27 +513,5 @@ public class RackViewModel : ViewModelBase
         CommandManager.InvalidateRequerySuggested();
     }
 
-    private void SafeExecute(Action action)
-    {
-        try
-        {
-            action();
-        }
-        catch (DatabaseConnectionException ex)
-        {
-            _dialogService.ShowError(
-                $"{ex.Message}\n\nTeknisk besked: {ex.InnerException?.Message ?? "ukendt"}",
-                "Forbindelsesfejl");
-        }
-        catch (SqlException ex)
-        {
-            _dialogService.ShowError(
-                $"Der opstod en fejl i databasen.\n\nTeknisk besked: {ex.Message}",
-                "Databasefejl");
-        }
-        catch (Exception ex)
-        {
-            _dialogService.ShowError(ex.Message, "Fejl");
-        }
-    }
+    // SafeExecute ligger nu i ViewModelBase og deles af alle ViewModels.
 }

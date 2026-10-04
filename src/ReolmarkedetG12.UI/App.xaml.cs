@@ -33,6 +33,11 @@ public partial class App : Application
             connectionString = config.GetConnectionString("DefaultConnection")
                 ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found in appsettings.json");
 
+            // BEMÆRK: "1234" er kun en nødløsning, hvis appsettings.json mangler
+            // SearchSalesPassword. Det er ikke en sikker adgangskode, og
+            // SecureAreaService er i øvrigt ikke "rigtig" sikkerhed (se
+            // ISecureAreaService.cs) - kun en simpel adgangsspærre for et
+            // skoleprojekt. Bør nævnes som en kendt begrænsning i rapporten.
             searchSalesPassword = config["SearchSalesPassword"] ?? "1234";
         }
         catch (Exception ex)

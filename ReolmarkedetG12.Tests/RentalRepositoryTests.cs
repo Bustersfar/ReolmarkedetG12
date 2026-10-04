@@ -1,183 +1,245 @@
-﻿using ReolmarkedetG12.Core.Exceptions;
+﻿using System;
+using System.Linq;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
 
 namespace ReolmarkedetG12.Tests;
 
 [TestClass]
-[DoNotParallelize]
 public class RentalRepositoryTests
 {
     private const string TestConnectionString = TestDatabase.ConnectionString;
 
-    // En lejeaftale skal høre til en lejer, så vi opretter en testlejer
-    private static Renter CreateTestRenter()
+    private static (Renter renter, Rack rack) CreateTestEntities()
     {
         var renterRepo = new RenterRepository(TestConnectionString);
-        renterRepo.Add(new Renter
+        var rackRepo = new RackRepository(TestConnectionString);
+        var rentalRepo = new RentalRepository(TestConnectionString);
+
+        var renter = new Renter
         {
-            FirstName = "RentalTest",
-            LastName = "Test",
-            Address = "Testvej 1",
+            FirstName = "RentalTest_" + Guid.NewGuid().ToString("N")[..8],
+            LastName = "Person",
+            Address = "Testgade 1",
             PostalCode = 4200,
             City = "Slagelse"
-        });
-        return renterRepo.GetAll().First(r => r.FirstName == "RentalTest");
+        };
+        renterRepo.Add(renter);
+        var createdRenter = renterRepo.GetAll().First(r => r.FirstName == renter.FirstName);
+
+        // Find en reol uden eksisterende aktive lejemål
+        var allRacks = rackRepo.GetAll().Where(r => r.Number >= 1 && r.Number <= 80).ToList();
+        var allRentals = rentalRepo.GetAll().ToList();
+        var racksWithActiveRental = allRentals
+            .Where(r => r.EndDate == null || r.EndDate > DateTime.UtcNow)
+            .Select(r => r.RackId)
+            .ToHashSet();
+
+        var freeRack = allRacks.FirstOrDefault(r => !racksWithActiveRental.Contains(r.RackId))
+                       ?? allRacks.First();
+
+        return (createdRenter, freeRack);
     }
 
-    // En lejeaftale skal også høre til en reol, så vi bruger den første reol
-    private static int GetAnyRackId()
+    [TestMethod]
+    public void Constructor_ServerDoesNotExist_ThrowsDatabaseConnectionException()
     {
-        return new RackRepository(TestConnectionString).GetAll().First().RackId;
-    }
+        var invalidConnectionString = "Server=server_der_ikke_findes;Database=ReolmarkedetTest;Integrated Security=True;TrustServerCertificate=True;";
+        var repo = new RentalRepository(invalidConnectionString);
 
-    // Sletter testlejerens lejeaftaler først og derefter selve lejeren
-    private static void DeleteTestRenter(Renter renter)
-    {
-        var rentalRepo = new RentalRepository(TestConnectionString);
-        foreach (var rental in rentalRepo.GetAll().Where(r => r.RenterId == renter.RenterId))
-        {
-            rentalRepo.Delete(rental.RentalId);
-        }
-        new RenterRepository(TestConnectionString).Delete(renter.RenterId);
+        Assert.ThrowsExactly<DatabaseConnectionException>(() => repo.GetAll());
     }
 
     [TestMethod]
     [TestCategory("Database")]
-    public void Add_NewRental_AllFieldsAreSavedInDatabase()
+    public void Add_ValidRental_CanBeRetrieved()
     {
-        // Arrange
-        var renter = CreateTestRenter();
-        int rackId = GetAnyRackId();
+        var (renter, rack) = CreateTestEntities();
         var repo = new RentalRepository(TestConnectionString);
-
-        // Act
-        repo.Add(new Rental
+        var rental = new Rental
         {
-            RackId = rackId,
+            RackId = rack.RackId,
             RenterId = renter.RenterId,
-            StartDate = new DateTime(2026, 1, 15),
+            StartDate = new DateTime(2026, 1, 1),
             EndDate = null,
             MonthlyRent = 850m
-        });
-        var saved = repo.GetAll().FirstOrDefault(r => r.RenterId == renter.RenterId);
+        };
+
+        repo.Add(rental);
+        var retrieved = repo.GetById(rental.RentalId);
 
         // Oprydning
-        DeleteTestRenter(renter);
+        repo.Delete(rental.RentalId);
+        new RenterRepository(TestConnectionString).Delete(renter.RenterId);
 
-        // Assert
-        Assert.IsNotNull(saved);
-        Assert.AreEqual(rackId, saved.RackId);
-        Assert.AreEqual(new DateTime(2026, 1, 15), saved.StartDate);
-        Assert.IsNull(saved.EndDate);
-        Assert.AreEqual(850m, saved.MonthlyRent);
+        Assert.IsNotNull(retrieved);
+        Assert.AreEqual(rack.RackId, retrieved.RackId);
+        Assert.AreEqual(renter.RenterId, retrieved.RenterId);
+        Assert.AreEqual(850m, retrieved.MonthlyRent);
     }
 
     [TestMethod]
     [TestCategory("Database")]
-    public void Add_RentalWithEndDate_SavesEndDate()
+    public void AddRentalWithRackStatus_ValidRental_InsertsRentalAndUpdatesRackStatusInTransaction()
     {
         // Arrange
-        var renter = CreateTestRenter();
-        var repo = new RentalRepository(TestConnectionString);
+        var (renter, rack) = CreateTestEntities();
+        var rentalRepo = new RentalRepository(TestConnectionString);
+        var rackRepo = new RackRepository(TestConnectionString);
 
-        // Act
-        repo.Add(new Rental
+        var originalStatus = rack.Status;
+
+        var rental = new Rental
         {
-            RackId = GetAnyRackId(),
+            RackId = rack.RackId,
             RenterId = renter.RenterId,
-            StartDate = new DateTime(2026, 1, 15),
-            EndDate = new DateTime(2026, 6, 30),
+            StartDate = DateTime.UtcNow,
+            EndDate = null,
             MonthlyRent = 850m
-        });
-        var saved = repo.GetAll().FirstOrDefault(r => r.RenterId == renter.RenterId);
+        };
 
-        // Oprydning
-        DeleteTestRenter(renter);
+        try
+        {
+            // Act
+            rentalRepo.AddRentalWithRackStatus(rental, (int)RackStatus.Rented);
 
-        // Assert
-        Assert.IsNotNull(saved);
-        Assert.AreEqual(new DateTime(2026, 6, 30), saved.EndDate);
+            // Assert
+            var createdRental = rentalRepo.GetById(rental.RentalId);
+            var updatedRack = rackRepo.GetById(rack.RackId);
+
+            Assert.IsNotNull(createdRental);
+            Assert.AreEqual(rack.RackId, createdRental.RackId);
+            Assert.IsNotNull(updatedRack);
+            Assert.AreEqual(RackStatus.Rented, updatedRack.Status);
+        }
+        finally
+        {
+            rack.Status = originalStatus;
+            rackRepo.Update(rack);
+
+            if (rental.RentalId > 0)
+            {
+                rentalRepo.Delete(rental.RentalId);
+            }
+            new RenterRepository(TestConnectionString).Delete(renter.RenterId);
+        }
     }
 
     [TestMethod]
     [TestCategory("Database")]
-    public void GetById_NonExistingId_ReturnsNull()
+    public void GetActiveRentalByRackId_ReturnsActiveRental()
     {
-        // Arrange
+        var (renter, rack) = CreateTestEntities();
         var repo = new RentalRepository(TestConnectionString);
+        var rental = new Rental
+        {
+            RackId = rack.RackId,
+            RenterId = renter.RenterId,
+            StartDate = DateTime.UtcNow.AddMinutes(5), // Sikrer at den er nyere end evt. historik
+            EndDate = null,
+            MonthlyRent = 850m
+        };
+        repo.Add(rental);
 
-        // Act
-        var rental = repo.GetById(-1);
+        var active = repo.GetActiveRentalByRackId(rack.RackId);
 
-        // Assert
-        Assert.IsNull(rental);
+        repo.Delete(rental.RentalId);
+        new RenterRepository(TestConnectionString).Delete(renter.RenterId);
+
+        Assert.IsNotNull(active);
+        Assert.AreEqual(rental.RentalId, active.RentalId);
     }
 
     [TestMethod]
     [TestCategory("Database")]
-    public void Update_ChangeMonthlyRent_IsSavedInDatabase()
+    public void GetCompletedRentalsByRackId_ReturnsOnlyCompletedRentals()
     {
-        // Arrange: opret en lejeaftale
-        var renter = CreateTestRenter();
+        var (renter, rack) = CreateTestEntities();
         var repo = new RentalRepository(TestConnectionString);
-        repo.Add(new Rental
-        {
-            RackId = GetAnyRackId(),
-            RenterId = renter.RenterId,
-            StartDate = new DateTime(2026, 1, 15),
-            MonthlyRent = 850m
-        });
-        var rental = repo.GetAll().First(r => r.RenterId == renter.RenterId);
 
-        // Act: ret huslejen, og hent lejeaftalen igen
-        rental.MonthlyRent = 1675m;
+        var completedRental = new Rental
+        {
+            RackId = rack.RackId,
+            RenterId = renter.RenterId,
+            StartDate = new DateTime(2025, 1, 1),
+            EndDate = new DateTime(2025, 6, 1),
+            MonthlyRent = 850m
+        };
+        repo.Add(completedRental);
+
+        var activeRental = new Rental
+        {
+            RackId = rack.RackId,
+            RenterId = renter.RenterId,
+            StartDate = new DateTime(2025, 7, 1),
+            EndDate = null,
+            MonthlyRent = 850m
+        };
+        repo.Add(activeRental);
+
+        var completedList = repo.GetCompletedRentalsByRackId(rack.RackId).ToList();
+
+        repo.Delete(completedRental.RentalId);
+        repo.Delete(activeRental.RentalId);
+        new RenterRepository(TestConnectionString).Delete(renter.RenterId);
+
+        Assert.IsTrue(completedList.Any(r => r.RentalId == completedRental.RentalId));
+        Assert.IsFalse(completedList.Any(r => r.RentalId == activeRental.RentalId));
+    }
+
+    [TestMethod]
+    [TestCategory("Database")]
+    public void Update_ChangesRentalData()
+    {
+        var (renter, rack) = CreateTestEntities();
+        var repo = new RentalRepository(TestConnectionString);
+        var rental = new Rental
+        {
+            RackId = rack.RackId,
+            RenterId = renter.RenterId,
+            StartDate = new DateTime(2026, 1, 1),
+            EndDate = null,
+            MonthlyRent = 850m
+        };
+        repo.Add(rental);
+
+        rental.EndDate = new DateTime(2026, 6, 1);
+        rental.MonthlyRent = 900m;
         repo.Update(rental);
+
         var updated = repo.GetById(rental.RentalId);
 
-        // Oprydning
-        DeleteTestRenter(renter);
+        repo.Delete(rental.RentalId);
+        new RenterRepository(TestConnectionString).Delete(renter.RenterId);
 
-        // Assert
         Assert.IsNotNull(updated);
-        Assert.AreEqual(1675m, updated.MonthlyRent);
+        Assert.AreEqual(new DateTime(2026, 6, 1), updated.EndDate);
+        Assert.AreEqual(900m, updated.MonthlyRent);
     }
 
     [TestMethod]
     [TestCategory("Database")]
-    public void Delete_ExistingRental_RemovesItFromDatabase()
+    public void Delete_RemovesRental()
     {
-        // Arrange: opret en lejeaftale
-        var renter = CreateTestRenter();
+        var (renter, rack) = CreateTestEntities();
         var repo = new RentalRepository(TestConnectionString);
-        repo.Add(new Rental
+        var rental = new Rental
         {
-            RackId = GetAnyRackId(),
+            RackId = rack.RackId,
             RenterId = renter.RenterId,
-            StartDate = new DateTime(2026, 1, 15),
+            StartDate = new DateTime(2026, 1, 1),
+            EndDate = null,
             MonthlyRent = 850m
-        });
-        var rental = repo.GetAll().First(r => r.RenterId == renter.RenterId);
+        };
+        repo.Add(rental);
 
-        // Act: slet lejeaftalen
         repo.Delete(rental.RentalId);
-        var result = repo.GetById(rental.RentalId);
+        var retrieved = repo.GetById(rental.RentalId);
 
-        // Oprydning
-        DeleteTestRenter(renter);
+        new RenterRepository(TestConnectionString).Delete(renter.RenterId);
 
-        // Assert
-        Assert.IsNull(result);
-    }
-
-    [TestMethod]
-    public void GetAll_ServerDoesNotExist_ThrowsDatabaseConnectionException()
-    {
-        // Arrange: en server der ikke findes
-        var repo = new RentalRepository(
-            "Server=findes-ikke;Database=x;Connect Timeout=1;Trusted_Connection=True;TrustServerCertificate=True;");
-
-        // Act + Assert
-        Assert.ThrowsExactly<DatabaseConnectionException>(() => repo.GetAll());
+        Assert.IsNull(retrieved);
     }
 }

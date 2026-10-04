@@ -81,7 +81,7 @@ public class SaleRepositoryTests
             var retrieved = repo.GetAll().Where(s => s.RenterId == renter.RenterId).ToList();
 
             // Assert
-            Assert.AreEqual(2, retrieved.Count);
+            Assert.HasCount(2, retrieved);
             Assert.IsTrue(retrieved.Any(s => s.Amount == 150m && s.Description == "Vare 1"));
             Assert.IsTrue(retrieved.Any(s => s.Amount == 250m && s.Description == "Vare 2"));
         }
@@ -130,7 +130,7 @@ public class SaleRepositoryTests
             Assert.AreEqual(175m, updatedSale.Amount);
             Assert.AreEqual("Rettet vare", updatedSale.Description);
 
-            Assert.AreEqual(1, auditLogs.Count);
+            Assert.HasCount(1, auditLogs);
             Assert.AreEqual("UPDATE", auditLogs[0].ActionType);
             Assert.AreEqual(100m, auditLogs[0].OldAmount);
             Assert.AreEqual(175m, auditLogs[0].NewAmount);
@@ -166,7 +166,7 @@ public class SaleRepositoryTests
 
             // Assert
             Assert.IsNull(deletedSale);
-            Assert.AreEqual(1, auditLogs.Count);
+            Assert.HasCount(1, auditLogs);
             Assert.AreEqual("DELETE", auditLogs[0].ActionType);
             Assert.AreEqual(220m, auditLogs[0].OldAmount);
             Assert.IsNull(auditLogs[0].NewAmount);

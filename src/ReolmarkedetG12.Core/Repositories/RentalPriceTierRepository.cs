@@ -1,4 +1,6 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using System;
+using System.Collections.Generic;
+using Microsoft.Data.SqlClient;
 using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
 
@@ -31,22 +33,35 @@ public class RentalPriceTierRepository : IRentalPriceTierRepository
     public IEnumerable<RentalPriceTier> GetAll()
     {
         var tiers = new List<RentalPriceTier>();
-        string query = "SELECT * FROM RENTAL_PRICE_TIER";
+        const string query = "SELECT * FROM dbo.RENTAL_PRICE_TIER ORDER BY MinRacks ASC;";
 
         using (SqlConnection connection = OpenConnection())
         {
-            SqlCommand command = new SqlCommand(query, connection);
-
+            using (SqlCommand command = new SqlCommand(query, connection))
             using (SqlDataReader reader = command.ExecuteReader())
             {
+                int priceOrdinal = -1;
+
                 while (reader.Read())
                 {
+                    if (priceOrdinal == -1)
+                    {
+                        try
+                        {
+                            priceOrdinal = reader.GetOrdinal("PricePerRack");
+                        }
+                        catch (IndexOutOfRangeException)
+                        {
+                            priceOrdinal = reader.GetOrdinal("MonthlyPrice");
+                        }
+                    }
+
                     tiers.Add(new RentalPriceTier
                     {
                         TierId = (int)reader["TierId"],
                         MinRacks = (int)reader["MinRacks"],
-                        MaxRacks = reader["MaxRacks"] as int?,
-                        PricePerRack = (decimal)reader["PricePerRack"]
+                        MaxRacks = reader["MaxRacks"] == DBNull.Value ? null : (int?)reader["MaxRacks"],
+                        PricePerRack = Convert.ToDecimal(reader[priceOrdinal])
                     });
                 }
             }

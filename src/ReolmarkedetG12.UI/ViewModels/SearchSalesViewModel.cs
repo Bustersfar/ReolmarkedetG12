@@ -43,12 +43,16 @@ public class SearchSalesViewModel : ViewModelBase
         {
             if (SetProperty(ref _selectedSaleItem, value))
             {
+                LoadAuditLogsForSelectedSale();
                 CommandManager.InvalidateRequerySuggested();
             }
         }
     }
 
     public ObservableCollection<SaleDisplayItem> SaleResults { get; } = new();
+
+    // Punkt 17: Liste over ændringer (audit logs) for det markerede salg
+    public ObservableCollection<SaleAuditLog> AuditLogs { get; } = new();
 
     public RelayCommand SearchCommand { get; }
     public RelayCommand ResetSearchCommand { get; }
@@ -78,6 +82,7 @@ public class SearchSalesViewModel : ViewModelBase
     private void Search()
     {
         SaleResults.Clear();
+        AuditLogs.Clear();
 
         var racks = _rackRepository.GetAll().ToDictionary(r => r.RackId, r => r.Number);
         var renters = _renterRepository.GetAll().ToDictionary(r => r.RenterId, r => $"{r.FirstName} {r.LastName}");
@@ -88,7 +93,6 @@ public class SearchSalesViewModel : ViewModelBase
         {
             if (SearchRackNumber.Value == 0)
             {
-                // Reol 0 / Internt butikssalg
                 sales = sales.Where(s => !s.RackId.HasValue || s.RackId.Value == 0 || (racks.TryGetValue(s.RackId.Value, out int num) && num == 0));
             }
             else
@@ -145,7 +149,25 @@ public class SearchSalesViewModel : ViewModelBase
         SearchRackNumber = null;
         SearchDate = null;
         SaleResults.Clear();
+        AuditLogs.Clear();
         SelectedSaleItem = null;
+    }
+
+    private void LoadAuditLogsForSelectedSale()
+    {
+        AuditLogs.Clear();
+
+        if (SelectedSaleItem == null)
+            return;
+
+        if (_saleRepository is SaleRepository concreteRepo)
+        {
+            var logs = concreteRepo.GetAuditLogsForSale(SelectedSaleItem.SaleId);
+            foreach (var log in logs)
+            {
+                AuditLogs.Add(log);
+            }
+        }
     }
 
     private void Update()
@@ -192,6 +214,9 @@ public class SearchSalesViewModel : ViewModelBase
         }
 
         _dialogService.ShowInfo($"{updatedCount} salg er opdateret i databasen.", "Gemt");
+
+        // Genindlæs revisionslog hvis et element er markeret
+        LoadAuditLogsForSelectedSale();
     }
 
     private void Delete(SaleDisplayItem? item)
@@ -225,6 +250,7 @@ public class SearchSalesViewModel : ViewModelBase
         }
 
         SaleResults.Remove(target);
+        AuditLogs.Clear();
 
         _dialogService.ShowInfo("Salget er blevet slettet.", "Slettet");
     }

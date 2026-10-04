@@ -6,53 +6,19 @@
              mc:Ignorable="d"
              d:DesignHeight="300" d:DesignWidth="400">
 
-    <UserControl.Resources>
-        <Style x:Key="PanelCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="#F1EFE8"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="16,12"/>
-        </Style>
-
-        <Style x:Key="PanelLabelStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Foreground" Value="Gray"/>
-            <Setter Property="Margin" Value="0,0,0,4"/>
-        </Style>
-
-        <Style x:Key="NeutralActionButtonStyle" TargetType="Button">
-            <Setter Property="Padding" Value="14,8"/>
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#D7D2C8"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="12">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              Margin="{TemplateBinding Padding}"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </UserControl.Resources>
-
-    <Grid Background="White">
-        <Border Style="{StaticResource PanelCardStyle}" Width="280" HorizontalAlignment="Center" VerticalAlignment="Center">
+    <!-- Bruger nu de delte styles fra App.xaml (samme som resten af appen),
+         i stedet for sin egen gråbeige farvepalette. -->
+    <Grid Background="{StaticResource AppBackground}">
+        <Border Style="{StaticResource CardPanel}" Width="280" HorizontalAlignment="Center" VerticalAlignment="Center">
             <StackPanel>
-                <TextBlock Text="Dette område er låst" FontSize="16" FontWeight="Bold" Margin="0,0,0,14"/>
+                <TextBlock Text="Dette område er låst" Style="{StaticResource SectionHeader}" Margin="0,0,0,14"/>
 
-                <TextBlock Text="Kodeord" Style="{StaticResource PanelLabelStyle}"/>
-                <PasswordBox x:Name="PasswordInputBox" Padding="6" Margin="0,0,0,14"
+                <TextBlock Text="Kodeord" Style="{StaticResource FieldLabel}"/>
+                <PasswordBox x:Name="PasswordInputBox" Height="34" Padding="8" VerticalContentAlignment="Center" Margin="0,0,0,14"
                              PasswordChanged="PasswordInputBox_PasswordChanged"/>
 
                 <Button Content="Lås op" HorizontalAlignment="Right"
-                        Style="{StaticResource NeutralActionButtonStyle}"
+                        Style="{StaticResource PrimaryButton}"
                         Command="{Binding UnlockCommand}"/>
             </StackPanel>
         </Border>

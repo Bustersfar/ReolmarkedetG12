@@ -105,10 +105,10 @@ public class RenterViewModel : ViewModelBase
         set => SetProperty(ref _address, value);
     }
 
-    public ICommand NewCommand { get; }
-    public ICommand SaveCommand { get; }
-    public ICommand DeleteCommand { get; }
-    public ICommand GetAllCommand { get; }
+    public RelayCommand NewCommand { get; }
+    public RelayCommand SaveCommand { get; }
+    public RelayCommand DeleteCommand { get; }
+    public RelayCommand GetAllCommand { get; }
 
     public RenterViewModel(IRepository<Renter> renterRepository, IRepository<Rental> rentalRepository, IDialogService dialogService)
         : base(dialogService)

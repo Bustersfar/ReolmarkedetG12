@@ -89,6 +89,10 @@ public partial class App : Application
 
         var mainWindow = new MainWindow { DataContext = mainViewModel };
         this.MainWindow = mainWindow;
+
+        // Stop RackViewModel's baggrunds-timer pænt, når vinduet lukkes.
+        mainWindow.Closed += (_, _) => mainViewModel.RackViewModel.Dispose();
+
         mainWindow.Show();
     }
 }

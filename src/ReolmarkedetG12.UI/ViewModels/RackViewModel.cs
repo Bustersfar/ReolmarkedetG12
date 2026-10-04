@@ -14,8 +14,31 @@ using ReolmarkedetG12.UI.Services;
 
 namespace ReolmarkedetG12.UI.ViewModels;
 
-public class RackViewModel : ViewModelBase
+public class RackViewModel : ViewModelBase, IDisposable
 {
+    // Navngivne konstanter i stedet for "magic numbers" spredt i koden.
+    // Disse definerer butikkens fysiske plantegning: reol 1-13 står i en
+    // venstre søjle, og reol 14-80 er opdelt i klynger (se RackView.xaml).
+    private const decimal FallbackMonthlyRent = 850m; // Brugt hvis der ingen prisregler findes i databasen
+    private const int LeftColumnRackStart = 1;
+    private const int LeftColumnRackEnd = 13;
+    private const int Cluster1418Start = 14;
+    private const int Cluster1418End = 18;
+    private const int Cluster1924Start = 19;
+    private const int Cluster1924End = 24;
+    private const int Cluster2538Start = 25;
+    private const int Cluster2538End = 38;
+    private const int Cluster3952Start = 39;
+    private const int Cluster3952End = 52;
+    private const int Cluster5366Start = 53;
+    private const int Cluster5366End = 66;
+    private const int Cluster6776Start = 67;
+    private const int Cluster6776End = 76;
+    private const int Cluster7778Start = 77;
+    private const int Cluster7778End = 78;
+    private const int Cluster7980Start = 79;
+    private const int Cluster7980End = 80;
+
     private readonly IRepository<Rack> _rackRepository;
     private readonly IRepository<Renter> _renterRepository;
     private readonly IRepository<Rental> _rentalRepository;
@@ -27,9 +50,18 @@ public class RackViewModel : ViewModelBase
     private bool _hasShownTimerDbError;
 
     // --- Samlinger af reoler ---
+    // "Racks" er den flade liste (bruges bl.a. til opslag andre steder i ViewModel'en).
+    // De øvrige samlinger genskaber butikkens fysiske plantegning og bruges af
+    // RackView.xaml til at tegne reolerne, som de reelt står i butikken.
     public ObservableCollection<RackDisplayItem> Racks { get; } = [];
     public ObservableCollection<RackDisplayItem> LeftColumnRacks { get; } = [];
     public ObservableCollection<RackDisplayItem> Cluster_14_18 { get; } = [];
+    public ObservableCollection<RackDisplayItem> Cluster_19_24 { get; } = [];
+    public ObservableCollection<RackDisplayItem> Cluster_25_38 { get; } = [];
+    public ObservableCollection<RackDisplayItem> Cluster_39_52 { get; } = [];
+    public ObservableCollection<RackDisplayItem> Cluster_53_66 { get; } = [];
+    public ObservableCollection<RackDisplayItem> Cluster_67_76 { get; } = [];
+    public ObservableCollection<RackDisplayItem> Cluster_77_78 { get; } = [];
     public ObservableCollection<RackDisplayItem> Cluster_79_80 { get; } = [];
 
     public ObservableCollection<RackDisplayItem> SelectedRacks { get; } = [];
@@ -180,6 +212,12 @@ public class RackViewModel : ViewModelBase
         Racks.Clear();
         LeftColumnRacks.Clear();
         Cluster_14_18.Clear();
+        Cluster_19_24.Clear();
+        Cluster_25_38.Clear();
+        Cluster_39_52.Clear();
+        Cluster_53_66.Clear();
+        Cluster_67_76.Clear();
+        Cluster_77_78.Clear();
         Cluster_79_80.Clear();
         SelectedRacks.Clear();
         RackHistory.Clear();
@@ -191,11 +229,26 @@ public class RackViewModel : ViewModelBase
             var item = new RackDisplayItem(rack);
             Racks.Add(item);
 
-            if (rack.Number is >= 1 and <= 13)
-                LeftColumnRacks.Add(item);
-            else if (rack.Number is >= 14 and <= 18)
+            // Reol 0 (butikssalg) hører ikke til nogen fysisk klynge i plantegningen.
+            // Venstre søjle vises højeste nummer først (13 i toppen, 1 i bunden),
+            // ligesom i butikkens oprindelige plantegning.
+            if (rack.Number is >= LeftColumnRackStart and <= LeftColumnRackEnd)
+                LeftColumnRacks.Insert(0, item);
+            else if (rack.Number is >= Cluster1418Start and <= Cluster1418End)
                 Cluster_14_18.Add(item);
-            else if (rack.Number is >= 79 and <= 80)
+            else if (rack.Number is >= Cluster1924Start and <= Cluster1924End)
+                Cluster_19_24.Add(item);
+            else if (rack.Number is >= Cluster2538Start and <= Cluster2538End)
+                Cluster_25_38.Add(item);
+            else if (rack.Number is >= Cluster3952Start and <= Cluster3952End)
+                Cluster_39_52.Add(item);
+            else if (rack.Number is >= Cluster5366Start and <= Cluster5366End)
+                Cluster_53_66.Add(item);
+            else if (rack.Number is >= Cluster6776Start and <= Cluster6776End)
+                Cluster_67_76.Add(item);
+            else if (rack.Number is >= Cluster7778Start and <= Cluster7778End)
+                Cluster_77_78.Add(item);
+            else if (rack.Number is >= Cluster7980Start and <= Cluster7980End)
                 Cluster_79_80.Add(item);
         }
     }
@@ -247,18 +300,16 @@ public class RackViewModel : ViewModelBase
         }
         else if (item.Rack.Status == RackStatus.Available)
         {
+            // Nulstil kun den fundne lejer, hvis vedkommende ikke allerede er valgt
+            // via SelectRenterCommand (så "Kundens reoler" ikke forsvinder, når man
+            // bagefter vælger en ledig reol til den samme kunde).
             bool hasOtherRentedSelected = SelectedRacks.Any(r => r != item && r.Rack.Status == RackStatus.Rented);
-            if (!hasOtherRentedSelected && (FoundRenter == null || RenterRacks.Count == 0))
+            bool renterAlreadyChosenManually = FoundRenter != null && RenterRacks.Count == 0;
+
+            if (!hasOtherRentedSelected && !renterAlreadyChosenManually)
             {
-                if (FoundRenter != null && RenterRacks.Count == 0)
-                {
-                    // Bevar kunden hvis valgt via SelectRenterCommand
-                }
-                else
-                {
-                    FoundRenter = null;
-                    RenterRacks.Clear();
-                }
+                FoundRenter = null;
+                RenterRacks.Clear();
             }
         }
 
@@ -382,7 +433,7 @@ public class RackViewModel : ViewModelBase
             int position = existingActiveCount + i + 1;
             decimal price = tiers.Count > 0
                 ? RentalPriceCalculator.CalculateRackPriceAtPosition(position, tiers)
-                : 850m;
+                : FallbackMonthlyRent;
 
             var rental = new Rental
             {
@@ -514,4 +565,11 @@ public class RackViewModel : ViewModelBase
     }
 
     // SafeExecute ligger nu i ViewModelBase og deles af alle ViewModels.
+
+    // Stopper den periodiske timer, så den ikke fortsætter med at køre i baggrunden,
+    // hvis denne ViewModel på et tidspunkt bliver kasseret (f.eks. ved lukning af vinduet).
+    public void Dispose()
+    {
+        _terminationCheckTimer?.Stop();
+    }
 }

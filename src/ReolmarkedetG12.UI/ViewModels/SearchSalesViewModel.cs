@@ -1,4 +1,7 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows.Input;
 using Microsoft.Data.SqlClient;
 using ReolmarkedetG12.Core.Exceptions;
@@ -83,8 +86,16 @@ public class SearchSalesViewModel : ViewModelBase
 
         if (SearchRackNumber.HasValue)
         {
-            var matchingRackIds = racks.Where(r => r.Value == SearchRackNumber.Value).Select(r => r.Key).ToHashSet();
-            sales = sales.Where(s => matchingRackIds.Contains(s.RackId));
+            if (SearchRackNumber.Value == 0)
+            {
+                // Reol 0 / Internt butikssalg
+                sales = sales.Where(s => !s.RackId.HasValue || s.RackId.Value == 0 || (racks.TryGetValue(s.RackId.Value, out int num) && num == 0));
+            }
+            else
+            {
+                var matchingRackIds = racks.Where(r => r.Value == SearchRackNumber.Value).Select(r => r.Key).ToHashSet();
+                sales = sales.Where(s => s.RackId.HasValue && matchingRackIds.Contains(s.RackId.Value));
+            }
         }
 
         if (SearchDate.HasValue)
@@ -96,14 +107,27 @@ public class SearchSalesViewModel : ViewModelBase
 
         foreach (var sale in orderedSales)
         {
-            racks.TryGetValue(sale.RackId, out int rackNumber);
-            renters.TryGetValue(sale.RenterId, out string? renterName);
+            int rackNumber = 0;
+            if (sale.RackId.HasValue && racks.TryGetValue(sale.RackId.Value, out int num))
+            {
+                rackNumber = num;
+            }
+
+            string renterName;
+            if (sale.RenterId.HasValue && renters.TryGetValue(sale.RenterId.Value, out string? name))
+            {
+                renterName = name;
+            }
+            else
+            {
+                renterName = (rackNumber == 0) ? "Butikken" : "Ukendt lejer";
+            }
 
             SaleResults.Add(new SaleDisplayItem
             {
                 SaleId = sale.SaleId,
                 RackNumber = rackNumber,
-                RenterName = renterName ?? "Ukendt lejer",
+                RenterName = renterName,
                 Date = sale.Date,
                 Amount = sale.Amount,
                 Description = sale.Description ?? string.Empty
@@ -140,9 +164,30 @@ public class SearchSalesViewModel : ViewModelBase
             if (sale == null)
                 continue;
 
+            // Klon original til revisionslog
+            var originalSale = new Sale
+            {
+                SaleId = sale.SaleId,
+                RackId = sale.RackId,
+                RenterId = sale.RenterId,
+                Amount = sale.Amount,
+                Description = sale.Description,
+                Date = sale.Date,
+                PaymentMethod = sale.PaymentMethod
+            };
+
             sale.Amount = item.Amount;
-            sale.Description = string.IsNullOrWhiteSpace(item.Description) ? null : item.Description.Trim();
-            _saleRepository.Update(sale);
+            sale.Description = string.IsNullOrWhiteSpace(item.Description) ? string.Empty : item.Description.Trim();
+
+            if (_saleRepository is SaleRepository concreteRepo)
+            {
+                concreteRepo.UpdateWithAudit(sale, originalSale);
+            }
+            else
+            {
+                _saleRepository.Update(sale);
+            }
+
             updatedCount++;
         }
 
@@ -162,7 +207,23 @@ public class SearchSalesViewModel : ViewModelBase
         if (!confirm)
             return;
 
-        _saleRepository.Delete(target.SaleId);
+        if (_saleRepository is SaleRepository concreteRepo)
+        {
+            var sale = concreteRepo.GetById(target.SaleId);
+            if (sale != null)
+            {
+                concreteRepo.DeleteWithAudit(sale);
+            }
+            else
+            {
+                concreteRepo.Delete(target.SaleId);
+            }
+        }
+        else
+        {
+            _saleRepository.Delete(target.SaleId);
+        }
+
         SaleResults.Remove(target);
 
         _dialogService.ShowInfo("Salget er blevet slettet.", "Slettet");

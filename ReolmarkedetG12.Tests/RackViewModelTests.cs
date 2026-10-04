@@ -226,7 +226,7 @@ public class RackViewModelTests
     }
 
     [TestMethod]
-    public void CreateRentalCommand_Confirmed_CreatesFirstMonthPayment()
+    public void CreateRentalCommand_Confirmed_SendsAmountToCheckout()
     {
         // Arrange: to ledige reoler og én lejer, brugeren svarer ja
         AddRack(1);
@@ -237,19 +237,28 @@ public class RackViewModelTests
         viewModel.SelectRackCommand.Execute(viewModel.Racks[0]);
         viewModel.SelectRackCommand.Execute(viewModel.Racks[1]);
 
+        List<int>? sentRackNumbers = null;
+        decimal sentAmount = 0;
+        string? sentRenterName = null;
+        viewModel.OnSendToCheckout = (rackNumbers, amount, renterName) =>
+        {
+            sentRackNumbers = rackNumbers;
+            sentAmount = amount;
+            sentRenterName = renterName;
+        };
+
         // Act
         viewModel.CreateRentalCommand.Execute(null);
 
-        // Assert: betaling for første (del)måned = summen af hver reols EGEN pristrins-pris (850 + 825), ikke et gennemsnit
+        // Assert: beløbet sendt til kassen regnes af den SAMLEDE ekstra husleje (850 + 825 = 1675)
+        // i ét regnestykke - ligesom FirstMonthPaymentAmount selv gør det.
         var today = DateOnly.FromDateTime(DateTime.Now);
-        var expectedAmount = RentalPriceCalculator.CalculatePartialMonthRent(850m, today)
-                            + RentalPriceCalculator.CalculatePartialMonthRent(825m, today);
-        Assert.HasCount(1, _payments.Payments);
-        var payment = _payments.Payments[0];
-        Assert.AreEqual(renter.RenterId, payment.RenterId);
-        Assert.AreEqual(PaymentType.FirstMonthPayment, payment.Type);
-        Assert.AreEqual(PaymentMethod.MobilePay, payment.PaymentMethod);
-        Assert.AreEqual(expectedAmount, payment.Amount);
+        var expectedAmount = RentalPriceCalculator.CalculatePartialMonthRent(850m + 825m, today);
+
+        Assert.IsNotNull(sentRackNumbers);
+        Assert.HasCount(2, sentRackNumbers!);
+        Assert.AreEqual(expectedAmount, sentAmount);
+        Assert.AreEqual($"{renter.FirstName} {renter.LastName}", sentRenterName);
     }
 
     [TestMethod]
@@ -467,8 +476,15 @@ public class RackViewModelTests
         // Assert: fejlen vises én gang for hver gang, databasen går ned
         Assert.AreEqual(2, _dialog.ErrorCount);
     }
+
+    // =========================================================================
+    // NYE TESTS: kunde-kontekst må aldrig "hænge fast" efter en reol fravælges,
+    // men skal bevares når man lejer en ekstra reol ud til samme kunde, og at
+    // klikke en anden kundes reol skal ALTID bare skifte - aldrig blokere.
+    // =========================================================================
+
     [TestMethod]
-    public void SelectRackCommand_RackBelongsToOtherRenter_ShowsInfoAndDoesNotSelect()
+    public void SelectRackCommand_RackBelongsToOtherRenter_SwitchesToThatRenter()
     {
         // Arrange: to lejere, som hver har en udlejet reol
         var renterA = AddRenter();
@@ -483,8 +499,84 @@ public class RackViewModelTests
         // Act: klik på lejer B's reol, mens lejer A er valgt
         viewModel.SelectRackCommand.Execute(viewModel.Racks[1]);
 
+        // Assert: systemet skifter roligt til lejer B i stedet for at blokere
+        Assert.AreEqual(renterB.RenterId, viewModel.FoundRenter!.RenterId);
+        Assert.IsTrue(viewModel.Racks[1].IsSelected);
+    }
+
+    [TestMethod]
+    public void SelectRackCommand_DeselectLastSelectedRack_ClearsFoundRenter()
+    {
+        // Arrange: en udlejet reol klikkes, så kunden vises
+        var renter = AddRenter();
+        var rack = AddRackWithStatus(1, RackStatus.Rented);
+        AddRental(rack, renter, null);
+        var viewModel = CreateViewModel();
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[0]);
+
+        // Act: klik samme reol igen (fravælg)
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[0]);
+
+        // Assert: kunden må ikke stadig stå i vinduet
+        Assert.IsNull(viewModel.FoundRenter);
+        Assert.HasCount(0, viewModel.RenterRacks);
+    }
+
+    [TestMethod]
+    public void SelectRackCommand_AvailableRackAfterDeselectingOtherRenter_HasNoLeftoverRenter()
+    {
+        // Arrange: kunde A's reol vises og fravælges igen (som når man bare viser kunden deres reol)
+        var renterA = AddRenter();
+        var rentedRack = AddRackWithStatus(1, RackStatus.Rented);
+        AddRental(rentedRack, renterA, null);
+        AddRack(2); // ledig reol
+        var viewModel = CreateViewModel();
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[0]);
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[0]);
+
+        // Act: en ny kunde kommer og vælger en ledig reol
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[1]);
+
+        // Assert: ingen kunde må være "hængende" fra før
+        Assert.IsNull(viewModel.FoundRenter);
+        Assert.IsTrue(viewModel.Racks[1].IsSelected);
+    }
+
+    [TestMethod]
+    public void SelectRackCommand_AvailableRackWhileViewingSameRenterRack_KeepsRenterForExtension()
+    {
+        // Arrange: kunde A's udlejede reol klikkes (viser kunden), uden at fravælge den igen
+        var renterA = AddRenter();
+        var rentedRack = AddRackWithStatus(1, RackStatus.Rented);
+        AddRental(rentedRack, renterA, null);
+        AddRack(2); // ledig reol, som kunden vil leje ekstra
+        var viewModel = CreateViewModel();
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[0]);
+
+        // Act: klik den ledige reol - kunden skal IKKE forsvinde, det er en udvidelse af deres leje
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[1]);
+
         // Assert
-        Assert.IsNotNull(_dialog.LastInfo);
-        Assert.IsFalse(viewModel.Racks[1].IsSelected);
+        Assert.IsNotNull(viewModel.FoundRenter);
+        Assert.AreEqual(renterA.RenterId, viewModel.FoundRenter!.RenterId);
+        Assert.IsTrue(viewModel.Racks[1].IsSelected);
+        Assert.IsTrue(viewModel.CreateRentalCommand.CanExecute(null));
+    }
+
+    [TestMethod]
+    public void TerminateRentalCommand_MixedRentedAndTerminatedSelection_CannotExecute()
+    {
+        // Arrange: samme kunde har både en udlejet og en opsagt reol, begge markeres
+        var renter = AddRenter();
+        var rentedRack = AddRackWithStatus(1, RackStatus.Rented);
+        AddRental(rentedRack, renter, null);
+        var terminatedRack = AddRackWithStatus(2, RackStatus.Terminated);
+        AddRental(terminatedRack, renter, new DateTime(2100, 1, 1));
+        var viewModel = CreateViewModel();
+        viewModel.SelectRackCommand.Execute(viewModel.Racks.Single(r => r.Rack.Number == 1)); // udlejet
+        viewModel.SelectRackCommand.Execute(viewModel.Racks.Single(r => r.Rack.Number == 2)); // opsagt, samme kunde
+
+        // Assert: "Opsig aftale" må ikke kunne køres når valget blander status
+        Assert.IsFalse(viewModel.TerminateRentalCommand.CanExecute(null));
     }
 }

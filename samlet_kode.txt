@@ -1,6 +1,171 @@
-﻿================================================
+﻿FIL: database\schema.sql
+-- Run this script once against your local SQL Server instance to create the
+-- database and tables this project needs. Matches the model classes in
+-- ReolmarkedetG12.Core.Models.
+
+IF NOT EXISTS (SELECT 1 FROM sys.databases WHERE name = 'Reolmarkedet')
+BEGIN
+    CREATE DATABASE Reolmarkedet;
+END
+GO
+
+USE Reolmarkedet;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'RACK')
+BEGIN
+    CREATE TABLE RACK
+    (
+        RackId INT IDENTITY(1,1) PRIMARY KEY,
+        Number INT NOT NULL
+    );
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('RACK') AND name = 'Status')
+BEGIN
+    ALTER TABLE RACK ADD Status INT NOT NULL DEFAULT 0;
+END
+GO
+
+-- Seed: opret de 80 reoler, men kun hvis tabellen er tom (undgÃ¥r dubletter ved gentagne kÃ¸rsler)
+IF NOT EXISTS (SELECT 1 FROM RACK)
+BEGIN
+    DECLARE @i INT = 1;
+    WHILE @i <= 80
+    BEGIN
+        INSERT INTO RACK (Number) VALUES (@i);
+        SET @i = @i + 1;
+    END
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'RENTAL_PRICE_TIER')
+BEGIN
+    CREATE TABLE RENTAL_PRICE_TIER
+    (
+        TierId       INT IDENTITY(1,1) PRIMARY KEY,
+        MinRacks     INT NOT NULL,
+        MaxRacks     INT NULL,
+        PricePerRack DECIMAL(10,2) NOT NULL
+    );
+
+    INSERT INTO RENTAL_PRICE_TIER (MinRacks, MaxRacks, PricePerRack) VALUES
+    (1, 1, 850.00),
+    (2, 3, 825.00),
+    (4, NULL, 800.00);
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'RENTER')
+BEGIN
+    CREATE TABLE RENTER
+    (
+        RenterId   INT IDENTITY(1,1) PRIMARY KEY,
+        FirstName  NVARCHAR(100) NOT NULL,
+        LastName   NVARCHAR(100) NOT NULL,
+        Address    NVARCHAR(200) NOT NULL,
+        PostalCode INT NOT NULL,
+        City       NVARCHAR(100) NOT NULL,
+        Email      NVARCHAR(200) NULL,
+        Phone      NVARCHAR(50) NULL
+    );
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'RENTAL')
+BEGIN
+    CREATE TABLE RENTAL
+    (
+        RentalId  INT IDENTITY(1,1) PRIMARY KEY,
+        RackId    INT NOT NULL,
+        RenterId  INT NOT NULL,
+        StartDate DATETIME NOT NULL,
+        EndDate   DATETIME NULL,
+        CONSTRAINT FK_Rental_Rack FOREIGN KEY (RackId) REFERENCES RACK(RackId),
+        CONSTRAINT FK_Rental_Renter FOREIGN KEY (RenterId) REFERENCES RENTER(RenterId)
+    );
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('RENTAL') AND name = 'MonthlyRent')
+BEGIN
+    ALTER TABLE RENTAL ADD MonthlyRent DECIMAL(10,2) NOT NULL DEFAULT 0;
+END
+GO
+
+-- Seed: 10 testlejere + 5 aktive og 5 opsagte lejemÃ¥l, men kun ved en frisk opsÃ¦tning (RENTER er tom)
+IF NOT EXISTS (SELECT 1 FROM RENTER)
+BEGIN
+    INSERT INTO RENTER (FirstName, LastName, Address, PostalCode, City, Email, Phone)
+    VALUES
+    ('Anna', 'Andersen', 'Testvej 2', 1234, 'Testby', 'anna.andersen@test.dk', '20000001'),
+    ('Bo', 'Bertelsen', 'Testvej 3', 1234, 'Testby', 'bo.bertelsen@test.dk', '20000002'),
+    ('Camilla', 'Christensen', 'Testvej 4', 1234, 'Testby', 'camilla.c@test.dk', '20000003'),
+    ('David', 'Dahl', 'Testvej 5', 1234, 'Testby', 'david.dahl@example.dk', '20000004'),
+    ('Emma', 'Eriksen', 'Testvej 6', 1234, 'Testby', 'emma.eriksen@test.dk', '20000005'),
+    ('Frederik', 'Falk', 'Testvej 7', 1234, 'Testby', 'frederik.falk@test.dk', '20000006'),
+    ('Gitte', 'Green', 'Testvej 8', 1234, 'Testby', 'gitte.green@test.dk', '20000007'),
+    ('Henrik', 'Holm', 'Testvej 9', 1234, 'Testby', 'henrik.holm@test.dk', '20000008'),
+    ('Ida', 'Iversen', 'Testvej 10', 1234, 'Testby', 'ida.iversen@test.dk', '20000009'),
+    ('Jonas', 'Juhl', 'Testvej 11', 1234, 'Testby', 'jonas.juhl@test.dk', '20000010');
+
+    -- Reol 1-5: aktivt udlejet (rÃ¸d), til lejer 1-5
+    UPDATE RACK SET Status = 1 WHERE RackId IN (1, 2, 3, 4, 5);
+
+    INSERT INTO RENTAL (RackId, RenterId, StartDate, EndDate, MonthlyRent)
+    VALUES
+    (1, 1, GETDATE(), NULL, 850.00),
+    (2, 2, GETDATE(), NULL, 850.00),
+    (3, 3, GETDATE(), NULL, 850.00),
+    (4, 4, GETDATE(), NULL, 850.00),
+    (5, 5, GETDATE(), NULL, 850.00);
+
+    -- Reol 6-10: under opsigelse (gul), til lejer 6-10
+    UPDATE RACK SET Status = 2 WHERE RackId IN (6, 7, 8, 9, 10);
+
+    INSERT INTO RENTAL (RackId, RenterId, StartDate, EndDate, MonthlyRent)
+    VALUES
+    (6, 6, DATEADD(MONTH, -1, GETDATE()), '2026-11-01', 850.00),
+    (7, 7, DATEADD(MONTH, -1, GETDATE()), '2026-11-01', 850.00),
+    (8, 8, DATEADD(MONTH, -1, GETDATE()), '2026-11-01', 850.00),
+    (9, 9, DATEADD(MONTH, -1, GETDATE()), '2026-11-01', 850.00),
+    (10, 10, DATEADD(MONTH, -1, GETDATE()), '2026-11-01', 850.00);
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'PAYMENT')
+BEGIN
+    CREATE TABLE PAYMENT
+    (
+        PaymentId     INT IDENTITY(1,1) PRIMARY KEY,
+        RenterId      INT NOT NULL,
+        Date          DATETIME NOT NULL,
+        Amount        DECIMAL(10,2) NOT NULL,
+        Type          INT NOT NULL,           -- 0 = FirstMonthPayment, 1 = MonthlyPayment
+        PaymentMethod INT NOT NULL DEFAULT 0, -- 0 = MobilePay, 1 = Bank
+        CONSTRAINT FK_Payment_Renter FOREIGN KEY (RenterId) REFERENCES RENTER(RenterId)
+    );
+END
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'SALE')
+BEGIN
+    CREATE TABLE SALE
+    (
+        SaleId      INT IDENTITY(1,1) PRIMARY KEY,
+        RackId      INT NOT NULL,
+        RenterId    INT NOT NULL,
+        Date        DATETIME NOT NULL,
+        Amount      DECIMAL(10,2) NOT NULL,
+        Description NVARCHAR(200) NULL,
+        CONSTRAINT FK_Sale_Rack FOREIGN KEY (RackId) REFERENCES RACK(RackId),
+        CONSTRAINT FK_Sale_Renter FOREIGN KEY (RenterId) REFERENCES RENTER(RenterId)
+    );
+END
+GO
+
+
 FIL: ReolmarkedetG12.Tests\Fakes\FakeDialogService.cs
-================================================
 using ReolmarkedetG12.UI.Services;
 
 namespace ReolmarkedetG12.Tests.Fakes;
@@ -24,9 +189,7 @@ public class FakeDialogService : IDialogService
 }
 
 
-================================================
 FIL: ReolmarkedetG12.Tests\Fakes\FakePaymentRepository.cs
-================================================
 using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
@@ -80,9 +243,7 @@ public class FakePaymentRepository : IRepository<Payment>
 
 
 
-================================================
 FIL: ReolmarkedetG12.Tests\Fakes\FakePriceTierRepository.cs
-================================================
 using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
 
@@ -101,9 +262,7 @@ public class FakePriceTierRepository : IRentalPriceTierRepository
 }
 
 
-================================================
 FIL: ReolmarkedetG12.Tests\Fakes\FakeRackRepository.cs
-================================================
 using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
@@ -156,9 +315,7 @@ public class FakeRackRepository : IRepository<Rack>
 }
 
 
-================================================
 FIL: ReolmarkedetG12.Tests\Fakes\FakeRentalRepository.cs
-================================================
 using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
@@ -211,9 +368,7 @@ public class FakeRentalRepository : IRepository<Rental>
 }
 
 
-================================================
 FIL: ReolmarkedetG12.Tests\Fakes\FakeRenterRepository.cs
-================================================
 using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
@@ -266,9 +421,7 @@ public class FakeRenterRepository : IRepository<Renter>
 }
 
 
-================================================
 FIL: ReolmarkedetG12.Tests\Fakes\FakeSaleRepository.cs
-================================================
 using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
@@ -321,9 +474,7 @@ public class FakeSaleRepository : IRepository<Sale>
 }
 
 
-================================================
 FIL: ReolmarkedetG12.Tests\EmptyToVisibilityConverterTests.cs
-================================================
 using System.Globalization;
 using System.Windows;
 using ReolmarkedetG12.UI.Converters;
@@ -383,9 +534,7 @@ public class EmptyToVisibilityConverterTests
 }
 
 
-================================================
 FIL: ReolmarkedetG12.Tests\MainViewModelTests.cs
-================================================
 using ReolmarkedetG12.Tests.Fakes;
 using ReolmarkedetG12.UI.Services;
 using ReolmarkedetG12.UI.ViewModels;
@@ -405,9 +554,9 @@ public class MainViewModelTests
             new FakePriceTierRepository(), new FakePaymentRepository(), dialog);
         var renterViewModel = new RenterViewModel(new FakeRenterRepository(), new FakeRentalRepository(), dialog);
         var salesViewModel = new SalesViewModel(
-            new FakeRackRepository(), new FakeRentalRepository(), new FakeSaleRepository(), dialog);
+            new FakeRackRepository(), new FakeRentalRepository(), new FakeSaleRepository(), new FakeRenterRepository(), dialog);
         var searchSalesViewModel = new SearchSalesViewModel(
-            new FakeRackRepository(), new FakeSaleRepository(), dialog, new SecureAreaService("1234"));
+            new FakeRackRepository(), new FakeSaleRepository(), new FakeRenterRepository(), dialog, new SecureAreaService("1234"));
         var monthlyStatementViewModel = new MonthlyStatementViewModel(new SecureAreaService("1234"), dialog);
 
         // Act
@@ -423,16 +572,12 @@ public class MainViewModelTests
 }
 
 
-================================================
 FIL: ReolmarkedetG12.Tests\MSTestSettings.cs
-================================================
 [assembly: Parallelize(Scope = ExecutionScope.MethodLevel)]
 
 
 
-================================================
 FIL: ReolmarkedetG12.Tests\ObservableCollectionExtensionsTests.cs
-================================================
 using System.Collections.ObjectModel;
 using ReolmarkedetG12.UI.ViewModels;
 
@@ -456,9 +601,7 @@ public class ObservableCollectionExtensionsTests
 }
 
 
-================================================
 FIL: ReolmarkedetG12.Tests\RackRepositoryTests.cs
-================================================
 using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
@@ -569,9 +712,7 @@ public class RackRepositoryTests
 }
 
 
-================================================
 FIL: ReolmarkedetG12.Tests\RackViewModelTests.cs
-================================================
 using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Services;
 using ReolmarkedetG12.Tests.Fakes;
@@ -800,7 +941,7 @@ public class RackViewModelTests
     }
 
     [TestMethod]
-    public void CreateRentalCommand_Confirmed_CreatesFirstMonthPayment()
+    public void CreateRentalCommand_Confirmed_SendsAmountToCheckout()
     {
         // Arrange: to ledige reoler og én lejer, brugeren svarer ja
         AddRack(1);
@@ -811,19 +952,28 @@ public class RackViewModelTests
         viewModel.SelectRackCommand.Execute(viewModel.Racks[0]);
         viewModel.SelectRackCommand.Execute(viewModel.Racks[1]);
 
+        List<int>? sentRackNumbers = null;
+        decimal sentAmount = 0;
+        string? sentRenterName = null;
+        viewModel.OnSendToCheckout = (rackNumbers, amount, renterName) =>
+        {
+            sentRackNumbers = rackNumbers;
+            sentAmount = amount;
+            sentRenterName = renterName;
+        };
+
         // Act
         viewModel.CreateRentalCommand.Execute(null);
 
-        // Assert: betaling for første (del)måned = summen af hver reols EGEN pristrins-pris (850 + 825), ikke et gennemsnit
+        // Assert: beløbet sendt til kassen regnes af den SAMLEDE ekstra husleje (850 + 825 = 1675)
+        // i ét regnestykke - ligesom FirstMonthPaymentAmount selv gør det.
         var today = DateOnly.FromDateTime(DateTime.Now);
-        var expectedAmount = RentalPriceCalculator.CalculatePartialMonthRent(850m, today)
-                            + RentalPriceCalculator.CalculatePartialMonthRent(825m, today);
-        Assert.HasCount(1, _payments.Payments);
-        var payment = _payments.Payments[0];
-        Assert.AreEqual(renter.RenterId, payment.RenterId);
-        Assert.AreEqual(PaymentType.FirstMonthPayment, payment.Type);
-        Assert.AreEqual(PaymentMethod.MobilePay, payment.PaymentMethod);
-        Assert.AreEqual(expectedAmount, payment.Amount);
+        var expectedAmount = RentalPriceCalculator.CalculatePartialMonthRent(850m + 825m, today);
+
+        Assert.IsNotNull(sentRackNumbers);
+        Assert.HasCount(2, sentRackNumbers!);
+        Assert.AreEqual(expectedAmount, sentAmount);
+        Assert.AreEqual($"{renter.FirstName} {renter.LastName}", sentRenterName);
     }
 
     [TestMethod]
@@ -1041,8 +1191,15 @@ public class RackViewModelTests
         // Assert: fejlen vises én gang for hver gang, databasen går ned
         Assert.AreEqual(2, _dialog.ErrorCount);
     }
+
+    // =========================================================================
+    // NYE TESTS: kunde-kontekst må aldrig "hænge fast" efter en reol fravælges,
+    // men skal bevares når man lejer en ekstra reol ud til samme kunde, og at
+    // klikke en anden kundes reol skal ALTID bare skifte - aldrig blokere.
+    // =========================================================================
+
     [TestMethod]
-    public void SelectRackCommand_RackBelongsToOtherRenter_ShowsInfoAndDoesNotSelect()
+    public void SelectRackCommand_RackBelongsToOtherRenter_SwitchesToThatRenter()
     {
         // Arrange: to lejere, som hver har en udlejet reol
         var renterA = AddRenter();
@@ -1057,16 +1214,90 @@ public class RackViewModelTests
         // Act: klik på lejer B's reol, mens lejer A er valgt
         viewModel.SelectRackCommand.Execute(viewModel.Racks[1]);
 
+        // Assert: systemet skifter roligt til lejer B i stedet for at blokere
+        Assert.AreEqual(renterB.RenterId, viewModel.FoundRenter!.RenterId);
+        Assert.IsTrue(viewModel.Racks[1].IsSelected);
+    }
+
+    [TestMethod]
+    public void SelectRackCommand_DeselectLastSelectedRack_ClearsFoundRenter()
+    {
+        // Arrange: en udlejet reol klikkes, så kunden vises
+        var renter = AddRenter();
+        var rack = AddRackWithStatus(1, RackStatus.Rented);
+        AddRental(rack, renter, null);
+        var viewModel = CreateViewModel();
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[0]);
+
+        // Act: klik samme reol igen (fravælg)
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[0]);
+
+        // Assert: kunden må ikke stadig stå i vinduet
+        Assert.IsNull(viewModel.FoundRenter);
+        Assert.HasCount(0, viewModel.RenterRacks);
+    }
+
+    [TestMethod]
+    public void SelectRackCommand_AvailableRackAfterDeselectingOtherRenter_HasNoLeftoverRenter()
+    {
+        // Arrange: kunde A's reol vises og fravælges igen (som når man bare viser kunden deres reol)
+        var renterA = AddRenter();
+        var rentedRack = AddRackWithStatus(1, RackStatus.Rented);
+        AddRental(rentedRack, renterA, null);
+        AddRack(2); // ledig reol
+        var viewModel = CreateViewModel();
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[0]);
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[0]);
+
+        // Act: en ny kunde kommer og vælger en ledig reol
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[1]);
+
+        // Assert: ingen kunde må være "hængende" fra før
+        Assert.IsNull(viewModel.FoundRenter);
+        Assert.IsTrue(viewModel.Racks[1].IsSelected);
+    }
+
+    [TestMethod]
+    public void SelectRackCommand_AvailableRackWhileViewingSameRenterRack_KeepsRenterForExtension()
+    {
+        // Arrange: kunde A's udlejede reol klikkes (viser kunden), uden at fravælge den igen
+        var renterA = AddRenter();
+        var rentedRack = AddRackWithStatus(1, RackStatus.Rented);
+        AddRental(rentedRack, renterA, null);
+        AddRack(2); // ledig reol, som kunden vil leje ekstra
+        var viewModel = CreateViewModel();
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[0]);
+
+        // Act: klik den ledige reol - kunden skal IKKE forsvinde, det er en udvidelse af deres leje
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[1]);
+
         // Assert
-        Assert.IsNotNull(_dialog.LastInfo);
-        Assert.IsFalse(viewModel.Racks[1].IsSelected);
+        Assert.IsNotNull(viewModel.FoundRenter);
+        Assert.AreEqual(renterA.RenterId, viewModel.FoundRenter!.RenterId);
+        Assert.IsTrue(viewModel.Racks[1].IsSelected);
+        Assert.IsTrue(viewModel.CreateRentalCommand.CanExecute(null));
+    }
+
+    [TestMethod]
+    public void TerminateRentalCommand_MixedRentedAndTerminatedSelection_CannotExecute()
+    {
+        // Arrange: samme kunde har både en udlejet og en opsagt reol, begge markeres
+        var renter = AddRenter();
+        var rentedRack = AddRackWithStatus(1, RackStatus.Rented);
+        AddRental(rentedRack, renter, null);
+        var terminatedRack = AddRackWithStatus(2, RackStatus.Terminated);
+        AddRental(terminatedRack, renter, new DateTime(2100, 1, 1));
+        var viewModel = CreateViewModel();
+        viewModel.SelectRackCommand.Execute(viewModel.Racks.Single(r => r.Rack.Number == 1)); // udlejet
+        viewModel.SelectRackCommand.Execute(viewModel.Racks.Single(r => r.Rack.Number == 2)); // opsagt, samme kunde
+
+        // Assert: "Opsig aftale" må ikke kunne køres når valget blander status
+        Assert.IsFalse(viewModel.TerminateRentalCommand.CanExecute(null));
     }
 }
 
 
-================================================
 FIL: ReolmarkedetG12.Tests\RelayCommandTests.cs
-================================================
 using ReolmarkedetG12.UI.MVVM;
 
 namespace ReolmarkedetG12.Tests;
@@ -1106,9 +1337,7 @@ public class RelayCommandTests
 }
 
 
-================================================
 FIL: ReolmarkedetG12.Tests\RentalPriceCalculatorTests.cs
-================================================
 using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Services;
 
@@ -1199,9 +1428,7 @@ public class RentalPriceCalculatorTests
 }
 
 
-================================================
 FIL: ReolmarkedetG12.Tests\RentalPriceTierRepositoryTests.cs
-================================================
 using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Repositories;
 
@@ -1260,9 +1487,7 @@ public class RentalPriceTierRepositoryTests
 }
 
 
-================================================
 FIL: ReolmarkedetG12.Tests\RentalRepositoryTests.cs
-================================================
 using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
@@ -1448,9 +1673,7 @@ public class RentalRepositoryTests
 }
 
 
-================================================
 FIL: ReolmarkedetG12.Tests\RenterRepositoryTests.cs
-================================================
 using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
 using ReolmarkedetG12.Core.Exceptions;
@@ -1609,9 +1832,7 @@ public class RenterRepositoryTests
 }
 
 
-================================================
 FIL: ReolmarkedetG12.Tests\RenterViewModelTests.cs
-================================================
 using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Tests.Fakes;
 using ReolmarkedetG12.UI.ViewModels;
@@ -1787,38 +2008,159 @@ public class RenterViewModelTests
 }
 
 
-================================================
-FIL: ReolmarkedetG12.Tests\ReolmarkedetG12.Tests.csproj
-================================================
-<Project Sdk="Microsoft.NET.Sdk">
+FIL: ReolmarkedetG12.Tests\SalesViewModelTests.cs
+using ReolmarkedetG12.Core.Models;
+using ReolmarkedetG12.Tests.Fakes;
+using ReolmarkedetG12.UI.ViewModels;
 
-  <PropertyGroup>
-	  <TargetFramework>net10.0-windows</TargetFramework>
-    <LangVersion>latest</LangVersion>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+namespace ReolmarkedetG12.Tests;
 
-  <ItemGroup>
-    <PackageReference Include="MSTest" Version="4.0.2" />
-  </ItemGroup>
+[TestClass]
+public class SalesViewModelTests
+{
+    private readonly FakeRackRepository _rackRepository = new();
+    private readonly FakeRentalRepository _rentalRepository = new();
+    private readonly FakeSaleRepository _saleRepository = new();
+    private readonly FakeRenterRepository _renterRepository = new();
+    private readonly FakeDialogService _dialogService = new();
 
-  <ItemGroup>
-    <ProjectReference Include="..\src\ReolmarkedetG12.Core\ReolmarkedetG12.Core.csproj" />
-	<ProjectReference Include="..\src\ReolmarkedetG12.UI\ReolmarkedetG12.UI.csproj" />
-  </ItemGroup>
+    private SalesViewModel CreateViewModel() =>
+        new SalesViewModel(_rackRepository, _rentalRepository, _saleRepository, _renterRepository, _dialogService);
 
-  <ItemGroup>
-    <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
-  </ItemGroup>
+    private void SetupRentedRack(int rackNumber, string firstName, string lastName)
+    {
+        var rack = new Rack { Number = rackNumber, Status = RackStatus.Rented };
+        _rackRepository.Add(rack);
 
-</Project>
+        var renter = new Renter
+        {
+            FirstName = firstName,
+            LastName = lastName,
+            Address = "Testvej 1",
+            PostalCode = 4200,
+            City = "Slagelse"
+        };
+        _renterRepository.Add(renter);
+
+        _rentalRepository.Add(new Rental
+        {
+            RackId = rack.RackId,
+            RenterId = renter.RenterId,
+            StartDate = DateTime.Now.AddDays(-10),
+            EndDate = null,
+            MonthlyRent = 850m
+        });
+    }
+
+    [TestMethod]
+    public void NewRackNumber_ValidActiveRental_SetsValidAndShowsRenterName()
+    {
+        // Arrange
+        SetupRentedRack(10, "Peter", "Hansen");
+        var vm = CreateViewModel();
+
+        // Act
+        vm.NewRackNumber = 10;
+
+        // Assert
+        Assert.IsTrue(vm.IsRackValid);
+        Assert.IsTrue(vm.RackValidationMessage.Contains("Peter Hansen"));
+    }
+
+    [TestMethod]
+    public void NewRackNumber_RackDoesNotExist_SetsInvalidAndShowsWarning()
+    {
+        // Arrange
+        var vm = CreateViewModel();
+
+        // Act
+        vm.NewRackNumber = 999;
+
+        // Assert
+        Assert.IsFalse(vm.IsRackValid);
+        Assert.IsTrue(vm.RackValidationMessage.Contains("findes ikke"));
+    }
+
+    [TestMethod]
+    public void NewRackNumber_RackAvailableNoRenter_SetsInvalidAndShowsWarning()
+    {
+        // Arrange
+        _rackRepository.Add(new Rack { Number = 5, Status = RackStatus.Available });
+        var vm = CreateViewModel();
+
+        // Act
+        vm.NewRackNumber = 5;
+
+        // Assert
+        Assert.IsFalse(vm.IsRackValid);
+        Assert.IsTrue(vm.RackValidationMessage.Contains("ingen aktiv lejer"));
+    }
+
+    [TestMethod]
+    public void AddItemCommand_ValidItem_AddsToCartAndCalculatesTotal()
+    {
+        // Arrange
+        SetupRentedRack(10, "Peter", "Hansen");
+        var vm = CreateViewModel();
+        vm.NewRackNumber = 10;
+        vm.NewPrice = 125m;
+        vm.NewRemark = "Vase";
+
+        // Act
+        vm.AddItemCommand.Execute(null);
+
+        // Assert
+        Assert.AreEqual(1, vm.CurrentSaleItems.Count);
+        Assert.AreEqual(125m, vm.TotalAmount);
+        Assert.IsNull(vm.NewRackNumber);
+        Assert.AreEqual(0m, vm.NewPrice);
+    }
+
+    [TestMethod]
+    public void RegisterSaleCommand_CashPaymentWithEnoughMoney_SavesSaleAndClearsCart()
+    {
+        // Arrange
+        SetupRentedRack(10, "Peter", "Hansen");
+        var vm = CreateViewModel();
+        vm.NewRackNumber = 10;
+        vm.NewPrice = 100m;
+        vm.AddItemCommand.Execute(null);
+
+        vm.PaymentMethod = PaymentMethod.Cash;
+        vm.CashReceived = 150m;
+
+        // Act
+        Assert.AreEqual(50m, vm.Change);
+        Assert.IsTrue(vm.RegisterSaleCommand.CanExecute(null));
+        vm.RegisterSaleCommand.Execute(null);
+
+        // Assert
+        Assert.AreEqual(1, _saleRepository.Sales.Count);
+        Assert.AreEqual(100m, _saleRepository.Sales[0].Amount);
+        Assert.AreEqual(0, vm.CurrentSaleItems.Count);
+        Assert.IsNull(vm.CashReceived);
+    }
+
+    [TestMethod]
+    public void RegisterSaleCommand_CashPaymentNotEnoughMoney_CannotExecute()
+    {
+        // Arrange
+        SetupRentedRack(10, "Peter", "Hansen");
+        var vm = CreateViewModel();
+        vm.NewRackNumber = 10;
+        vm.NewPrice = 100m;
+        vm.AddItemCommand.Execute(null);
+
+        vm.PaymentMethod = PaymentMethod.Cash;
+        vm.CashReceived = 80m;
+
+        // Act & Assert
+        Assert.IsFalse(vm.RegisterSaleCommand.CanExecute(null));
+    }
+}
 
 
-
-================================================
 FIL: ReolmarkedetG12.Tests\TestDatabase.cs
-================================================
 namespace ReolmarkedetG12.Tests;
 
 public static class TestDatabase
@@ -1829,9 +2171,7 @@ public static class TestDatabase
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.Core\Exceptions\DatabaseConnectionException.cs
-================================================
 namespace ReolmarkedetG12.Core.Exceptions;
 
 public class DatabaseConnectionException : Exception
@@ -1843,9 +2183,7 @@ public class DatabaseConnectionException : Exception
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.Core\Models\Payment.cs
-================================================
 namespace ReolmarkedetG12.Core.Models;
 
 public class Payment
@@ -1860,9 +2198,7 @@ public class Payment
 
 
 
-================================================
 FIL: src\ReolmarkedetG12.Core\Models\PaymentMethod.cs
-================================================
 namespace ReolmarkedetG12.Core.Models;
 
 public enum PaymentMethod
@@ -1874,9 +2210,7 @@ public enum PaymentMethod
 
 
 
-================================================
 FIL: src\ReolmarkedetG12.Core\Models\PaymentType.cs
-================================================
 namespace ReolmarkedetG12.Core.Models;
 
 public enum PaymentType
@@ -1887,9 +2221,7 @@ public enum PaymentType
 
 
 
-================================================
 FIL: src\ReolmarkedetG12.Core\Models\Rack.cs
-================================================
 namespace ReolmarkedetG12.Core.Models;
 
 public class Rack
@@ -1900,9 +2232,7 @@ public class Rack
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.Core\Models\RackStatus.cs
-================================================
 namespace ReolmarkedetG12.Core.Models;
 
 public enum RackStatus
@@ -1913,9 +2243,7 @@ public enum RackStatus
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.Core\Models\Rental.cs
-================================================
 namespace ReolmarkedetG12.Core.Models;
 
 public class Rental
@@ -1929,9 +2257,7 @@ public class Rental
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.Core\Models\RentalPriceTier.cs
-================================================
 namespace ReolmarkedetG12.Core.Models;
 
 public class RentalPriceTier
@@ -1943,9 +2269,7 @@ public class RentalPriceTier
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.Core\Models\Renter.cs
-================================================
 namespace ReolmarkedetG12.Core.Models;
 
 public class Renter
@@ -1961,9 +2285,7 @@ public class Renter
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.Core\Models\Sale.cs
-================================================
 namespace ReolmarkedetG12.Core.Models;
 
 public class Sale
@@ -1977,9 +2299,7 @@ public class Sale
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.Core\Repositories\IRentalPriceTierRepository.cs
-================================================
 using ReolmarkedetG12.Core.Models;
 
 namespace ReolmarkedetG12.Core.Repositories;
@@ -1990,9 +2310,7 @@ public interface IRentalPriceTierRepository
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.Core\Repositories\IRepository.cs
-================================================
 namespace ReolmarkedetG12.Core.Repositories;
 
 public interface IRepository<T>
@@ -2006,9 +2324,7 @@ public interface IRepository<T>
 
 
 
-================================================
 FIL: src\ReolmarkedetG12.Core\Repositories\PaymentRepository.cs
-================================================
 using Microsoft.Data.SqlClient;
 using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
@@ -2147,9 +2463,7 @@ namespace ReolmarkedetG12.Core.Repositories
 
 
 
-================================================
 FIL: src\ReolmarkedetG12.Core\Repositories\RackRepository.cs
-================================================
 using Microsoft.Data.SqlClient;
 using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
@@ -2273,9 +2587,7 @@ public class RackRepository : IRepository<Rack>
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.Core\Repositories\RentalPriceTierRepository.cs
-================================================
 using Microsoft.Data.SqlClient;
 using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
@@ -2335,9 +2647,7 @@ public class RentalPriceTierRepository : IRentalPriceTierRepository
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.Core\Repositories\RentalRepository.cs
-================================================
 using Microsoft.Data.SqlClient;
 using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
@@ -2475,9 +2785,7 @@ namespace ReolmarkedetG12.Core.Repositories
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.Core\Repositories\RenterRepository.cs
-================================================
 using Microsoft.Data.SqlClient;
 using System;
 using System.Collections.Generic;
@@ -2626,9 +2934,7 @@ namespace ReolmarkedetG12.Core.Repositories
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.Core\Repositories\SaleRepository.cs
-================================================
 using Microsoft.Data.SqlClient;
 using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
@@ -2766,9 +3072,7 @@ namespace ReolmarkedetG12.Core.Repositories
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.Core\Services\RentalPriceCalculator.cs
-================================================
 using ReolmarkedetG12.Core.Models;
 
 namespace ReolmarkedetG12.Core.Services;
@@ -2818,28 +3122,7 @@ public static class RentalPriceCalculator
 }
 
 
-================================================
-FIL: src\ReolmarkedetG12.Core\ReolmarkedetG12.Core.csproj
-================================================
-<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.3" />
-  </ItemGroup>
-
-</Project>
-
-
-
-================================================
 FIL: src\ReolmarkedetG12.UI\Converters\NullToVisibilityConverter.cs
-================================================
 using System.Collections;
 using System.Globalization;
 using System.Windows;
@@ -2876,9 +3159,7 @@ namespace ReolmarkedetG12.UI.Converters
 
 
 
-================================================
 FIL: src\ReolmarkedetG12.UI\MVVM\RelayCommand.cs
-================================================
 using System.Windows.Input;
 
 namespace ReolmarkedetG12.UI.MVVM;
@@ -2907,9 +3188,7 @@ public class RelayCommand : ICommand
 
 
 
-================================================
 FIL: src\ReolmarkedetG12.UI\MVVM\ViewModelBase.cs
-================================================
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
@@ -2936,9 +3215,7 @@ public class ViewModelBase : INotifyPropertyChanged
 
 
 
-================================================
 FIL: src\ReolmarkedetG12.UI\Services\IDialogService.cs
-================================================
 namespace ReolmarkedetG12.UI.Services;
 
 public interface IDialogService
@@ -2949,9 +3226,7 @@ public interface IDialogService
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.UI\Services\ISecureAreaService.cs
-================================================
 using System.ComponentModel;
 
 namespace ReolmarkedetG12.UI.Services;
@@ -2965,9 +3240,7 @@ public interface ISecureAreaService : INotifyPropertyChanged
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.UI\Services\MessageBoxDialogService.cs
-================================================
 using System.Windows;
 
 namespace ReolmarkedetG12.UI.Services;
@@ -2985,9 +3258,7 @@ public class MessageBoxDialogService : IDialogService
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.UI\Services\SecureAreaService.cs
-================================================
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
@@ -3029,9 +3300,7 @@ public class SecureAreaService : ISecureAreaService
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.UI\ViewModels\CartLineItem.cs
-================================================
 namespace ReolmarkedetG12.UI.ViewModels;
 
 // Én vare i det igangværende salg, endnu ikke gemt nogen steder.
@@ -3044,9 +3313,7 @@ public class CartLineItem
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.UI\ViewModels\LockScreenViewModel.cs
-================================================
 using ReolmarkedetG12.UI.MVVM;
 using ReolmarkedetG12.UI.Services;
 
@@ -3095,9 +3362,7 @@ public class LockScreenViewModel : ViewModelBase
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.UI\ViewModels\MainViewModel.cs
-================================================
 using ReolmarkedetG12.UI.MVVM;
 
 namespace ReolmarkedetG12.UI.ViewModels;
@@ -3110,25 +3375,42 @@ public class MainViewModel : ViewModelBase
     public SearchSalesViewModel SearchSalesViewModel { get; }
     public MonthlyStatementViewModel MonthlyStatementViewModel { get; }
 
+    private int _selectedTabIndex;
+    public int SelectedTabIndex
+    {
+        get => _selectedTabIndex;
+        set => SetProperty(ref _selectedTabIndex, value);
+    }
+
     public MainViewModel(
         RackViewModel rackVm,
-        RenterViewModel RenterVm,
+        RenterViewModel renterVm,
         SalesViewModel salesVm,
         SearchSalesViewModel searchSalesVm,
         MonthlyStatementViewModel monthlyStatementVm)
     {
         RackViewModel = rackVm;
-        RenterViewModel = RenterVm;
+        RenterViewModel = renterVm;
         SalesViewModel = salesVm;
         SearchSalesViewModel = searchSalesVm;
         MonthlyStatementViewModel = monthlyStatementVm;
+
+        RackViewModel.OnSendToCheckout = (rackNumbers, amount, renterName) =>
+        {
+            foreach (var rackNo in rackNumbers)
+            {
+                decimal itemAmount = amount / rackNumbers.Count;
+                SalesViewModel.AddRentalPaymentItem(rackNo, itemAmount, renterName);
+            }
+
+            // Skifter direkte til Kasse / Salg-fanen (indeks 2)
+            SelectedTabIndex = 2;
+        };
     }
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.UI\ViewModels\MonthlyStatementViewModel.cs
-================================================
 using ReolmarkedetG12.UI.MVVM;
 using ReolmarkedetG12.UI.Services;
 
@@ -3146,9 +3428,7 @@ public class MonthlyStatementViewModel : ViewModelBase
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.UI\ViewModels\ObservableCollectionExtensions.cs
-================================================
 using System.Collections.ObjectModel;
 
 namespace ReolmarkedetG12.UI.ViewModels;
@@ -3163,9 +3443,7 @@ public static class ObservableCollectionExtensions
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.UI\ViewModels\RackDisplayItem.cs
-================================================
 using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.UI.MVVM;
 
@@ -3205,9 +3483,7 @@ public class RackDisplayItem : ViewModelBase
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.UI\ViewModels\RackViewModel.cs
-================================================
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -3232,8 +3508,6 @@ public class RackViewModel : ViewModelBase
     private readonly DispatcherTimer _terminationCheckTimer;
     private bool _timerCheckFailed;
 
-    private readonly ObservableCollection<RackDisplayItem> _selectedRacks = new();
-
     public ObservableCollection<RackDisplayItem> Racks { get; } = new();
 
     public ObservableCollection<RackDisplayItem> LeftColumnRacks { get; } = new();
@@ -3246,15 +3520,61 @@ public class RackViewModel : ViewModelBase
     public ObservableCollection<RackDisplayItem> Cluster_77_78 { get; } = new();
     public ObservableCollection<RackDisplayItem> Cluster_79_80 { get; } = new();
 
-    public ObservableCollection<RackDisplayItem> SelectedRacks => _selectedRacks;
-
+    public ObservableCollection<RackDisplayItem> SelectedRacks { get; } = new();
     public ObservableCollection<RenterRackDisplayItem> RenterRacks { get; } = new();
-
-    // Samlet mÃ¥nedsbelÃ¸b for lejerens aktive/opsagte reoler â€” udledes af RenterRacks,
-    // ikke gemt separat. Raises OnPropertyChanged manuelt, hver gang RenterRacks Ã¦ndres.
-    public decimal TotalMonthlyRent => RenterRacks.Sum(r => r.Rental.MonthlyRent);
-
     public ObservableCollection<Renter> SearchResults { get; } = new();
+
+    public Action<List<int>, decimal, string>? OnSendToCheckout { get; set; }
+
+    // =========================================================================
+    // MÃ†NGDE- OG STATUSPROPERTIES
+    // =========================================================================
+
+    public int ActiveRentalsCount => RenterRacks.Count(r => r.Rental.EndDate == null);
+    public int SelectedAvailableRacksCount => SelectedRacks.Count(r => r.Rack.Status == RackStatus.Available);
+    public int SelectedRentedRacksCount => SelectedRacks.Count(r => r.Rack.Status == RackStatus.Rented);
+    public int SelectedTerminatedRacksCount => SelectedRacks.Count(r => r.Rack.Status == RackStatus.Terminated);
+
+    public bool ShowNewRentalPriceBox => SelectedAvailableRacksCount > 0;
+
+    public decimal CurrentMonthlyRent
+    {
+        get
+        {
+            if (ActiveRentalsCount == 0) return 0m;
+            var tiers = _rentalPriceTierRepository.GetAll();
+            return RentalPriceCalculator.CalculateMonthlyRent(ActiveRentalsCount, tiers);
+        }
+    }
+
+    public decimal NewMonthlyRent
+    {
+        get
+        {
+            int total = ActiveRentalsCount + SelectedAvailableRacksCount;
+            if (total == 0) return 0m;
+            var tiers = _rentalPriceTierRepository.GetAll();
+            return RentalPriceCalculator.CalculateMonthlyRent(total, tiers);
+        }
+    }
+
+    public decimal AdditionalMonthlyRent => NewMonthlyRent - CurrentMonthlyRent;
+
+    public decimal FirstMonthPaymentAmount
+    {
+        get
+        {
+            if (SelectedAvailableRacksCount == 0) return 0m;
+            var today = DateOnly.FromDateTime(DateTime.Now);
+            return RentalPriceCalculator.CalculatePartialMonthRent(AdditionalMonthlyRent, today);
+        }
+    }
+
+    public decimal TotalMonthlyRent => CurrentMonthlyRent;
+
+    // =========================================================================
+    // SÃ˜GNING OG KUNDE
+    // =========================================================================
 
     private string _searchQuery = string.Empty;
     public string SearchQuery
@@ -3272,16 +3592,29 @@ public class RackViewModel : ViewModelBase
     public Renter? FoundRenter
     {
         get => _foundRenter;
-        private set { _foundRenter = value; OnPropertyChanged(); }
+        private set
+        {
+            _foundRenter = value;
+            OnPropertyChanged();
+            NotifyPriceChanges();
+            CommandManager.InvalidateRequerySuggested();
+        }
     }
 
     public ICommand SelectRackCommand { get; }
     public ICommand SelectRenterCommand { get; }
+    public ICommand ClearRenterCommand { get; }
     public ICommand CreateRentalCommand { get; }
     public ICommand TerminateRentalCommand { get; }
     public ICommand CancelTerminationCommand { get; }
 
-    public RackViewModel(IRepository<Rack> rackRepository, IRepository<Renter> renterRepository, IRepository<Rental> rentalRepository, IRentalPriceTierRepository rentalPriceTierRepository, IRepository<Payment> paymentRepository, IDialogService dialogService)
+    public RackViewModel(
+        IRepository<Rack> rackRepository,
+        IRepository<Renter> renterRepository,
+        IRepository<Rental> rentalRepository,
+        IRentalPriceTierRepository rentalPriceTierRepository,
+        IRepository<Payment> paymentRepository,
+        IDialogService dialogService)
     {
         _rackRepository = rackRepository;
         _renterRepository = renterRepository;
@@ -3341,55 +3674,80 @@ public class RackViewModel : ViewModelBase
             SafeExecute(() =>
             {
                 var clicked = (RackDisplayItem)item!;
-
                 RefreshTerminationInfo(clicked);
 
-                if (!clicked.IsSelected &&
-                    (clicked.Rack.Status == RackStatus.Rented || clicked.Rack.Status == RackStatus.Terminated))
+                if (clicked.Rack.Status == RackStatus.Available)
                 {
+                    // LEDIG REOL: fjern evt. markerede optagne/opsagte reoler fra valget,
+                    // men behold den fundne kunde - det er netop sÃ¥dan man lejer en
+                    // ekstra reol ud til en kunde man allerede har fundet (ved sÃ¸gning,
+                    // eller ved at klikke en af deres nuvÃ¦rende reoler).
+                    foreach (var r in SelectedRacks.Where(r => r.Rack.Status != RackStatus.Available).ToList())
+                    {
+                        r.IsSelected = false;
+                        SelectedRacks.Remove(r);
+                    }
+                }
+                else
+                {
+                    // OPTAGET/OPSAGT REOL: find og vis dens faktiske lejer.
+                    // Et klik her skifter ALTID roligt til den rigtige lejer -
+                    // der vises aldrig en blokerende fejl.
                     var relevantRental = clicked.Rack.Status == RackStatus.Rented
                         ? _rentalRepository.GetAll().FirstOrDefault(r => r.RackId == clicked.Rack.RackId && r.EndDate == null)
                         : _rentalRepository.GetAll().Where(r => r.RackId == clicked.Rack.RackId && r.EndDate != null)
                             .OrderByDescending(r => r.EndDate).FirstOrDefault();
 
-                    if (relevantRental != null)
+                    if (relevantRental != null && (FoundRenter == null || relevantRental.RenterId != FoundRenter.RenterId))
                     {
-                        if (FoundRenter != null && relevantRental.RenterId != FoundRenter.RenterId)
-                        {
-                            _dialogService.ShowInfo(
-                                "Denne reol tilhÃ¸rer en anden lejer end den, du allerede har valgt. " +
-                                "Ryd sÃ¸gefeltet, hvis du vil skifte til en anden lejer.",
-                                "Reol tilhÃ¸rer en anden lejer");
-                            return;
-                        }
-                        clicked.MonthRent = relevantRental.MonthlyRent;
                         var renter = _renterRepository.GetById(relevantRental.RenterId);
                         if (renter != null)
                         {
+                            // Skifter vi til en anden kunde, giver gamle markeringer
+                            // ikke lÃ¦ngere mening - ryd dem.
+                            foreach (var r in SelectedRacks.ToList())
+                            {
+                                r.IsSelected = false;
+                                SelectedRacks.Remove(r);
+                            }
+
                             FoundRenter = renter;
                             SearchResults.Clear();
                             LoadRenterRacks();
                         }
                     }
+
+                    // Fjern ledige reoler, sÃ¥ vi kun har egne optagne valgt
+                    foreach (var a in SelectedRacks.Where(r => r.Rack.Status == RackStatus.Available).ToList())
+                    {
+                        a.IsSelected = false;
+                        SelectedRacks.Remove(a);
+                    }
                 }
 
+                // Skift markering
                 clicked.IsSelected = !clicked.IsSelected;
 
                 if (clicked.IsSelected)
                 {
-                    _selectedRacks.Add(clicked);
+                    if (!SelectedRacks.Contains(clicked))
+                        SelectedRacks.Add(clicked);
                 }
                 else
                 {
-                    _selectedRacks.Remove(clicked);
+                    SelectedRacks.Remove(clicked);
 
-                    if (_selectedRacks.Count == 0)
+                    // Fravalgte vi den sidste markerede reol, er der ikke lÃ¦ngere
+                    // nogen grund til at holde kunden "Ã¥ben" - nulstil helt.
+                    if (SelectedRacks.Count == 0)
                     {
-                        ClearRenterSelection();
+                        FoundRenter = null;
+                        RenterRacks.Clear();
                     }
                 }
 
-                UpdateSelectedRackPrices();
+                NotifyPriceChanges();
+                CommandManager.InvalidateRequerySuggested();
             });
         });
 
@@ -3399,21 +3757,60 @@ public class RackViewModel : ViewModelBase
             {
                 FoundRenter = (Renter)item!;
                 SearchResults.Clear();
+                ClearSelectedRacks();
                 LoadRenterRacks();
             });
         });
 
+        ClearRenterCommand = new RelayCommand(_ => ClearAllSelection());
+
         CreateRentalCommand = new RelayCommand(
             _ => SafeExecute(CreateRental),
-            _ => FoundRenter != null && _selectedRacks.Any(r => r.Rack.Status == RackStatus.Available));
+            _ => FoundRenter != null && SelectedAvailableRacksCount > 0 && SelectedAvailableRacksCount == SelectedRacks.Count);
 
         TerminateRentalCommand = new RelayCommand(
             _ => SafeExecute(TerminateRental),
-            _ => FoundRenter != null && _selectedRacks.Any(r => r.Rack.Status == RackStatus.Rented));
+            _ => FoundRenter != null && SelectedRentedRacksCount > 0 && SelectedRentedRacksCount == SelectedRacks.Count);
 
         CancelTerminationCommand = new RelayCommand(
             _ => SafeExecute(CancelTermination),
-            _ => FoundRenter != null && _selectedRacks.Any(r => r.Rack.Status == RackStatus.Terminated));
+            _ => FoundRenter != null && SelectedTerminatedRacksCount > 0 && SelectedTerminatedRacksCount == SelectedRacks.Count);
+    }
+
+    public void ClearAllSelection()
+    {
+        ClearSelectedRacks();
+        FoundRenter = null;
+        SearchQuery = string.Empty;
+        SearchResults.Clear();
+        RenterRacks.Clear();
+        NotifyPriceChanges();
+        CommandManager.InvalidateRequerySuggested();
+    }
+
+    private void ClearSelectedRacks()
+    {
+        foreach (var r in SelectedRacks.ToList())
+        {
+            r.IsSelected = false;
+        }
+        SelectedRacks.Clear();
+        NotifyPriceChanges();
+        CommandManager.InvalidateRequerySuggested();
+    }
+
+    private void NotifyPriceChanges()
+    {
+        OnPropertyChanged(nameof(ActiveRentalsCount));
+        OnPropertyChanged(nameof(SelectedAvailableRacksCount));
+        OnPropertyChanged(nameof(SelectedRentedRacksCount));
+        OnPropertyChanged(nameof(SelectedTerminatedRacksCount));
+        OnPropertyChanged(nameof(ShowNewRentalPriceBox));
+        OnPropertyChanged(nameof(CurrentMonthlyRent));
+        OnPropertyChanged(nameof(NewMonthlyRent));
+        OnPropertyChanged(nameof(AdditionalMonthlyRent));
+        OnPropertyChanged(nameof(FirstMonthPaymentAmount));
+        OnPropertyChanged(nameof(TotalMonthlyRent));
     }
 
     private bool SafeExecute(Action action, bool showError = true)
@@ -3453,7 +3850,6 @@ public class RackViewModel : ViewModelBase
 
     public void CheckTerminationDatesFromTimer()
     {
-        // Vis kun fejlen fÃ¸rste gang. Er databasen stadig nede, prÃ¸ver vi stille igen nÃ¦ste minut.
         _timerCheckFailed = !SafeExecute(RefreshAllTerminationInfo, showError: !_timerCheckFailed);
     }
 
@@ -3495,9 +3891,12 @@ public class RackViewModel : ViewModelBase
 
         if (string.IsNullOrWhiteSpace(SearchQuery))
         {
-            FoundRenter = null;
-            RenterRacks.Clear();
-            OnPropertyChanged(nameof(TotalMonthlyRent));
+            if (FoundRenter != null && SelectedRacks.Count == 0)
+            {
+                FoundRenter = null;
+                RenterRacks.Clear();
+            }
+            NotifyPriceChanges();
             return;
         }
 
@@ -3512,9 +3911,7 @@ public class RackViewModel : ViewModelBase
                 SearchResults.Add(renter);
         });
 
-        FoundRenter = null;
-        RenterRacks.Clear();
-        OnPropertyChanged(nameof(TotalMonthlyRent));
+        NotifyPriceChanges();
     }
 
     private void LoadRenterRacks()
@@ -3523,7 +3920,7 @@ public class RackViewModel : ViewModelBase
 
         if (FoundRenter == null)
         {
-            OnPropertyChanged(nameof(TotalMonthlyRent));
+            NotifyPriceChanges();
             return;
         }
 
@@ -3538,28 +3935,7 @@ public class RackViewModel : ViewModelBase
                 RenterRacks.Add(new RenterRackDisplayItem(rackItem, rental));
         }
 
-        OnPropertyChanged(nameof(TotalMonthlyRent));
-        UpdateSelectedRackPrices();
-    }
-
-    // Viser fÃ¸rste (del)mÃ¥neds leje for hver valgt ledig reol. Hver NY reol fÃ¥r sin egen
-    // pristrins-pris ud fra hvilken plads den fylder i lejerens stak af reoler (ALDRIG et gennemsnit) â€”
-    // lejerens eksisterende reoler beholder deres oprindelige pris og rÃ¸rs ikke her.
-    private void UpdateSelectedRackPrices()
-    {
-        var newRacks = _selectedRacks.Where(r => r.Rack.Status == RackStatus.Available).ToList();
-        if (newRacks.Count == 0)
-            return;
-
-        int existingCount = RenterRacks.Count(r => r.Rental.EndDate == null);
-        var priceTiers = _rentalPriceTierRepository.GetAll();
-
-        for (int i = 0; i < newRacks.Count; i++)
-        {
-            int position = existingCount + i + 1;
-            decimal rackMonthlyRent = RentalPriceCalculator.CalculateRackPriceAtPosition(position, priceTiers);
-            newRacks[i].MonthRent = RentalPriceCalculator.CalculatePartialMonthRent(rackMonthlyRent, DateOnly.FromDateTime(DateTime.Now));
-        }
+        NotifyPriceChanges();
     }
 
     private void CreateRental()
@@ -3567,22 +3943,34 @@ public class RackViewModel : ViewModelBase
         if (FoundRenter == null)
             return;
 
-        var newItems = _selectedRacks.Where(r => r.Rack.Status == RackStatus.Available).ToList();
+        var newItems = SelectedRacks.Where(r => r.Rack.Status == RackStatus.Available).ToList();
         if (newItems.Count == 0)
             return;
 
-        var firstMonthTotal = newItems.Sum(r => r.MonthRent);
-        if (!_dialogService.Confirm($"Leje fÃ¸rste mÃ¥ned udgÃ¸r {firstMonthTotal:0.00} kr. Modtag betaling. Ã˜nsker du at fortsÃ¦tte?", "Oprettelse"))
+        int existingCount = ActiveRentalsCount;
+        int newTotal = existingCount + newItems.Count;
+        decimal newTotalMonthly = NewMonthlyRent;
+        decimal paymentNow = FirstMonthPaymentAmount;
+
+        var rackNumbersText = string.Join(", ", newItems.Select(r => $"Reol {r.Rack.Number}"));
+
+        string message = $"Vil du oprette lejeaftale for {FoundRenter.FirstName} {FoundRenter.LastName}?\n\n" +
+                         $"â€¢ Reoler: {rackNumbersText}\n" +
+                         $"â€¢ Til betaling ved kassen nu: {paymentNow:0.00} kr.\n" +
+                         $"â€¢ Fast husleje fremover: {newTotalMonthly:0.00} kr./md. ({newTotal} stk.)\n\n" +
+                         $"Tryk 'Ja' for at oprette og sende betalingen til kassen.";
+
+        if (!_dialogService.Confirm(message, "BekrÃ¦ft oprettelse"))
             return;
 
-        // Hver ny reol fÃ¥r sin egen faste pristrins-pris ud fra sin plads i lejerens stak â€”
-        // lejerens EKSISTERENDE reoler beholder deres oprindelige pris og genberegnes ikke.
-        int position = RenterRacks.Count(r => r.Rental.EndDate == null);
-        var priceTiers = _rentalPriceTierRepository.GetAll();
+        var tiers = _rentalPriceTierRepository.GetAll();
+        int position = existingCount;
+        var createdRackNumbers = new List<int>();
 
         foreach (var item in newItems)
         {
             position++;
+            decimal tierPrice = RentalPriceCalculator.CalculateRackPriceAtPosition(position, tiers);
 
             var rental = new Rental
             {
@@ -3590,7 +3978,7 @@ public class RackViewModel : ViewModelBase
                 RenterId = FoundRenter.RenterId,
                 StartDate = DateTime.Now,
                 EndDate = null,
-                MonthlyRent = RentalPriceCalculator.CalculateRackPriceAtPosition(position, priceTiers)
+                MonthlyRent = tierPrice
             };
             _rentalRepository.Add(rental);
 
@@ -3599,18 +3987,15 @@ public class RackViewModel : ViewModelBase
             item.RefreshStatus();
 
             item.IsSelected = false;
-            RenterRacks.Add(new RenterRackDisplayItem(item, rental));
+            createdRackNumbers.Add(item.Rack.Number);
         }
 
-        _paymentRepository.Add(new Payment
+        if (paymentNow > 0 && OnSendToCheckout != null)
         {
-            RenterId = FoundRenter.RenterId,
-            Date = DateTime.Now,
-            Amount = firstMonthTotal,
-            Type = PaymentType.FirstMonthPayment
-        });
+            OnSendToCheckout(createdRackNumbers, paymentNow, $"{FoundRenter.FirstName} {FoundRenter.LastName}");
+        }
 
-        _selectedRacks.Clear();
+        ClearSelectedRacks();
         LoadRenterRacks();
     }
 
@@ -3619,24 +4004,19 @@ public class RackViewModel : ViewModelBase
         if (FoundRenter == null)
             return;
 
-        foreach (var item in _selectedRacks.ToList())
-        {
-            if (item.Rack.Status != RackStatus.Rented)
-            {
-                item.IsSelected = false;
-                continue;
-            }
+        var itemsToTerminate = SelectedRacks.Where(r => r.Rack.Status == RackStatus.Rented).ToList();
+        if (itemsToTerminate.Count == 0)
+            return;
 
+        var effectiveDate = CalculateTerminationEffectiveDate(DateTime.Now);
+
+        foreach (var item in itemsToTerminate)
+        {
             var rental = _rentalRepository.GetAll()
                 .FirstOrDefault(r => r.RackId == item.Rack.RackId && r.RenterId == FoundRenter.RenterId && r.EndDate == null);
 
             if (rental == null)
-            {
-                item.IsSelected = false;
                 continue;
-            }
-
-            var effectiveDate = CalculateTerminationEffectiveDate(DateTime.Now);
 
             rental.EndDate = effectiveDate;
             _rentalRepository.Update(rental);
@@ -3647,13 +4027,9 @@ public class RackViewModel : ViewModelBase
             item.RefreshStatus();
 
             item.IsSelected = false;
-            RenterRacks.RemoveAll(r => r.RackItem == item);
-            RenterRacks.Add(new RenterRackDisplayItem(item, rental));
         }
 
-        // BemÃ¦rk: de resterende reolers pris genberegnes IKKE her â€” hver reol beholder sin egen
-        // faste pristrins-pris for evigt, uanset hvad der sker med lejerens andre reoler.
-        _selectedRacks.Clear();
+        ClearSelectedRacks();
         LoadRenterRacks();
     }
 
@@ -3662,24 +4038,19 @@ public class RackViewModel : ViewModelBase
         if (FoundRenter == null)
             return;
 
-        foreach (var item in _selectedRacks.ToList())
-        {
-            if (item.Rack.Status != RackStatus.Terminated)
-            {
-                item.IsSelected = false;
-                continue;
-            }
+        var itemsToCancel = SelectedRacks.Where(r => r.Rack.Status == RackStatus.Terminated).ToList();
+        if (itemsToCancel.Count == 0)
+            return;
 
+        foreach (var item in itemsToCancel)
+        {
             var rental = _rentalRepository.GetAll()
                 .Where(r => r.RackId == item.Rack.RackId && r.RenterId == FoundRenter.RenterId && r.EndDate != null)
                 .OrderByDescending(r => r.EndDate)
                 .FirstOrDefault();
 
             if (rental == null)
-            {
-                item.IsSelected = false;
                 continue;
-            }
 
             rental.EndDate = null;
             _rentalRepository.Update(rental);
@@ -3690,21 +4061,10 @@ public class RackViewModel : ViewModelBase
             item.RefreshStatus();
 
             item.IsSelected = false;
-            RenterRacks.RemoveAll(r => r.RackItem == item);
-            RenterRacks.Add(new RenterRackDisplayItem(item, rental));
         }
 
-        // Samme princip som ved opsigelse: ingen genberegning af de andre reolers pris.
-        _selectedRacks.Clear();
+        ClearSelectedRacks();
         LoadRenterRacks();
-    }
-
-    private void ClearRenterSelection()
-    {
-        FoundRenter = null;
-        SearchQuery = string.Empty;
-        RenterRacks.Clear();
-        OnPropertyChanged(nameof(TotalMonthlyRent));
     }
 
     public static DateTime CalculateTerminationEffectiveDate(DateTime today)
@@ -3726,9 +4086,7 @@ public class RackViewModel : ViewModelBase
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.UI\ViewModels\RenterRackDisplayItem.cs
-================================================
 using ReolmarkedetG12.Core.Models;
 
 namespace ReolmarkedetG12.UI.ViewModels;
@@ -3746,9 +4104,7 @@ public class RenterRackDisplayItem
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.UI\ViewModels\RenterViewModel.cs
-================================================
 using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
 using ReolmarkedetG12.UI.MVVM;
@@ -4002,14 +4358,11 @@ public class RenterViewModel : ViewModelBase
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.UI\ViewModels\SaleDisplayItem.cs
-================================================
 using ReolmarkedetG12.UI.MVVM;
 
 namespace ReolmarkedetG12.UI.ViewModels;
 
-// Én række i søge/ret-gridet på "Søg/ret salg"-fanen.
 public class SaleDisplayItem : ViewModelBase
 {
     private decimal _amount;
@@ -4017,6 +4370,7 @@ public class SaleDisplayItem : ViewModelBase
 
     public int SaleId { get; set; }
     public int RackNumber { get; set; }
+    public string RenterName { get; set; } = string.Empty;
     public DateTime Date { get; set; }
 
     public decimal Amount
@@ -4033,14 +4387,15 @@ public class SaleDisplayItem : ViewModelBase
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.UI\ViewModels\SalesViewModel.cs
-================================================
+using System.Collections.ObjectModel;
+using System.Windows.Input;
+using Microsoft.Data.SqlClient;
+using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
 using ReolmarkedetG12.UI.MVVM;
 using ReolmarkedetG12.UI.Services;
-using System.Collections.ObjectModel;
 
 namespace ReolmarkedetG12.UI.ViewModels;
 
@@ -4049,16 +4404,40 @@ public class SalesViewModel : ViewModelBase
     private readonly IRepository<Rack> _rackRepository;
     private readonly IRepository<Rental> _rentalRepository;
     private readonly IRepository<Sale> _saleRepository;
+    private readonly IRepository<Renter> _renterRepository;
     private readonly IDialogService _dialogService;
 
-    // --- "Tilføj vare"-felterne ---
+    // --- 1. Indtast vare ---
 
     private int? _newRackNumber;
     public int? NewRackNumber
     {
         get => _newRackNumber;
-        set => SetProperty(ref _newRackNumber, value);
+        set
+        {
+            if (SetProperty(ref _newRackNumber, value))
+            {
+                ValidateEnteredRack();
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
     }
+
+    private string _rackValidationMessage = string.Empty;
+    public string RackValidationMessage
+    {
+        get => _rackValidationMessage;
+        private set => SetProperty(ref _rackValidationMessage, value);
+    }
+
+    private bool _isRackValid;
+    public bool IsRackValid
+    {
+        get => _isRackValid;
+        private set => SetProperty(ref _isRackValid, value);
+    }
+
+    private int? _activeRenterId;
 
     private string _newRemark = string.Empty;
     public string NewRemark
@@ -4071,12 +4450,18 @@ public class SalesViewModel : ViewModelBase
     public decimal NewPrice
     {
         get => _newPrice;
-        set => SetProperty(ref _newPrice, value);
+        set
+        {
+            if (SetProperty(ref _newPrice, value))
+            {
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
     }
 
     public RelayCommand AddItemCommand { get; }
 
-    // --- "Nuværende salg"-kurven ---
+    // --- 2. Aktuelt salg (kurv) ---
 
     public ObservableCollection<CartLineItem> CurrentSaleItems { get; } = new();
 
@@ -4089,8 +4474,9 @@ public class SalesViewModel : ViewModelBase
 
     public RelayCommand EditItemCommand { get; }
     public RelayCommand DeleteItemCommand { get; }
+    public RelayCommand ClearCartCommand { get; }
 
-    // --- Betaling ---
+    // --- 3. Betaling & afslutning ---
 
     public IEnumerable<PaymentMethod> PaymentMethods => Enum.GetValues<PaymentMethod>();
 
@@ -4101,9 +4487,15 @@ public class SalesViewModel : ViewModelBase
         set
         {
             if (SetProperty(ref _paymentMethod, value))
+            {
+                OnPropertyChanged(nameof(IsCashPayment));
                 RecalculateChange();
+                CommandManager.InvalidateRequerySuggested();
+            }
         }
     }
+
+    public bool IsCashPayment => PaymentMethod == PaymentMethod.Cash;
 
     private decimal? _cashReceived;
     public decimal? CashReceived
@@ -4112,7 +4504,10 @@ public class SalesViewModel : ViewModelBase
         set
         {
             if (SetProperty(ref _cashReceived, value))
+            {
                 RecalculateChange();
+                CommandManager.InvalidateRequerySuggested();
+            }
         }
     }
 
@@ -4129,79 +4524,58 @@ public class SalesViewModel : ViewModelBase
         IRepository<Rack> rackRepository,
         IRepository<Rental> rentalRepository,
         IRepository<Sale> saleRepository,
+        IRepository<Renter> renterRepository,
         IDialogService dialogService)
     {
         _rackRepository = rackRepository;
         _rentalRepository = rentalRepository;
         _saleRepository = saleRepository;
+        _renterRepository = renterRepository;
         _dialogService = dialogService;
 
-        AddItemCommand = new RelayCommand(_ => AddItem());
+        AddItemCommand = new RelayCommand(
+            _ => AddItem(),
+            _ => IsRackValid && NewPrice > 0 && NewRackNumber.HasValue);
+
         EditItemCommand = new RelayCommand(param => EditItem(param as CartLineItem));
         DeleteItemCommand = new RelayCommand(param => DeleteItem(param as CartLineItem));
-        RegisterSaleCommand = new RelayCommand(_ => RegisterSale(), _ => CurrentSaleItems.Count > 0);
+        ClearCartCommand = new RelayCommand(_ => ClearCart(), _ => CurrentSaleItems.Count > 0);
+
+        RegisterSaleCommand = new RelayCommand(
+            _ => SafeExecute(RegisterSale),
+            _ => CanRegisterSale());
 
         CurrentSaleItems.CollectionChanged += (_, _) => RecalculateTotals();
     }
 
-    private void AddItem()
+    public void AddRentalPaymentItem(int rackNumber, decimal amount, string renterName)
     {
-        if (NewRackNumber == null || NewPrice <= 0)
-            return;
-
         CurrentSaleItems.Add(new CartLineItem
         {
-            RackNumber = NewRackNumber.Value,
-            Remark = NewRemark,
-            Amount = NewPrice
+            RackNumber = rackNumber,
+            Remark = $"1. md. leje - {renterName}",
+            Amount = amount
         });
-
-        NewRackNumber = null;
-        NewRemark = string.Empty;
-        NewPrice = 0;
     }
 
-    private void EditItem(CartLineItem? item)
+    private void ValidateEnteredRack()
     {
-        if (item == null)
-            return;
+        _activeRenterId = null;
 
-        // Hent linjen tilbage op i tilføj-felterne, så den kan rettes og lægges ind igen.
-        NewRackNumber = item.RackNumber;
-        NewRemark = item.Remark;
-        NewPrice = item.Amount;
-        CurrentSaleItems.Remove(item);
-    }
-
-    private void DeleteItem(CartLineItem? item)
-    {
-        if (item == null)
-            return;
-
-        CurrentSaleItems.Remove(item);
-    }
-
-    private void RecalculateTotals()
-    {
-        TotalAmount = CurrentSaleItems.Sum(i => i.Amount);
-        RecalculateChange();
-    }
-
-    private void RecalculateChange()
-    {
-        Change = PaymentMethod == PaymentMethod.Cash && CashReceived.HasValue
-            ? CashReceived.Value - TotalAmount
-            : 0m;
-    }
-
-    private void RegisterSale()
-    {
-        foreach (var item in CurrentSaleItems)
+        if (!NewRackNumber.HasValue)
         {
-            var rack = _rackRepository.GetAll().FirstOrDefault(r => r.Number == item.RackNumber);
+            RackValidationMessage = string.Empty;
+            IsRackValid = false;
+            return;
+        }
+
+        SafeExecute(() =>
+        {
+            var rack = _rackRepository.GetAll().FirstOrDefault(r => r.Number == NewRackNumber.Value);
             if (rack == null)
             {
-                _dialogService.ShowError($"Reol {item.RackNumber} findes ikke.", "Kunne ikke registrere salg");
+                RackValidationMessage = $"Reol {NewRackNumber.Value} findes ikke.";
+                IsRackValid = false;
                 return;
             }
 
@@ -4210,36 +4584,181 @@ public class SalesViewModel : ViewModelBase
                 .Where(r => r.RackId == rack.RackId && r.StartDate <= now && (r.EndDate == null || r.EndDate > now))
                 .OrderByDescending(r => r.StartDate)
                 .FirstOrDefault();
+
             if (activeRental == null)
             {
-                _dialogService.ShowError($"Reol {item.RackNumber} har ingen aktiv lejer lige nu.", "Kunne ikke registrere salg");
+                RackValidationMessage = $"Reol {NewRackNumber.Value} har ingen aktiv lejer!";
+                IsRackValid = false;
                 return;
             }
+
+            var renter = _renterRepository.GetById(activeRental.RenterId);
+            if (renter != null)
+            {
+                RackValidationMessage = $"Lejer: {renter.FirstName} {renter.LastName}";
+                _activeRenterId = renter.RenterId;
+                IsRackValid = true;
+            }
+            else
+            {
+                RackValidationMessage = "Ukendt lejer tilknyttet reolen.";
+                IsRackValid = false;
+            }
+        });
+    }
+
+    private void AddItem()
+    {
+        if (!IsRackValid || !NewRackNumber.HasValue || NewPrice <= 0)
+            return;
+
+        CurrentSaleItems.Add(new CartLineItem
+        {
+            RackNumber = NewRackNumber.Value,
+            Remark = string.IsNullOrWhiteSpace(NewRemark) ? string.Empty : NewRemark.Trim(),
+            Amount = NewPrice
+        });
+
+        NewRackNumber = null;
+        NewRemark = string.Empty;
+        NewPrice = 0;
+        RackValidationMessage = string.Empty;
+        IsRackValid = false;
+        _activeRenterId = null;
+    }
+
+    private void EditItem(CartLineItem? item)
+    {
+        if (item == null)
+            return;
+
+        NewRackNumber = item.RackNumber;
+        NewRemark = item.Remark;
+        NewPrice = item.Amount;
+        CurrentSaleItems.Remove(item);
+    }
+
+    private void DeleteItem(CartLineItem? item)
+    {
+        if (item != null)
+            CurrentSaleItems.Remove(item);
+    }
+
+    private void ClearCart()
+    {
+        if (_dialogService.Confirm("Vil du annullere det igangværende salg og tømme kurven?", "Annuller salg"))
+        {
+            CurrentSaleItems.Clear();
+            CashReceived = null;
+        }
+    }
+
+    private void RecalculateTotals()
+    {
+        TotalAmount = CurrentSaleItems.Sum(i => i.Amount);
+        RecalculateChange();
+        CommandManager.InvalidateRequerySuggested();
+    }
+
+    private void RecalculateChange()
+    {
+        if (PaymentMethod == PaymentMethod.Cash && CashReceived.HasValue)
+        {
+            Change = CashReceived.Value - TotalAmount;
+        }
+        else
+        {
+            Change = 0m;
+        }
+    }
+
+    private bool CanRegisterSale()
+    {
+        if (CurrentSaleItems.Count == 0)
+            return false;
+
+        if (PaymentMethod == PaymentMethod.Cash)
+        {
+            return CashReceived.HasValue && CashReceived.Value >= TotalAmount;
+        }
+
+        return true;
+    }
+
+    private void RegisterSale()
+    {
+        var now = DateTime.Now;
+
+        foreach (var item in CurrentSaleItems)
+        {
+            var rack = _rackRepository.GetAll().FirstOrDefault(r => r.Number == item.RackNumber);
+            if (rack == null)
+                throw new InvalidOperationException($"Reol {item.RackNumber} blev ikke fundet.");
+
+            var activeRental = _rentalRepository.GetAll()
+                .Where(r => r.RackId == rack.RackId && r.StartDate <= now && (r.EndDate == null || r.EndDate > now))
+                .OrderByDescending(r => r.StartDate)
+                .FirstOrDefault();
+
+            if (activeRental == null)
+                throw new InvalidOperationException($"Reol {item.RackNumber} har ikke længere et aktivt lejemål.");
 
             _saleRepository.Add(new Sale
             {
                 RackId = rack.RackId,
                 RenterId = activeRental.RenterId,
-                Date = DateTime.Now,
+                Date = now,
                 Amount = item.Amount,
                 Description = string.IsNullOrWhiteSpace(item.Remark) ? null : item.Remark
             });
         }
 
+        _dialogService.ShowInfo($"Salget på {TotalAmount:0.00} kr. er gennemført!", "Salg afsluttet");
+
         CurrentSaleItems.Clear();
         CashReceived = null;
+        Change = 0;
+    }
+
+    private bool SafeExecute(Action action)
+    {
+        try
+        {
+            action();
+            return true;
+        }
+        catch (DatabaseConnectionException ex)
+        {
+            _dialogService.ShowError(
+                $"{ex.Message}\n\nTeknisk besked: {ex.InnerException?.Message ?? "ukendt"}",
+                "Forbindelsesfejl");
+            return false;
+        }
+        catch (SqlException ex)
+        {
+            _dialogService.ShowError(
+                $"Der opstod en fejl i databasen.\n\nTeknisk besked: {ex.Message}",
+                "Databasefejl");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _dialogService.ShowError(ex.Message, "Fejl");
+            return false;
+        }
     }
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.UI\ViewModels\SearchSalesViewModel.cs
-================================================
+using System.Collections.ObjectModel;
+using System.Windows.Input;
+using Microsoft.Data.SqlClient;
+using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
 using ReolmarkedetG12.UI.MVVM;
 using ReolmarkedetG12.UI.Services;
-using System.Collections.ObjectModel;
 
 namespace ReolmarkedetG12.UI.ViewModels;
 
@@ -4247,6 +4766,8 @@ public class SearchSalesViewModel : ViewModelBase
 {
     private readonly IRepository<Rack> _rackRepository;
     private readonly IRepository<Sale> _saleRepository;
+    private readonly IRepository<Renter> _renterRepository;
+    private readonly IDialogService _dialogService;
 
     public LockScreenViewModel Lock { get; }
 
@@ -4264,74 +4785,236 @@ public class SearchSalesViewModel : ViewModelBase
         set => SetProperty(ref _searchDate, value);
     }
 
+    private SaleDisplayItem? _selectedSaleItem;
+    public SaleDisplayItem? SelectedSaleItem
+    {
+        get => _selectedSaleItem;
+        set
+        {
+            if (SetProperty(ref _selectedSaleItem, value))
+            {
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
+    }
+
     public ObservableCollection<SaleDisplayItem> SaleResults { get; } = new();
 
     public RelayCommand SearchCommand { get; }
+    public RelayCommand ResetSearchCommand { get; }
     public RelayCommand UpdateCommand { get; }
+    public RelayCommand DeleteCommand { get; }
 
     public SearchSalesViewModel(
         IRepository<Rack> rackRepository,
         IRepository<Sale> saleRepository,
+        IRepository<Renter> renterRepository,
         IDialogService dialogService,
         ISecureAreaService secureAreaService)
     {
         _rackRepository = rackRepository;
         _saleRepository = saleRepository;
+        _renterRepository = renterRepository;
+        _dialogService = dialogService;
 
         Lock = new LockScreenViewModel(secureAreaService, dialogService);
 
-        SearchCommand = new RelayCommand(_ => Search());
-        UpdateCommand = new RelayCommand(_ => Update());
+        SearchCommand = new RelayCommand(_ => SafeExecute(Search));
+        ResetSearchCommand = new RelayCommand(_ => ResetSearch());
+        UpdateCommand = new RelayCommand(_ => SafeExecute(Update), _ => SaleResults.Count > 0);
+        DeleteCommand = new RelayCommand(param => SafeExecute(() => Delete(param as SaleDisplayItem)));
     }
 
     private void Search()
     {
         SaleResults.Clear();
 
-        var racks = _rackRepository.GetAll().ToList();
+        var racks = _rackRepository.GetAll().ToDictionary(r => r.RackId, r => r.Number);
+        var renters = _renterRepository.GetAll().ToDictionary(r => r.RenterId, r => $"{r.FirstName} {r.LastName}");
 
-        foreach (var sale in _saleRepository.GetAll())
+        var sales = _saleRepository.GetAll();
+
+        if (SearchRackNumber.HasValue)
         {
-            var rack = racks.FirstOrDefault(r => r.RackId == sale.RackId);
-            if (rack == null)
-                continue;
+            var matchingRackIds = racks.Where(r => r.Value == SearchRackNumber.Value).Select(r => r.Key).ToHashSet();
+            sales = sales.Where(s => matchingRackIds.Contains(s.RackId));
+        }
 
-            if (SearchRackNumber.HasValue && rack.Number != SearchRackNumber.Value)
-                continue;
+        if (SearchDate.HasValue)
+        {
+            sales = sales.Where(s => s.Date.Date == SearchDate.Value.Date);
+        }
 
-            if (SearchDate.HasValue && sale.Date.Date != SearchDate.Value.Date)
-                continue;
+        var orderedSales = sales.OrderByDescending(s => s.Date);
+
+        foreach (var sale in orderedSales)
+        {
+            racks.TryGetValue(sale.RackId, out int rackNumber);
+            renters.TryGetValue(sale.RenterId, out string? renterName);
 
             SaleResults.Add(new SaleDisplayItem
             {
                 SaleId = sale.SaleId,
-                RackNumber = rack.Number,
+                RackNumber = rackNumber,
+                RenterName = renterName ?? "Ukendt lejer",
                 Date = sale.Date,
                 Amount = sale.Amount,
                 Description = sale.Description ?? string.Empty
             });
         }
+
+        if (SaleResults.Count == 0)
+        {
+            _dialogService.ShowInfo("Ingen salg matchede søgekriterierne.", "Søgeresultat");
+        }
+    }
+
+    private void ResetSearch()
+    {
+        SearchRackNumber = null;
+        SearchDate = null;
+        SaleResults.Clear();
+        SelectedSaleItem = null;
     }
 
     private void Update()
     {
+        int updatedCount = 0;
+
         foreach (var item in SaleResults)
         {
+            if (item.Amount <= 0)
+            {
+                _dialogService.ShowError($"Beløb for salg ID {item.SaleId} skal være større end 0 kr.", "Ugyldigt beløb");
+                return;
+            }
+
             var sale = _saleRepository.GetById(item.SaleId);
             if (sale == null)
                 continue;
 
             sale.Amount = item.Amount;
-            sale.Description = string.IsNullOrWhiteSpace(item.Description) ? null : item.Description;
+            sale.Description = string.IsNullOrWhiteSpace(item.Description) ? null : item.Description.Trim();
             _saleRepository.Update(sale);
+            updatedCount++;
+        }
+
+        _dialogService.ShowInfo($"{updatedCount} salg er opdateret i databasen.", "Gemt");
+    }
+
+    private void Delete(SaleDisplayItem? item)
+    {
+        var target = item ?? SelectedSaleItem;
+        if (target == null)
+            return;
+
+        bool confirm = _dialogService.Confirm(
+            $"Er du sikker på, at du vil slette salget på {target.Amount:0.00} kr. fra Reol {target.RackNumber} ({target.Date:dd-MM-yyyy})?",
+            "Bekræft sletning af salg");
+
+        if (!confirm)
+            return;
+
+        _saleRepository.Delete(target.SaleId);
+        SaleResults.Remove(target);
+
+        _dialogService.ShowInfo("Salget er blevet slettet.", "Slettet");
+    }
+
+    private bool SafeExecute(Action action)
+    {
+        try
+        {
+            action();
+            return true;
+        }
+        catch (DatabaseConnectionException ex)
+        {
+            _dialogService.ShowError(
+                $"{ex.Message}\n\nTeknisk besked: {ex.InnerException?.Message ?? "ukendt"}",
+                "Forbindelsesfejl");
+            return false;
+        }
+        catch (SqlException ex)
+        {
+            _dialogService.ShowError(
+                $"Der opstod en fejl i databasen.\n\nTeknisk besked: {ex.Message}",
+                "Databasefejl");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _dialogService.ShowError(ex.Message, "Fejl");
+            return false;
         }
     }
 }
 
 
-================================================
+FIL: src\ReolmarkedetG12.UI\Views\LockScreenView.xaml
+<UserControl x:Class="ReolmarkedetG12.UI.Views.LockScreenView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="300" d:DesignWidth="400">
+
+    <UserControl.Resources>
+        <Style x:Key="PanelCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="#F1EFE8"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="16,12"/>
+        </Style>
+
+        <Style x:Key="PanelLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Foreground" Value="Gray"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+
+        <Style x:Key="NeutralActionButtonStyle" TargetType="Button">
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#D7D2C8"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="12">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Background="White">
+        <Border Style="{StaticResource PanelCardStyle}" Width="280" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <StackPanel>
+                <TextBlock Text="Dette område er låst" FontSize="16" FontWeight="Bold" Margin="0,0,0,14"/>
+
+                <TextBlock Text="Kodeord" Style="{StaticResource PanelLabelStyle}"/>
+                <PasswordBox x:Name="PasswordInputBox" Padding="6" Margin="0,0,0,14"
+                             PasswordChanged="PasswordInputBox_PasswordChanged"/>
+
+                <Button Content="Lås op" HorizontalAlignment="Right"
+                        Style="{StaticResource NeutralActionButtonStyle}"
+                        Command="{Binding UnlockCommand}"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>
+
+
 FIL: src\ReolmarkedetG12.UI\Views\LockScreenView.xaml.cs
-================================================
 using System.Windows;
 using System.Windows.Controls;
 using ReolmarkedetG12.UI.ViewModels;
@@ -4356,9 +5039,115 @@ public partial class LockScreenView : UserControl
 }
 
 
-================================================
+FIL: src\ReolmarkedetG12.UI\Views\MainWindow.xaml
+<Window x:Class="ReolmarkedetG12.UI.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:ReolmarkedetG12.UI.Views"
+        mc:Ignorable="d"
+        Title="Reolmarkedet" 
+        Height="750" 
+        Width="1150"
+        MinHeight="600"
+        MinWidth="900"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource AppBackground}">
+
+    <Window.Resources>
+        <Style x:Key="MainAppTabControlStyle" TargetType="TabControl">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="{StaticResource AppBackground}" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabControl">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <Border Grid.Row="0" Background="#1E293B" Padding="20,0,20,0">
+                                <DockPanel LastChildFill="False">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,30,0">
+                                        <TextBlock Text="REOLMARKEDET" 
+                                                   FontSize="18" 
+                                                   FontWeight="Bold" 
+                                                   Foreground="White" 
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+
+                                    <TabPanel IsItemsHost="True" VerticalAlignment="Bottom" />
+                                </DockPanel>
+                            </Border>
+
+                            <Border Grid.Row="1" Background="{TemplateBinding Background}">
+                                <ContentPresenter ContentSource="SelectedContent" />
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TopNavTabItemStyle" TargetType="TabItem">
+            <Setter Property="Padding" Value="16,14" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#94A3B8" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="tabBorder" 
+                                Background="Transparent" 
+                                BorderThickness="0,0,0,3" 
+                                BorderBrush="Transparent" 
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="tabBorder" Property="BorderBrush" Value="{StaticResource PrimaryBlue}" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="#F8FAFC" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <TabControl SelectedIndex="{Binding SelectedTabIndex}"
+                    Style="{StaticResource MainAppTabControlStyle}" 
+                    ItemContainerStyle="{StaticResource TopNavTabItemStyle}">
+            <TabItem Header="Kunder">
+                <views:RenterView DataContext="{Binding RenterViewModel}" />
+            </TabItem>
+            <TabItem Header="Reoler">
+                <views:RackView DataContext="{Binding RackViewModel}" />
+            </TabItem>
+            <TabItem Header="Kasse / Salg">
+                <views:SalesView DataContext="{Binding SalesViewModel}" />
+            </TabItem>
+            <TabItem Header="Søg/ret salg">
+                <views:SearchSalesView DataContext="{Binding SearchSalesViewModel}" />
+            </TabItem>
+            <TabItem Header="Månedsopgørelse">
+                <views:MonthlyStatementView DataContext="{Binding MonthlyStatementViewModel}" />
+            </TabItem>
+        </TabControl>
+    </Grid>
+</Window>
+
+
 FIL: src\ReolmarkedetG12.UI\Views\MainWindow.xaml.cs
-================================================
 using System.Windows;
 
 namespace ReolmarkedetG12.UI.Views;
@@ -4375,9 +5164,54 @@ public partial class MainWindow : Window
 }
 
 
-================================================
+FIL: src\ReolmarkedetG12.UI\Views\MonthlyStatementView.xaml
+<UserControl x:Class="ReolmarkedetG12.UI.Views.MonthlyStatementView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:views="clr-namespace:ReolmarkedetG12.UI.Views"
+             mc:Ignorable="d"
+             d:DesignHeight="780" d:DesignWidth="1100">
+
+    <UserControl.Resources>
+        <!-- Vist indtil kodeordet er accepteret -->
+        <Style x:Key="LockScreenStyle" TargetType="FrameworkElement">
+            <Setter Property="Visibility" Value="Visible"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Lock.IsUnlocked}" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Vist først efter kodeordet er accepteret -->
+        <Style x:Key="UnlockedContentStyle" TargetType="Grid">
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Lock.IsUnlocked}" Value="True">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+
+        <!--Lås-skærm: genbrugelig view, vist indtil kodeordet er accepteret-->
+        <Grid Style="{StaticResource LockScreenStyle}">
+            <views:LockScreenView DataContext="{Binding Lock}"/>
+        </Grid>
+
+        <!--Indhold: tomt skelet for nu, vist først når Lock.IsUnlocked er true-->
+        <Grid Style="{StaticResource UnlockedContentStyle}" Margin="15">
+            <TextBlock Text="MÅNEDSOPGØRELSE" FontSize="24" FontWeight="Bold" VerticalAlignment="Top"/>
+        </Grid>
+    </Grid>
+</UserControl>
+
+
 FIL: src\ReolmarkedetG12.UI\Views\MonthlyStatementView.xaml.cs
-================================================
 using System.Windows.Controls;
 
 namespace ReolmarkedetG12.UI.Views;
@@ -4394,9 +5228,537 @@ public partial class MonthlyStatementView : UserControl
 }
 
 
-================================================
+FIL: src\ReolmarkedetG12.UI\Views\RackView.xaml
+<UserControl x:Class="ReolmarkedetG12.UI.Views.RackView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:local="clr-namespace:ReolmarkedetG12.UI.Converters"
+             mc:Ignorable="d"
+             d:DesignHeight="750" d:DesignWidth="1100"
+             FontSize="14">
+
+    <UserControl.Resources>
+        <local:EmptyToVisibilityConverter x:Key="EmptyToVisibilityConverter"/>
+
+        <!-- Moderne reol-knap til butikskortet -->
+        <Style x:Key="RackButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#10B981"/>
+            <!-- GrÃ¸n som standard (Ledig) -->
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Width" Value="60"/>
+            <Setter Property="Height" Value="45"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="tileBorder" 
+                                Background="{TemplateBinding Background}" 
+                                CornerRadius="5" 
+                                BorderThickness="2" 
+                                BorderBrush="Transparent">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding Rack.Status}" Value="Rented">
+                                <Setter Property="Background" Value="#EF4444"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Rack.Status}" Value="Terminated">
+                                <Setter Property="Background" Value="#F59E0B"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                <Setter Property="Background" Value="#2563EB"/>
+                                <Setter TargetName="tileBorder" Property="BorderBrush" Value="#1E3A8A"/>
+                                <Setter TargetName="tileBorder" Property="BorderThickness" Value="2.5"/>
+                            </DataTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ClusterRackButtonStyle" TargetType="Button" BasedOn="{StaticResource RackButtonStyle}">
+            <Setter Property="Height" Value="32"/>
+        </Style>
+
+        <Style x:Key="ClusterItemsControlStyle" TargetType="ItemsControl">
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="ItemTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <Button Content="{Binding Rack.Number}"
+                                Style="{StaticResource ClusterRackButtonStyle}"
+                                ToolTip="{Binding TerminationDate, StringFormat='Opsagt til {0:dd-MM-yyyy}'}"
+                                Command="{Binding DataContext.SelectRackCommand,
+                                                  RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                CommandParameter="{Binding}"/>
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="LeftColumnRackButtonStyle" TargetType="Button" BasedOn="{StaticResource RackButtonStyle}">
+            <Setter Property="Width" Value="34"/>
+            <Setter Property="Height" Value="58"/>
+        </Style>
+
+        <Style x:Key="LeftColumnItemsControlStyle" TargetType="ItemsControl">
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="ItemTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <Button Content="{Binding Rack.Number}"
+                                Style="{StaticResource LeftColumnRackButtonStyle}"
+                                ToolTip="{Binding TerminationDate, StringFormat='Opsagt til {0:dd-MM-yyyy}'}"
+                                Command="{Binding DataContext.SelectRackCommand,
+                                                  RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                CommandParameter="{Binding}"/>
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PanelCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="#F8FAFC"/>
+            <Setter Property="BorderBrush" Value="#E2E8F0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="MinHeight" Value="40"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+
+        <Style x:Key="PanelLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#475569"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+
+        <Style x:Key="PlaceholderTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="#94A3B8"/>
+        </Style>
+
+        <Style x:Key="RackPillStyle" TargetType="Border">
+            <Setter Property="Background" Value="#EFF6FF"/>
+            <Setter Property="BorderBrush" Value="#BFDBFE"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Margin" Value="0,0,6,6"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="16" HorizontalAlignment="Center">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="320"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ============================================== -->
+        <!-- VENSTRE SIDE: BUTIKSKORTET (100% INTAKT)       -->
+        <!-- ============================================== -->
+        <Border Grid.Column="0" 
+                Background="White" 
+                BorderBrush="#E2E8F0" 
+                BorderThickness="1" 
+                CornerRadius="8" 
+                Padding="16"
+                Margin="0,0,16,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Signaturforklaring -->
+                <DockPanel Grid.Row="0" Margin="0,0,0,14">
+                    <TextBlock Text="Butiksoversigt" FontSize="16" FontWeight="Bold" Foreground="#1E293B" DockPanel.Dock="Left"/>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Border Width="12" Height="12" Background="#10B981" CornerRadius="3" Margin="0,0,4,0"/>
+                        <TextBlock Text="Ledig" FontSize="12" Margin="0,0,12,0" Foreground="#64748B"/>
+
+                        <Border Width="12" Height="12" Background="#EF4444" CornerRadius="3" Margin="0,0,4,0"/>
+                        <TextBlock Text="Udlejet" FontSize="12" Margin="0,0,12,0" Foreground="#64748B"/>
+
+                        <Border Width="12" Height="12" Background="#F59E0B" CornerRadius="3" Margin="0,0,4,0"/>
+                        <TextBlock Text="Opsagt" FontSize="12" Foreground="#64748B"/>
+                    </StackPanel>
+                </DockPanel>
+
+                <!-- Reol-omrÃ¥det -->
+                <Viewbox Grid.Row="1" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Top">
+                    <Grid Width="700" Height="900" Margin="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Venstre sÃ¸jle (1-13) -->
+                        <ItemsControl Grid.Column="0"
+                                      ItemsSource="{Binding LeftColumnRacks}"
+                                      Style="{StaticResource LeftColumnItemsControlStyle}"/>
+
+                        <!-- Midten: klynger (14-80) -->
+                        <StackPanel Grid.Column="1" Margin="40,0,0,0" HorizontalAlignment="Left">
+
+                            <ItemsControl ItemsSource="{Binding Cluster_14_18}" Style="{StaticResource ClusterItemsControlStyle}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Rows="1" Columns="5"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
+
+                            <ItemsControl ItemsSource="{Binding Cluster_19_24}" Style="{StaticResource ClusterItemsControlStyle}" Margin="0,15,0,0">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Rows="2" Columns="3"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
+
+                            <ItemsControl ItemsSource="{Binding Cluster_25_38}" Style="{StaticResource ClusterItemsControlStyle}" Margin="0,15,0,0">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Rows="2" Columns="7"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
+
+                            <ItemsControl ItemsSource="{Binding Cluster_39_52}" Style="{StaticResource ClusterItemsControlStyle}" Margin="0,15,0,0">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Rows="2" Columns="7"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
+
+                            <ItemsControl ItemsSource="{Binding Cluster_53_66}" Style="{StaticResource ClusterItemsControlStyle}" Margin="0,15,0,0">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Rows="2" Columns="7"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
+
+                            <ItemsControl ItemsSource="{Binding Cluster_67_76}" Style="{StaticResource ClusterItemsControlStyle}" Margin="0,15,0,0">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Rows="2" Columns="5"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,15,0,0">
+                                <ItemsControl ItemsSource="{Binding Cluster_77_78}" Style="{StaticResource ClusterItemsControlStyle}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Rows="1" Columns="2"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                </ItemsControl>
+
+                                <ItemsControl ItemsSource="{Binding Cluster_79_80}" Style="{StaticResource ClusterItemsControlStyle}" Margin="30,0,0,0">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Rows="1" Columns="2"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                </ItemsControl>
+                            </StackPanel>
+
+                        </StackPanel>
+                    </Grid>
+                </Viewbox>
+            </Grid>
+        </Border>
+
+        <!-- ============================================== -->
+        <!-- HÃ˜JRE SIDE: LEJER-PANEL OG HANDLINGER          -->
+        <!-- ============================================== -->
+        <Border Grid.Column="1" 
+                Background="White" 
+                BorderBrush="#E2E8F0" 
+                BorderThickness="1" 
+                CornerRadius="8" 
+                Padding="16">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="1.3*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <DockPanel Grid.Row="0">
+                    <TextBlock Text="VÃ¦lg lejer" Style="{StaticResource PanelLabelStyle}" VerticalAlignment="Center"/>
+                    <Button Content="âœ• Ryd lejer" 
+                            Command="{Binding ClearRenterCommand}" 
+                            HorizontalAlignment="Right" 
+                            Background="Transparent" 
+                            BorderThickness="0" 
+                            Foreground="#DC2626" 
+                            FontSize="12" 
+                            FontWeight="SemiBold" 
+                            Cursor="Hand"
+                            Visibility="{Binding FoundRenter, Converter={StaticResource EmptyToVisibilityConverter}, ConverterParameter=Invert}"/>
+                </DockPanel>
+
+                <Grid Grid.Row="1" Margin="0,0,0,8">
+                    <TextBox Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" 
+                             Height="34" 
+                             Padding="8,0"
+                             VerticalContentAlignment="Center"/>
+                    <TextBlock Text="SÃ¸g pÃ¥ navn, tlf eller by..."
+                               IsHitTestVisible="False"
+                               Margin="10,0,0,0"
+                               VerticalAlignment="Center"
+                               Foreground="#94A3B8"
+                               Visibility="{Binding SearchQuery, Converter={StaticResource EmptyToVisibilityConverter}}"/>
+                </Grid>
+
+                <!-- SÃ¸geresultat / Valgt kunde -->
+                <Border Grid.Row="2" Style="{StaticResource PanelCardStyle}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <TextBlock Text="SÃ¸g efter en lejer for at komme i gang"
+                                       Style="{StaticResource PlaceholderTextStyle}"
+                                       Visibility="{Binding SearchQuery, Converter={StaticResource EmptyToVisibilityConverter}}"/>
+
+                            <ItemsControl ItemsSource="{Binding SearchResults}"
+                                          Visibility="{Binding FoundRenter, Converter={StaticResource EmptyToVisibilityConverter}}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button HorizontalContentAlignment="Left"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Margin="0,0,0,4"
+                                                Cursor="Hand"
+                                                Command="{Binding DataContext.SelectRenterCommand,
+                                                          RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                                CommandParameter="{Binding}">
+                                            <TextBlock>
+                                                <Run Text="{Binding FirstName}" FontWeight="SemiBold"/>
+                                                <Run Text="{Binding LastName}" FontWeight="SemiBold"/>
+                                                <LineBreak/>
+                                                <Run Text="{Binding Phone}" Foreground="#64748B" FontSize="11"/>
+                                                <Run Text=" Â· " Foreground="#94A3B8" FontSize="11"/>
+                                                <Run Text="{Binding City}" Foreground="#64748B" FontSize="11"/>
+                                            </TextBlock>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <StackPanel Visibility="{Binding FoundRenter, Converter={StaticResource EmptyToVisibilityConverter}, ConverterParameter=Invert}">
+                                <TextBlock FontWeight="Bold" FontSize="15" Foreground="#1E293B">
+                                    <Run Text="{Binding FoundRenter.FirstName}"/>
+                                    <Run Text="{Binding FoundRenter.LastName}"/>
+                                </TextBlock>
+                                <TextBlock FontSize="12" Foreground="#64748B" Text="{Binding FoundRenter.Email}"/>
+                                <TextBlock FontSize="12" Foreground="#64748B" Text="{Binding FoundRenter.Phone}"/>
+                                <TextBlock FontSize="12" Foreground="#64748B">
+                                    <Run Text="{Binding FoundRenter.Address}"/>
+                                    <Run Text=", "/>
+                                    <Run Text="{Binding FoundRenter.PostalCode}"/>
+                                    <Run Text=" "/>
+                                    <Run Text="{Binding FoundRenter.City}"/>
+                                </TextBlock>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+
+                <!-- Valgte reoler -->
+                <TextBlock Grid.Row="3" Text="Valgte reoler" Style="{StaticResource PanelLabelStyle}"/>
+
+                <Border Grid.Row="4" Style="{StaticResource PanelCardStyle}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <TextBlock Text="Ingen reoler valgt"
+                                       Style="{StaticResource PlaceholderTextStyle}"
+                                       Visibility="{Binding SelectedRacks.Count, Converter={StaticResource EmptyToVisibilityConverter}}"/>
+
+                            <!-- Piller for hver valgt reol -->
+                            <ItemsControl ItemsSource="{Binding SelectedRacks}"
+                                          Visibility="{Binding SelectedRacks.Count, Converter={StaticResource EmptyToVisibilityConverter}, ConverterParameter=Invert}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Style="{StaticResource RackPillStyle}">
+                                            <TextBlock FontSize="12" FontWeight="Bold" Foreground="#1E40AF">
+                                                <Run Text="Reol "/>
+                                                <Run Text="{Binding Rack.Number}"/>
+                                            </TextBlock>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Prisoversigt: Vises KUN nÃ¥r ShowNewRentalPriceBox er true (mindst 1 ledig reol er valgt) -->
+                            <Border Margin="0,8,0,0" Padding="10" Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="6">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ShowNewRentalPriceBox}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <StackPanel>
+                                    <DockPanel>
+                                        <TextBlock Text="Ekstra leje pr. md:" FontSize="12" Foreground="#1E40AF"/>
+                                        <TextBlock Text="{Binding AdditionalMonthlyRent, StringFormat='+{}{0:0.00} kr./md.'}" 
+                                                   FontSize="12" FontWeight="Bold" Foreground="#1E40AF" HorizontalAlignment="Right"/>
+                                    </DockPanel>
+
+                                    <DockPanel Margin="0,3,0,0">
+                                        <TextBlock Text="Ny samlet mÃ¥nedsleje:" FontSize="13" FontWeight="SemiBold" Foreground="#1E3A8A"/>
+                                        <TextBlock Text="{Binding NewMonthlyRent, StringFormat='{}{0:0.00} kr./md.'}" 
+                                                   FontSize="13" FontWeight="Bold" Foreground="#1E3A8A" HorizontalAlignment="Right"/>
+                                    </DockPanel>
+
+                                    <Separator Margin="0,6,0,6" Background="#BFDBFE"/>
+
+                                    <DockPanel>
+                                        <TextBlock Text="Til betaling nu (indevÃ¦rende md.):" FontSize="11" Foreground="#475569"/>
+                                        <TextBlock Text="{Binding FirstMonthPaymentAmount, StringFormat='{}{0:0.00} kr.'}" 
+                                                   FontSize="11" FontWeight="Bold" Foreground="#1E293B" HorizontalAlignment="Right"/>
+                                    </DockPanel>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+
+                <!-- Kundens aktive reoler -->
+                <TextBlock Grid.Row="5" Text="Kundens aktive lejemÃ¥l" Style="{StaticResource PanelLabelStyle}"/>
+
+                <Border Grid.Row="6" Style="{StaticResource PanelCardStyle}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <TextBlock Text="Ingen reoler tilknyttet"
+                                       Style="{StaticResource PlaceholderTextStyle}"
+                                       Visibility="{Binding RenterRacks.Count, Converter={StaticResource EmptyToVisibilityConverter}}"/>
+
+                            <!-- NuvÃ¦rende samlet mÃ¥nedsleje -->
+                            <Border Background="#F1F5F9" CornerRadius="6" Padding="8" Margin="0,0,0,10"
+                                    Visibility="{Binding RenterRacks.Count, Converter={StaticResource EmptyToVisibilityConverter}, ConverterParameter=Invert}">
+                                <DockPanel>
+                                    <TextBlock Text="NuvÃ¦rende husleje:" FontWeight="SemiBold" Foreground="#475569" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding CurrentMonthlyRent, Mode=OneWay, StringFormat='{}{0:0.00} kr./md.'}" 
+                                               FontWeight="Bold" FontSize="15" Foreground="#1E293B" HorizontalAlignment="Right"/>
+                                </DockPanel>
+                            </Border>
+
+                            <ItemsControl ItemsSource="{Binding RenterRacks}"
+                                          Visibility="{Binding RenterRacks.Count, Converter={StaticResource EmptyToVisibilityConverter}, ConverterParameter=Invert}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderThickness="0,0,0,1" BorderBrush="#E2E8F0" Padding="0,0,0,6" Margin="0,0,0,6">
+                                            <StackPanel>
+                                                <TextBlock FontWeight="Bold" Foreground="#1E293B">
+                                                    <Run Text="{Binding RackItem.Rack.Number, StringFormat='Reol {0}'}"/>
+                                                </TextBlock>
+
+                                                <TextBlock FontSize="11" Foreground="#64748B">
+                                                    <Run Text="Udlejet fra "/>
+                                                    <Run Text="{Binding Rental.StartDate, StringFormat='{}{0:dd-MM-yyyy}'}"/>
+                                                </TextBlock>
+
+                                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="#D97706"
+                                                           Visibility="{Binding Rental.EndDate, Converter={StaticResource EmptyToVisibilityConverter}, ConverterParameter=Invert}">
+                                                    <Run Text="Opsagt til "/>
+                                                    <Run Text="{Binding Rental.EndDate, StringFormat='{}{0:dd-MM-yyyy}'}"/>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+
+                <!-- Handlingsknapper -->
+                <StackPanel Grid.Row="7">
+                    <!-- Opret lejemÃ¥l -->
+                    <Button Content="Opret aftale" 
+                            Command="{Binding CreateRentalCommand}" 
+                            Height="38" 
+                            Background="#059669" 
+                            Foreground="White" 
+                            FontWeight="Bold" 
+                            BorderThickness="0" 
+                            Cursor="Hand" 
+                            Margin="0,0,0,8">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="6"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+
+                    <!-- Opsig aftale -->
+                    <Button Content="Opsig aftale" 
+                            Command="{Binding TerminateRentalCommand}" 
+                            Height="36" 
+                            Background="#F59E0B" 
+                            Foreground="White" 
+                            FontWeight="SemiBold" 
+                            BorderThickness="0" 
+                            Cursor="Hand" 
+                            Margin="0,0,0,8">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="6"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+
+                    <!-- Fortryd opsigelse -->
+                    <Button Content="Fortryd opsigelse" 
+                            Command="{Binding CancelTerminationCommand}" 
+                            Height="36" 
+                            Background="White" 
+                            BorderBrush="#CBD5E1" 
+                            BorderThickness="1" 
+                            Foreground="#475569" 
+                            FontWeight="Medium" 
+                            Cursor="Hand">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="6"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+
+</UserControl>
+
+
 FIL: src\ReolmarkedetG12.UI\Views\RackView.xaml.cs
-================================================
 using System.Windows.Controls;
 
 namespace ReolmarkedetG12.UI.Views;
@@ -4413,9 +5775,224 @@ public partial class RackView : UserControl
 }
 
 
-================================================
+FIL: src\ReolmarkedetG12.UI\Views\RenterView.xaml
+<UserControl x:Class="ReolmarkedetG12.UI.Views.RenterView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="1100"
+             FontSize="14">
+
+    <Grid Margin="20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="380"/>
+            <ColumnDefinition Width="20"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ============================================== -->
+        <!-- VENSTRE SIDE: FORMULAR TIL KUNDEDATA          -->
+        <!-- ============================================== -->
+        <Border Grid.Column="0" Style="{StaticResource CardPanel}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <!-- Header -->
+                    <DockPanel Margin="0,0,0,16">
+                        <TextBlock Text="Kundeoplysninger" 
+                                   Style="{StaticResource SectionHeader}" 
+                                   DockPanel.Dock="Left" 
+                                   Margin="0"/>
+
+                        <Button Content="+ Ny kunde" 
+                                Command="{Binding NewCommand}" 
+                                Style="{StaticResource SecondaryButton}"
+                                Height="30"
+                                Padding="10,0"
+                                FontSize="12"
+                                HorizontalAlignment="Right"/>
+                    </DockPanel>
+
+                    <!-- Navnefelter i to kolonner -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Fornavn *" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding FirstName, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Efternavn *" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding LastName, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Adresse -->
+                    <TextBlock Text="Adresse *" Style="{StaticResource FieldLabel}"/>
+                    <TextBox Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <!-- Postnr og By i to kolonner -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Postnr. *" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding PostalCode, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="By *" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding City, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Telefon -->
+                    <TextBlock Text="Telefon" Style="{StaticResource FieldLabel}"/>
+                    <TextBox Text="{Binding Phone, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <!-- E-mail -->
+                    <TextBlock Text="E-mail" Style="{StaticResource FieldLabel}"/>
+                    <TextBox Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <Separator Margin="0,10,0,16" Background="#E2E8F0"/>
+
+                    <!-- Handlingsknapper -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Gem kunde -->
+                        <Button Grid.Column="0" 
+                                Content="Gem kunde" 
+                                Command="{Binding SaveCommand}" 
+                                Style="{StaticResource SuccessButton}" 
+                                Height="42"/>
+
+                        <!-- Slet kunde -->
+                        <Button Grid.Column="2" 
+                                Content="Slet" 
+                                Command="{Binding DeleteCommand}" 
+                                Height="42"
+                                Width="75"
+                                Background="Transparent"
+                                BorderBrush="{StaticResource DangerRed}"
+                                BorderThickness="1"
+                                Foreground="{StaticResource DangerRed}"
+                                FontWeight="SemiBold"
+                                Cursor="Hand">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <!-- ============================================== -->
+        <!-- HÃ˜JRE SIDE: KUNDEOVERSIGT OG SÃ˜GNING          -->
+        <!-- ============================================== -->
+        <Border Grid.Column="2" Style="{StaticResource CardPanel}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Topbar med sÃ¸gning og optÃ¦lling -->
+                <Grid Grid.Row="0" Margin="0,0,0,14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox Grid.Column="0" 
+                             Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" 
+                             Height="36" 
+                             Margin="0"
+                             Padding="10,0"
+                             VerticalContentAlignment="Center"/>
+
+                    <!-- Placeholder-lignende hjÃ¦lpetekst hvis sÃ¸gefelt er tomt -->
+                    <TextBlock Grid.Column="0" 
+                               Text="SÃ¸g pÃ¥ navn, tlf eller e-mail..." 
+                               IsHitTestVisible="False" 
+                               VerticalAlignment="Center" 
+                               Margin="12,0,0,0" 
+                               Foreground="#94A3B8">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SearchQuery}" Value="">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
+                    <Button Grid.Column="2" 
+                            Content="Vis alle" 
+                            Command="{Binding GetAllCommand}" 
+                            Style="{StaticResource SecondaryButton}" 
+                            Height="36" 
+                            Padding="14,0"/>
+
+                    <TextBlock Grid.Column="3" 
+                               Text="{Binding Renters.Count, StringFormat='{}{0} kunde(r)'}" 
+                               Foreground="{StaticResource TextSecondary}" 
+                               VerticalAlignment="Center" 
+                               Margin="16,0,0,0"/>
+                </Grid>
+
+                <!-- Tabel med kunder -->
+                <DataGrid Grid.Row="1" 
+                          ItemsSource="{Binding Renters}" 
+                          SelectedItem="{Binding SelectedRenter}" 
+                          AutoGenerateColumns="False" 
+                          IsReadOnly="True" 
+                          CanUserAddRows="False"
+                          GridLinesVisibility="Horizontal"
+                          HorizontalGridLinesBrush="#F1F5F9"
+                          BorderThickness="1"
+                          BorderBrush="{StaticResource CardBorder}"
+                          RowHeight="38"
+                          SelectionMode="Single">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Fornavn" Binding="{Binding FirstName}" Width="130"/>
+                        <DataGridTextColumn Header="Efternavn" Binding="{Binding LastName}" Width="140"/>
+                        <DataGridTextColumn Header="Telefon" Binding="{Binding Phone}" Width="110"/>
+                        <DataGridTextColumn Header="E-mail" Binding="{Binding Email}" Width="190"/>
+                        <DataGridTextColumn Header="Adresse" Binding="{Binding Address}" Width="*"/>
+                        <DataGridTextColumn Header="Postnr" Binding="{Binding PostalCode}" Width="75"/>
+                        <DataGridTextColumn Header="By" Binding="{Binding City}" Width="120"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
+
+
 FIL: src\ReolmarkedetG12.UI\Views\RenterView.xaml.cs
-================================================
 using System.Windows.Controls;
 using ReolmarkedetG12.Core.Repositories;
 using ReolmarkedetG12.UI.ViewModels;
@@ -4436,10 +6013,285 @@ public partial class RenterView : UserControl
 
 
 
-================================================
+FIL: src\ReolmarkedetG12.UI\Views\SalesView.xaml
+<UserControl x:Class="ReolmarkedetG12.UI.Views.SalesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="1050"
+             FontSize="14">
+
+    <UserControl.Resources>
+        <!-- Konverter til at vise/skjule kontantfelter -->
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+
+        <Style TargetType="TextBox">
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="6,0"/>
+            <Setter Property="Margin" Value="0,4,0,12"/>
+        </Style>
+
+        <Style TargetType="TextBlock" x:Key="LabelStyle">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#333333"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="360"/>
+            <ColumnDefinition Width="24"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ========================================== -->
+        <!-- VENSTRE SIDE: 1. INDTAST VARE             -->
+        <!-- ========================================== -->
+        <Border Grid.Column="0" 
+                Background="#F9FAFB" 
+                BorderBrush="#E5E7EB" 
+                BorderThickness="1" 
+                CornerRadius="8" 
+                Padding="20">
+            <StackPanel>
+                <TextBlock Text="1. Indtast vare" 
+                           FontSize="18" 
+                           FontWeight="Bold" 
+                           Foreground="#1F2937" 
+                           Margin="0,0,0,16"/>
+
+                <!-- Reolnummer -->
+                <TextBlock Text="Reolnummer *" Style="{StaticResource LabelStyle}"/>
+                <TextBox x:Name="RackNumberBox" 
+                         Text="{Binding NewRackNumber, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}" />
+
+                <!-- Valideringstekst for lejer -->
+                <TextBlock Text="{Binding RackValidationMessage}" 
+                           Margin="0,-6,0,12" 
+                           FontWeight="Medium"
+                           TextWrapping="Wrap">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="#DC2626"/>
+                            <!-- Rød ved fejl -->
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsRackValid}" Value="True">
+                                    <Setter Property="Foreground" Value="#16A34A"/>
+                                    <!-- Grøn ved gyldig lejer -->
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding RackValidationMessage}" Value="">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
+                <!-- Pris -->
+                <TextBlock Text="Pris (kr.) *" Style="{StaticResource LabelStyle}"/>
+                <TextBox Text="{Binding NewPrice, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0.##}, TargetNullValue=''}">
+                    <!-- Tryk Enter i Pris-feltet tilføjer automatisk varen -->
+                    <TextBox.InputBindings>
+                        <KeyBinding Key="Enter" Command="{Binding AddItemCommand}"/>
+                    </TextBox.InputBindings>
+                </TextBox>
+
+                <!-- Beskrivelse / Note -->
+                <TextBlock Text="Beskrivelse / note (valgfri)" Style="{StaticResource LabelStyle}"/>
+                <TextBox Text="{Binding NewRemark, UpdateSourceTrigger=PropertyChanged}" Height="50" TextWrapping="Wrap"/>
+
+                <!-- Knap: Tilføj vare -->
+                <Button Content="Tilføj vare til kurv"
+                        Command="{Binding AddItemCommand}"
+                        Height="40" 
+                        Background="#2563EB" 
+                        Foreground="White" 
+                        FontWeight="Bold" 
+                        BorderThickness="0" 
+                        Cursor="Hand"
+                        Margin="0,10,0,0">
+                    <Button.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="6"/>
+                        </Style>
+                    </Button.Resources>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <!-- ========================================== -->
+        <!-- HØJRE SIDE: 2. KURV & 3. AFSLUT SALG       -->
+        <!-- ========================================== -->
+        <Grid Grid.Column="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- 2. Aktuelt køb (DataGrid) -->
+            <Border Grid.Row="0" 
+                    Background="White" 
+                    BorderBrush="#E5E7EB" 
+                    BorderThickness="1" 
+                    CornerRadius="8" 
+                    Padding="16">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <DockPanel Grid.Row="0" Margin="0,0,0,10">
+                        <TextBlock Text="2. Aktuelt salg (kurv)" 
+                                   FontSize="18" 
+                                   FontWeight="Bold" 
+                                   Foreground="#1F2937" 
+                                   DockPanel.Dock="Left"/>
+
+                        <TextBlock Text="{Binding CurrentSaleItems.Count, StringFormat='{}{0} vare(r) i kurv'}" 
+                                   Foreground="#6B7280" 
+                                   VerticalAlignment="Center" 
+                                   HorizontalAlignment="Right"/>
+                    </DockPanel>
+
+                    <!-- Tabel over varer -->
+                    <DataGrid Grid.Row="1" 
+                              ItemsSource="{Binding CurrentSaleItems}" 
+                              AutoGenerateColumns="False" 
+                              CanUserAddRows="False"
+                              IsReadOnly="True"
+                              GridLinesVisibility="Horizontal"
+                              HorizontalGridLinesBrush="#F3F4F6"
+                              BorderThickness="1"
+                              BorderBrush="#E5E7EB"
+                              RowHeight="36">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Reol" Binding="{Binding RackNumber, StringFormat='Reol {0}'}" Width="90"/>
+                            <DataGridTextColumn Header="Beskrivelse" Binding="{Binding Remark}" Width="*"/>
+                            <DataGridTextColumn Header="Pris" Binding="{Binding Amount, StringFormat='{}{0:0.00} kr.'}" Width="110"/>
+
+                            <!-- Slet / Ret handlinger -->
+                            <DataGridTemplateColumn Width="110">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <Button Content="Ret" 
+                                                    Command="{Binding DataContext.EditItemCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                                                    CommandParameter="{Binding}" 
+                                                    Margin="0,0,6,0" 
+                                                    Padding="8,2" 
+                                                    FontSize="12"/>
+                                            <Button Content="Slet" 
+                                                    Command="{Binding DataContext.DeleteItemCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                                                    CommandParameter="{Binding}" 
+                                                    Foreground="#DC2626" 
+                                                    Padding="8,2" 
+                                                    FontSize="12"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <!-- Annuller knap -->
+                    <Button Grid.Row="2" 
+                            Content="Annuller / tøm kurv" 
+                            Command="{Binding ClearCartCommand}" 
+                            HorizontalAlignment="Left" 
+                            Margin="0,10,0,0" 
+                            Padding="12,6" 
+                            Background="Transparent" 
+                            Foreground="#6B7280" 
+                            BorderBrush="#D1D5DB" 
+                            Cursor="Hand"/>
+                </Grid>
+            </Border>
+
+            <!-- 3. Afslut salg (Total & betaling) -->
+            <Border Grid.Row="1" 
+                    Background="#F9FAFB" 
+                    BorderBrush="#E5E7EB" 
+                    BorderThickness="1" 
+                    CornerRadius="8" 
+                    Padding="20" 
+                    Margin="0,16,0,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Venstre del: Betalingstype og modtaget -->
+                    <StackPanel Grid.Column="0" Margin="0,0,20,0">
+                        <TextBlock Text="Betalingsform" Style="{StaticResource LabelStyle}"/>
+                        <ComboBox ItemsSource="{Binding PaymentMethods}" 
+                                  SelectedItem="{Binding PaymentMethod}" 
+                                  Height="32" 
+                                  Margin="0,4,0,12"/>
+
+                        <!-- Vises kun hvis Betalingsform er Kontant -->
+                        <StackPanel Visibility="{Binding IsCashPayment, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="Modtaget beløb (kr.)" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding CashReceived, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0.##}, TargetNullValue=''}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Højre del: Totalbeløb, Byttepenge og Gennemfør-knap -->
+                    <StackPanel Grid.Column="1" VerticalAlignment="Bottom">
+                        <DockPanel Margin="0,0,0,8">
+                            <TextBlock Text="Total:" FontSize="18" FontWeight="SemiBold" Foreground="#374151"/>
+                            <TextBlock Text="{Binding TotalAmount, StringFormat='{}{0:0.00} kr.'}" 
+                                       FontSize="24" 
+                                       FontWeight="Bold" 
+                                       Foreground="#111827" 
+                                       HorizontalAlignment="Right"/>
+                        </DockPanel>
+
+                        <!-- Byttepenge (kun ved kontant) -->
+                        <DockPanel Margin="0,0,0,16" Visibility="{Binding IsCashPayment, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="Byttepenge:" FontSize="15" Foreground="#4B5563"/>
+                            <TextBlock Text="{Binding Change, StringFormat='{}{0:0.00} kr.'}" 
+                                       FontSize="18" 
+                                       FontWeight="Bold" 
+                                       Foreground="#059669" 
+                                       HorizontalAlignment="Right"/>
+                        </DockPanel>
+
+                        <!-- Gennemfør salg knap -->
+                        <Button Content="Gennemfør salg" 
+                                Command="{Binding RegisterSaleCommand}" 
+                                Height="46" 
+                                Background="#059669" 
+                                Foreground="White" 
+                                FontSize="16" 
+                                FontWeight="Bold" 
+                                BorderThickness="0" 
+                                Cursor="Hand">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>
+
+
 FIL: src\ReolmarkedetG12.UI\Views\SalesView.xaml.cs
-================================================
+using System;
+using System.Collections.Specialized;
 using System.Windows.Controls;
+using System.Windows.Threading;
+using ReolmarkedetG12.UI.ViewModels;
 
 namespace ReolmarkedetG12.UI.Views;
 
@@ -4451,13 +6303,276 @@ public partial class SalesView : UserControl
     public SalesView()
     {
         InitializeComponent();
+
+        Loaded += SalesView_Loaded;
+        DataContextChanged += SalesView_DataContextChanged;
+    }
+
+    private void SalesView_Loaded(object sender, System.Windows.RoutedEventArgs e)
+    {
+        // Sæt markøren i Reolnummer med det samme, når fanen åbnes
+        RackNumberBox.Focus();
+    }
+
+    private void SalesView_DataContextChanged(object sender, System.Windows.DependencyPropertyChangedEventArgs e)
+    {
+        if (e.OldValue is SalesViewModel oldVm)
+        {
+            oldVm.CurrentSaleItems.CollectionChanged -= CurrentSaleItems_CollectionChanged;
+        }
+
+        if (e.NewValue is SalesViewModel newVm)
+        {
+            newVm.CurrentSaleItems.CollectionChanged += CurrentSaleItems_CollectionChanged;
+        }
+    }
+
+    private void CurrentSaleItems_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        // Når der tilføjes en vare (eller kurven tømmes), flyt fokus tilbage til Reolnummer
+        if (e.Action == NotifyCollectionChangedAction.Add || e.Action == NotifyCollectionChangedAction.Reset)
+        {
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
+            {
+                RackNumberBox.Focus();
+                RackNumberBox.SelectAll();
+            }));
+        }
     }
 }
 
 
-================================================
+FIL: src\ReolmarkedetG12.UI\Views\SearchSalesView.xaml
+<UserControl x:Class="ReolmarkedetG12.UI.Views.SearchSalesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:views="clr-namespace:ReolmarkedetG12.UI.Views"
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="1050"
+             FontSize="14">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    </UserControl.Resources>
+
+    <Grid>
+        <!-- Hvis ikke låst op: Vis låseskærm -->
+        <views:LockScreenView DataContext="{Binding Lock}" 
+                              Visibility="{Binding IsUnlocked, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}">
+            <views:LockScreenView.Style>
+                <Style TargetType="views:LockScreenView">
+                    <Setter Property="Visibility" Value="Visible"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsUnlocked}" Value="True">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </views:LockScreenView.Style>
+        </views:LockScreenView>
+
+        <!-- Hvis låst op: Vis søg & ret interface -->
+        <Grid Margin="20">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Lock.IsUnlocked}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Søgefiltre -->
+            <Border Grid.Row="0" 
+                    Background="#F9FAFB" 
+                    BorderBrush="#E5E7EB" 
+                    BorderThickness="1" 
+                    CornerRadius="8" 
+                    Padding="16" 
+                    Margin="0,0,0,16">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="150"/>
+                        <ColumnDefinition Width="30"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Reolfilter -->
+                    <TextBlock Grid.Column="0" Text="Reolnummer:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,10,0"/>
+                    <TextBox Grid.Column="1" 
+                             Text="{Binding SearchRackNumber, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}" 
+                             Height="32" 
+                             VerticalContentAlignment="Center" 
+                             Padding="6,0"/>
+
+                    <!-- Datofilter -->
+                    <TextBlock Grid.Column="3" Text="Dato:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,10,0"/>
+                    <DatePicker Grid.Column="4" 
+                                SelectedDate="{Binding SearchDate}" 
+                                Height="32" 
+                                VerticalContentAlignment="Center"/>
+
+                    <!-- Søg og Ryd knapper -->
+                    <StackPanel Grid.Column="6" Orientation="Horizontal">
+                        <Button Content="Søg" 
+                                Command="{Binding SearchCommand}" 
+                                Width="90" 
+                                Height="34" 
+                                Background="#2563EB" 
+                                Foreground="White" 
+                                FontWeight="Bold" 
+                                BorderThickness="0" 
+                                Cursor="Hand" 
+                                Margin="0,0,8,0">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+
+                        <Button Content="Ryd filtre" 
+                                Command="{Binding ResetSearchCommand}" 
+                                Width="90" 
+                                Height="34" 
+                                Background="Transparent" 
+                                BorderBrush="#D1D5DB" 
+                                Foreground="#4B5563" 
+                                Cursor="Hand">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Tabel med resultater -->
+            <Border Grid.Row="1" 
+                    Background="White" 
+                    BorderBrush="#E5E7EB" 
+                    BorderThickness="1" 
+                    CornerRadius="8" 
+                    Padding="16">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <DockPanel Grid.Row="0" Margin="0,0,0,10">
+                        <TextBlock Text="Fundne salg (klik på Pris eller Beskrivelse for at rette)" 
+                                   FontWeight="SemiBold" 
+                                   Foreground="#4B5563" 
+                                   DockPanel.Dock="Left"/>
+
+                        <TextBlock Text="{Binding SaleResults.Count, StringFormat='{}{0} resultat(er)'}" 
+                                   Foreground="#6B7280" 
+                                   HorizontalAlignment="Right"/>
+                    </DockPanel>
+
+                    <DataGrid Grid.Row="1" 
+                              ItemsSource="{Binding SaleResults}" 
+                              SelectedItem="{Binding SelectedSaleItem}"
+                              AutoGenerateColumns="False" 
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              GridLinesVisibility="Horizontal"
+                              HorizontalGridLinesBrush="#F3F4F6"
+                              BorderThickness="1"
+                              BorderBrush="#E5E7EB"
+                              RowHeight="36">
+                        <DataGrid.Columns>
+                            <!-- ID -->
+                            <DataGridTextColumn Header="Salg ID" Binding="{Binding SaleId}" IsReadOnly="True" Width="80"/>
+
+                            <!-- Reol -->
+                            <DataGridTextColumn Header="Reol" Binding="{Binding RackNumber, StringFormat='Reol {0}'}" IsReadOnly="True" Width="90"/>
+
+                            <!-- Lejer -->
+                            <DataGridTextColumn Header="Lejer" Binding="{Binding RenterName}" IsReadOnly="True" Width="180"/>
+
+                            <!-- Dato -->
+                            <DataGridTextColumn Header="Dato &amp; Tid" Binding="{Binding Date, StringFormat='{}{0:dd-MM-yyyy HH:mm}'}" IsReadOnly="True" Width="150"/>
+
+                            <!-- Pris (Redigerbar) -->
+                            <DataGridTextColumn Header="Pris (kr.)" Binding="{Binding Amount, StringFormat='{}{0:0.00}', UpdateSourceTrigger=LostFocus}" Width="120">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <!-- Beskrivelse (Redigerbar) -->
+                            <DataGridTextColumn Header="Beskrivelse" Binding="{Binding Description, UpdateSourceTrigger=LostFocus}" Width="*"/>
+
+                            <!-- Slet handling -->
+                            <DataGridTemplateColumn Width="90">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="Slet" 
+                                                Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                                                CommandParameter="{Binding}" 
+                                                Foreground="#DC2626" 
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                FontWeight="SemiBold"
+                                                Cursor="Hand"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Border>
+
+            <!-- Bundbar: Gem ændringer -->
+            <DockPanel Grid.Row="2" Margin="0,16,0,0">
+                <TextBlock Text="Husk at trykke 'Gem ændringer' når du har rettet i tabellen." 
+                           Foreground="#6B7280" 
+                           VerticalAlignment="Center" 
+                           DockPanel.Dock="Left"/>
+
+                <Button Content="Gem ændringer" 
+                        Command="{Binding UpdateCommand}" 
+                        Height="40" 
+                        Width="150" 
+                        Background="#059669" 
+                        Foreground="White" 
+                        FontWeight="Bold" 
+                        BorderThickness="0" 
+                        Cursor="Hand" 
+                        HorizontalAlignment="Right">
+                    <Button.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="6"/>
+                        </Style>
+                    </Button.Resources>
+                </Button>
+            </DockPanel>
+        </Grid>
+    </Grid>
+</UserControl>
+
+
 FIL: src\ReolmarkedetG12.UI\Views\SearchSalesView.xaml.cs
-================================================
 using System.Windows.Controls;
 
 namespace ReolmarkedetG12.UI.Views;
@@ -4474,9 +6589,207 @@ public partial class SearchSalesView : UserControl
 }
 
 
-================================================
+FIL: src\ReolmarkedetG12.UI\App.xaml
+<Application x:Class="ReolmarkedetG12.UI.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Application.Resources>
+
+        <!-- ============================================== -->
+        <!-- 1. FARVEPALETTE & BRUSHES                      -->
+        <!-- ============================================== -->
+        <SolidColorBrush x:Key="AppBackground" Color="#F1F5F9" />
+        <SolidColorBrush x:Key="CardBackground" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="CardBorder" Color="#E2E8F0" />
+
+        <SolidColorBrush x:Key="TextPrimary" Color="#1E293B" />
+        <SolidColorBrush x:Key="TextSecondary" Color="#64748B" />
+
+        <SolidColorBrush x:Key="PrimaryBlue" Color="#2563EB" />
+        <SolidColorBrush x:Key="PrimaryBlueHover" Color="#1D4ED8" />
+
+        <SolidColorBrush x:Key="SuccessGreen" Color="#059669" />
+        <SolidColorBrush x:Key="SuccessGreenHover" Color="#047857" />
+
+        <SolidColorBrush x:Key="DangerRed" Color="#DC2626" />
+        <SolidColorBrush x:Key="DangerRedHover" Color="#B91C1C" />
+
+        <SolidColorBrush x:Key="InputBackground" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="InputBorder" Color="#CBD5E1" />
+
+        <!-- ============================================== -->
+        <!-- 2. KORT-CONTAINER STYLE                        -->
+        <!-- ============================================== -->
+        <Style x:Key="CardPanel" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardBackground}" />
+            <Setter Property="BorderBrush" Value="{StaticResource CardBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="16" />
+        </Style>
+
+        <!-- ============================================== -->
+        <!-- 3. TYPOGRAFI & LABELS                          -->
+        <!-- ============================================== -->
+        <Style x:Key="SectionHeader" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+            <Setter Property="Margin" Value="0,0,0,14" />
+        </Style>
+
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+            <Setter Property="Margin" Value="0,4,0,4" />
+        </Style>
+
+        <!-- ============================================== -->
+        <!-- 4. TEKSTFELTER & COMBOBOX                      -->
+        <!-- ============================================== -->
+        <Style TargetType="TextBox">
+            <Setter Property="Height" Value="34" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Padding" Value="8,0" />
+            <Setter Property="BorderBrush" Value="{StaticResource InputBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Background" Value="{StaticResource InputBackground}" />
+            <Setter Property="Margin" Value="0,0,0,10" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                            <ScrollViewer x:Name="PART_ContentHost" Focusable="False" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsFocused" Value="True">
+                                <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource PrimaryBlue}" />
+                                <Setter TargetName="border" Property="BorderThickness" Value="1.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ============================================== -->
+        <!-- 5. KNAPPER (Standard, Primær, Succes, m.fl.)   -->
+        <!-- ============================================== -->
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Height" Value="38" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="Background" Value="{StaticResource PrimaryBlue}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="{StaticResource PrimaryBlueHover}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#94A3B8" />
+                                <Setter Property="Foreground" Value="#F1F5F9" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SuccessButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Background" Value="{StaticResource SuccessGreen}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="{StaticResource SuccessGreenHover}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#94A3B8" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="Height" Value="38" />
+            <Setter Property="Padding" Value="14,0" />
+            <Setter Property="Background" Value="White" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+            <Setter Property="BorderBrush" Value="{StaticResource InputBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" 
+                                Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" 
+                                CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#F8FAFC" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ============================================== -->
+        <!-- 6. TAB-CONTROL (Overordnet Fane-bjælke)         -->
+        <!-- ============================================== -->
+        <Style TargetType="TabItem">
+            <Setter Property="Padding" Value="18,10" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#64748B" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="tabBorder" Background="Transparent" BorderThickness="0,0,0,2" BorderBrush="Transparent" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="tabBorder" Property="BorderBrush" Value="{StaticResource PrimaryBlue}" />
+                                <Setter Property="Foreground" Value="{StaticResource PrimaryBlue}" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+    </Application.Resources>
+</Application>
+
+
 FIL: src\ReolmarkedetG12.UI\App.xaml.cs
-================================================
 using System.Windows;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
@@ -4534,8 +6847,6 @@ public partial class App : Application
 
         try
         {
-            // Et hurtigt, uskyldigt kald der beviser, om databaseforbindelsen reelt virker,
-            // fÃ¸r vi bygger resten af applikationen op omkring den.
             rackRepository.GetAll();
         }
         catch (DatabaseConnectionException ex)
@@ -4559,8 +6870,8 @@ public partial class App : Application
         var mainViewModel = new MainViewModel(
             new RackViewModel(rackRepository, renterRepository, rentalRepository, rentalPriceTierRepository, paymentRepository, dialogService),
             new RenterViewModel(renterRepository, rentalRepository, dialogService),
-            new SalesViewModel(rackRepository, rentalRepository, saleRepository, dialogService),
-            new SearchSalesViewModel(rackRepository, saleRepository, dialogService, secureAreaService),
+            new SalesViewModel(rackRepository, rentalRepository, saleRepository, renterRepository, dialogService),
+            new SearchSalesViewModel(rackRepository, saleRepository, renterRepository, dialogService, secureAreaService),
             new MonthlyStatementViewModel(secureAreaService, dialogService));
 
         var mainWindow = new MainWindow { DataContext = mainViewModel };
@@ -4570,9 +6881,7 @@ public partial class App : Application
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.UI\appsettings.example.json
-================================================
 {
   "ConnectionStrings": {
     "DefaultConnection": "Server=YOUR_SERVER_NAME;Database=Reolmarkedet;Trusted_Connection=True;TrustServerCertificate=True;"
@@ -4581,9 +6890,7 @@ FIL: src\ReolmarkedetG12.UI\appsettings.example.json
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.UI\appsettings.json
-================================================
 {
   "ConnectionStrings": {
     "DefaultConnection": "Server=localhost;Database=Reolmarkedet;Trusted_Connection=True;TrustServerCertificate=True;"
@@ -4592,9 +6899,7 @@ FIL: src\ReolmarkedetG12.UI\appsettings.json
 }
 
 
-================================================
 FIL: src\ReolmarkedetG12.UI\AssemblyInfo.cs
-================================================
 using System.Windows;
 
 [assembly:ThemeInfo(
@@ -4605,36 +6910,6 @@ using System.Windows;
                                                 //(used if a resource is not found in the page,
                                                 // app, or any theme specific resource dictionaries)
 )]
-
-
-
-================================================
-FIL: src\ReolmarkedetG12.UI\ReolmarkedetG12.UI.csproj
-================================================
-<Project Sdk="Microsoft.NET.Sdk">
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.12" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\ReolmarkedetG12.Core\ReolmarkedetG12.Core.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-      <None Update="appsettings.json">
-	      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-  </ItemGroup>
-
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <UseWPF>true</UseWPF>
-  </PropertyGroup>
-
-</Project>
 
 
 

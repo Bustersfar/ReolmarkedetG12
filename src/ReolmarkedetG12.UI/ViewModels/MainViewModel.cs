@@ -10,17 +10,36 @@ public class MainViewModel : ViewModelBase
     public SearchSalesViewModel SearchSalesViewModel { get; }
     public MonthlyStatementViewModel MonthlyStatementViewModel { get; }
 
+    private int _selectedTabIndex;
+    public int SelectedTabIndex
+    {
+        get => _selectedTabIndex;
+        set => SetProperty(ref _selectedTabIndex, value);
+    }
+
     public MainViewModel(
         RackViewModel rackVm,
-        RenterViewModel RenterVm,
+        RenterViewModel renterVm,
         SalesViewModel salesVm,
         SearchSalesViewModel searchSalesVm,
         MonthlyStatementViewModel monthlyStatementVm)
     {
         RackViewModel = rackVm;
-        RenterViewModel = RenterVm;
+        RenterViewModel = renterVm;
         SalesViewModel = salesVm;
         SearchSalesViewModel = searchSalesVm;
         MonthlyStatementViewModel = monthlyStatementVm;
+
+        RackViewModel.OnSendToCheckout = (rackNumbers, amount, renterName) =>
+        {
+            foreach (var rackNo in rackNumbers)
+            {
+                decimal itemAmount = amount / rackNumbers.Count;
+                SalesViewModel.AddRentalPaymentItem(rackNo, itemAmount, renterName);
+            }
+
+            // Skifter direkte til Kasse / Salg-fanen (indeks 2)
+            SelectedTabIndex = 2;
+        };
     }
 }

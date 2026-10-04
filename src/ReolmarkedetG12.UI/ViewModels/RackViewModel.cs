@@ -22,8 +22,6 @@ public class RackViewModel : ViewModelBase
     private readonly DispatcherTimer _terminationCheckTimer;
     private bool _timerCheckFailed;
 
-    private readonly ObservableCollection<RackDisplayItem> _selectedRacks = new();
-
     public ObservableCollection<RackDisplayItem> Racks { get; } = new();
 
     public ObservableCollection<RackDisplayItem> LeftColumnRacks { get; } = new();
@@ -36,15 +34,61 @@ public class RackViewModel : ViewModelBase
     public ObservableCollection<RackDisplayItem> Cluster_77_78 { get; } = new();
     public ObservableCollection<RackDisplayItem> Cluster_79_80 { get; } = new();
 
-    public ObservableCollection<RackDisplayItem> SelectedRacks => _selectedRacks;
-
+    public ObservableCollection<RackDisplayItem> SelectedRacks { get; } = new();
     public ObservableCollection<RenterRackDisplayItem> RenterRacks { get; } = new();
-
-    // Samlet månedsbeløb for lejerens aktive/opsagte reoler — udledes af RenterRacks,
-    // ikke gemt separat. Raises OnPropertyChanged manuelt, hver gang RenterRacks ændres.
-    public decimal TotalMonthlyRent => RenterRacks.Sum(r => r.Rental.MonthlyRent);
-
     public ObservableCollection<Renter> SearchResults { get; } = new();
+
+    public Action<List<int>, decimal, string>? OnSendToCheckout { get; set; }
+
+    // =========================================================================
+    // MÆNGDE- OG STATUSPROPERTIES
+    // =========================================================================
+
+    public int ActiveRentalsCount => RenterRacks.Count(r => r.Rental.EndDate == null);
+    public int SelectedAvailableRacksCount => SelectedRacks.Count(r => r.Rack.Status == RackStatus.Available);
+    public int SelectedRentedRacksCount => SelectedRacks.Count(r => r.Rack.Status == RackStatus.Rented);
+    public int SelectedTerminatedRacksCount => SelectedRacks.Count(r => r.Rack.Status == RackStatus.Terminated);
+
+    public bool ShowNewRentalPriceBox => SelectedAvailableRacksCount > 0;
+
+    public decimal CurrentMonthlyRent
+    {
+        get
+        {
+            if (ActiveRentalsCount == 0) return 0m;
+            var tiers = _rentalPriceTierRepository.GetAll();
+            return RentalPriceCalculator.CalculateMonthlyRent(ActiveRentalsCount, tiers);
+        }
+    }
+
+    public decimal NewMonthlyRent
+    {
+        get
+        {
+            int total = ActiveRentalsCount + SelectedAvailableRacksCount;
+            if (total == 0) return 0m;
+            var tiers = _rentalPriceTierRepository.GetAll();
+            return RentalPriceCalculator.CalculateMonthlyRent(total, tiers);
+        }
+    }
+
+    public decimal AdditionalMonthlyRent => NewMonthlyRent - CurrentMonthlyRent;
+
+    public decimal FirstMonthPaymentAmount
+    {
+        get
+        {
+            if (SelectedAvailableRacksCount == 0) return 0m;
+            var today = DateOnly.FromDateTime(DateTime.Now);
+            return RentalPriceCalculator.CalculatePartialMonthRent(AdditionalMonthlyRent, today);
+        }
+    }
+
+    public decimal TotalMonthlyRent => CurrentMonthlyRent;
+
+    // =========================================================================
+    // SØGNING OG KUNDE
+    // =========================================================================
 
     private string _searchQuery = string.Empty;
     public string SearchQuery
@@ -62,16 +106,29 @@ public class RackViewModel : ViewModelBase
     public Renter? FoundRenter
     {
         get => _foundRenter;
-        private set { _foundRenter = value; OnPropertyChanged(); }
+        private set
+        {
+            _foundRenter = value;
+            OnPropertyChanged();
+            NotifyPriceChanges();
+            CommandManager.InvalidateRequerySuggested();
+        }
     }
 
     public ICommand SelectRackCommand { get; }
     public ICommand SelectRenterCommand { get; }
+    public ICommand ClearRenterCommand { get; }
     public ICommand CreateRentalCommand { get; }
     public ICommand TerminateRentalCommand { get; }
     public ICommand CancelTerminationCommand { get; }
 
-    public RackViewModel(IRepository<Rack> rackRepository, IRepository<Renter> renterRepository, IRepository<Rental> rentalRepository, IRentalPriceTierRepository rentalPriceTierRepository, IRepository<Payment> paymentRepository, IDialogService dialogService)
+    public RackViewModel(
+        IRepository<Rack> rackRepository,
+        IRepository<Renter> renterRepository,
+        IRepository<Rental> rentalRepository,
+        IRentalPriceTierRepository rentalPriceTierRepository,
+        IRepository<Payment> paymentRepository,
+        IDialogService dialogService)
     {
         _rackRepository = rackRepository;
         _renterRepository = renterRepository;
@@ -131,55 +188,80 @@ public class RackViewModel : ViewModelBase
             SafeExecute(() =>
             {
                 var clicked = (RackDisplayItem)item!;
-
                 RefreshTerminationInfo(clicked);
 
-                if (!clicked.IsSelected &&
-                    (clicked.Rack.Status == RackStatus.Rented || clicked.Rack.Status == RackStatus.Terminated))
+                if (clicked.Rack.Status == RackStatus.Available)
                 {
+                    // LEDIG REOL: fjern evt. markerede optagne/opsagte reoler fra valget,
+                    // men behold den fundne kunde - det er netop sådan man lejer en
+                    // ekstra reol ud til en kunde man allerede har fundet (ved søgning,
+                    // eller ved at klikke en af deres nuværende reoler).
+                    foreach (var r in SelectedRacks.Where(r => r.Rack.Status != RackStatus.Available).ToList())
+                    {
+                        r.IsSelected = false;
+                        SelectedRacks.Remove(r);
+                    }
+                }
+                else
+                {
+                    // OPTAGET/OPSAGT REOL: find og vis dens faktiske lejer.
+                    // Et klik her skifter ALTID roligt til den rigtige lejer -
+                    // der vises aldrig en blokerende fejl.
                     var relevantRental = clicked.Rack.Status == RackStatus.Rented
                         ? _rentalRepository.GetAll().FirstOrDefault(r => r.RackId == clicked.Rack.RackId && r.EndDate == null)
                         : _rentalRepository.GetAll().Where(r => r.RackId == clicked.Rack.RackId && r.EndDate != null)
                             .OrderByDescending(r => r.EndDate).FirstOrDefault();
 
-                    if (relevantRental != null)
+                    if (relevantRental != null && (FoundRenter == null || relevantRental.RenterId != FoundRenter.RenterId))
                     {
-                        if (FoundRenter != null && relevantRental.RenterId != FoundRenter.RenterId)
-                        {
-                            _dialogService.ShowInfo(
-                                "Denne reol tilhører en anden lejer end den, du allerede har valgt. " +
-                                "Ryd søgefeltet, hvis du vil skifte til en anden lejer.",
-                                "Reol tilhører en anden lejer");
-                            return;
-                        }
-                        clicked.MonthRent = relevantRental.MonthlyRent;
                         var renter = _renterRepository.GetById(relevantRental.RenterId);
                         if (renter != null)
                         {
+                            // Skifter vi til en anden kunde, giver gamle markeringer
+                            // ikke længere mening - ryd dem.
+                            foreach (var r in SelectedRacks.ToList())
+                            {
+                                r.IsSelected = false;
+                                SelectedRacks.Remove(r);
+                            }
+
                             FoundRenter = renter;
                             SearchResults.Clear();
                             LoadRenterRacks();
                         }
                     }
+
+                    // Fjern ledige reoler, så vi kun har egne optagne valgt
+                    foreach (var a in SelectedRacks.Where(r => r.Rack.Status == RackStatus.Available).ToList())
+                    {
+                        a.IsSelected = false;
+                        SelectedRacks.Remove(a);
+                    }
                 }
 
+                // Skift markering
                 clicked.IsSelected = !clicked.IsSelected;
 
                 if (clicked.IsSelected)
                 {
-                    _selectedRacks.Add(clicked);
+                    if (!SelectedRacks.Contains(clicked))
+                        SelectedRacks.Add(clicked);
                 }
                 else
                 {
-                    _selectedRacks.Remove(clicked);
+                    SelectedRacks.Remove(clicked);
 
-                    if (_selectedRacks.Count == 0)
+                    // Fravalgte vi den sidste markerede reol, er der ikke længere
+                    // nogen grund til at holde kunden "åben" - nulstil helt.
+                    if (SelectedRacks.Count == 0)
                     {
-                        ClearRenterSelection();
+                        FoundRenter = null;
+                        RenterRacks.Clear();
                     }
                 }
 
-                UpdateSelectedRackPrices();
+                NotifyPriceChanges();
+                CommandManager.InvalidateRequerySuggested();
             });
         });
 
@@ -189,21 +271,60 @@ public class RackViewModel : ViewModelBase
             {
                 FoundRenter = (Renter)item!;
                 SearchResults.Clear();
+                ClearSelectedRacks();
                 LoadRenterRacks();
             });
         });
 
+        ClearRenterCommand = new RelayCommand(_ => ClearAllSelection());
+
         CreateRentalCommand = new RelayCommand(
             _ => SafeExecute(CreateRental),
-            _ => FoundRenter != null && _selectedRacks.Any(r => r.Rack.Status == RackStatus.Available));
+            _ => FoundRenter != null && SelectedAvailableRacksCount > 0 && SelectedAvailableRacksCount == SelectedRacks.Count);
 
         TerminateRentalCommand = new RelayCommand(
             _ => SafeExecute(TerminateRental),
-            _ => FoundRenter != null && _selectedRacks.Any(r => r.Rack.Status == RackStatus.Rented));
+            _ => FoundRenter != null && SelectedRentedRacksCount > 0 && SelectedRentedRacksCount == SelectedRacks.Count);
 
         CancelTerminationCommand = new RelayCommand(
             _ => SafeExecute(CancelTermination),
-            _ => FoundRenter != null && _selectedRacks.Any(r => r.Rack.Status == RackStatus.Terminated));
+            _ => FoundRenter != null && SelectedTerminatedRacksCount > 0 && SelectedTerminatedRacksCount == SelectedRacks.Count);
+    }
+
+    public void ClearAllSelection()
+    {
+        ClearSelectedRacks();
+        FoundRenter = null;
+        SearchQuery = string.Empty;
+        SearchResults.Clear();
+        RenterRacks.Clear();
+        NotifyPriceChanges();
+        CommandManager.InvalidateRequerySuggested();
+    }
+
+    private void ClearSelectedRacks()
+    {
+        foreach (var r in SelectedRacks.ToList())
+        {
+            r.IsSelected = false;
+        }
+        SelectedRacks.Clear();
+        NotifyPriceChanges();
+        CommandManager.InvalidateRequerySuggested();
+    }
+
+    private void NotifyPriceChanges()
+    {
+        OnPropertyChanged(nameof(ActiveRentalsCount));
+        OnPropertyChanged(nameof(SelectedAvailableRacksCount));
+        OnPropertyChanged(nameof(SelectedRentedRacksCount));
+        OnPropertyChanged(nameof(SelectedTerminatedRacksCount));
+        OnPropertyChanged(nameof(ShowNewRentalPriceBox));
+        OnPropertyChanged(nameof(CurrentMonthlyRent));
+        OnPropertyChanged(nameof(NewMonthlyRent));
+        OnPropertyChanged(nameof(AdditionalMonthlyRent));
+        OnPropertyChanged(nameof(FirstMonthPaymentAmount));
+        OnPropertyChanged(nameof(TotalMonthlyRent));
     }
 
     private bool SafeExecute(Action action, bool showError = true)
@@ -243,7 +364,6 @@ public class RackViewModel : ViewModelBase
 
     public void CheckTerminationDatesFromTimer()
     {
-        // Vis kun fejlen første gang. Er databasen stadig nede, prøver vi stille igen næste minut.
         _timerCheckFailed = !SafeExecute(RefreshAllTerminationInfo, showError: !_timerCheckFailed);
     }
 
@@ -285,9 +405,12 @@ public class RackViewModel : ViewModelBase
 
         if (string.IsNullOrWhiteSpace(SearchQuery))
         {
-            FoundRenter = null;
-            RenterRacks.Clear();
-            OnPropertyChanged(nameof(TotalMonthlyRent));
+            if (FoundRenter != null && SelectedRacks.Count == 0)
+            {
+                FoundRenter = null;
+                RenterRacks.Clear();
+            }
+            NotifyPriceChanges();
             return;
         }
 
@@ -302,9 +425,7 @@ public class RackViewModel : ViewModelBase
                 SearchResults.Add(renter);
         });
 
-        FoundRenter = null;
-        RenterRacks.Clear();
-        OnPropertyChanged(nameof(TotalMonthlyRent));
+        NotifyPriceChanges();
     }
 
     private void LoadRenterRacks()
@@ -313,7 +434,7 @@ public class RackViewModel : ViewModelBase
 
         if (FoundRenter == null)
         {
-            OnPropertyChanged(nameof(TotalMonthlyRent));
+            NotifyPriceChanges();
             return;
         }
 
@@ -328,28 +449,7 @@ public class RackViewModel : ViewModelBase
                 RenterRacks.Add(new RenterRackDisplayItem(rackItem, rental));
         }
 
-        OnPropertyChanged(nameof(TotalMonthlyRent));
-        UpdateSelectedRackPrices();
-    }
-
-    // Viser første (del)måneds leje for hver valgt ledig reol. Hver NY reol får sin egen
-    // pristrins-pris ud fra hvilken plads den fylder i lejerens stak af reoler (ALDRIG et gennemsnit) —
-    // lejerens eksisterende reoler beholder deres oprindelige pris og rørs ikke her.
-    private void UpdateSelectedRackPrices()
-    {
-        var newRacks = _selectedRacks.Where(r => r.Rack.Status == RackStatus.Available).ToList();
-        if (newRacks.Count == 0)
-            return;
-
-        int existingCount = RenterRacks.Count(r => r.Rental.EndDate == null);
-        var priceTiers = _rentalPriceTierRepository.GetAll();
-
-        for (int i = 0; i < newRacks.Count; i++)
-        {
-            int position = existingCount + i + 1;
-            decimal rackMonthlyRent = RentalPriceCalculator.CalculateRackPriceAtPosition(position, priceTiers);
-            newRacks[i].MonthRent = RentalPriceCalculator.CalculatePartialMonthRent(rackMonthlyRent, DateOnly.FromDateTime(DateTime.Now));
-        }
+        NotifyPriceChanges();
     }
 
     private void CreateRental()
@@ -357,22 +457,34 @@ public class RackViewModel : ViewModelBase
         if (FoundRenter == null)
             return;
 
-        var newItems = _selectedRacks.Where(r => r.Rack.Status == RackStatus.Available).ToList();
+        var newItems = SelectedRacks.Where(r => r.Rack.Status == RackStatus.Available).ToList();
         if (newItems.Count == 0)
             return;
 
-        var firstMonthTotal = newItems.Sum(r => r.MonthRent);
-        if (!_dialogService.Confirm($"Leje første måned udgør {firstMonthTotal:0.00} kr. Modtag betaling. Ønsker du at fortsætte?", "Oprettelse"))
+        int existingCount = ActiveRentalsCount;
+        int newTotal = existingCount + newItems.Count;
+        decimal newTotalMonthly = NewMonthlyRent;
+        decimal paymentNow = FirstMonthPaymentAmount;
+
+        var rackNumbersText = string.Join(", ", newItems.Select(r => $"Reol {r.Rack.Number}"));
+
+        string message = $"Vil du oprette lejeaftale for {FoundRenter.FirstName} {FoundRenter.LastName}?\n\n" +
+                         $"• Reoler: {rackNumbersText}\n" +
+                         $"• Til betaling ved kassen nu: {paymentNow:0.00} kr.\n" +
+                         $"• Fast husleje fremover: {newTotalMonthly:0.00} kr./md. ({newTotal} stk.)\n\n" +
+                         $"Tryk 'Ja' for at oprette og sende betalingen til kassen.";
+
+        if (!_dialogService.Confirm(message, "Bekræft oprettelse"))
             return;
 
-        // Hver ny reol får sin egen faste pristrins-pris ud fra sin plads i lejerens stak —
-        // lejerens EKSISTERENDE reoler beholder deres oprindelige pris og genberegnes ikke.
-        int position = RenterRacks.Count(r => r.Rental.EndDate == null);
-        var priceTiers = _rentalPriceTierRepository.GetAll();
+        var tiers = _rentalPriceTierRepository.GetAll();
+        int position = existingCount;
+        var createdRackNumbers = new List<int>();
 
         foreach (var item in newItems)
         {
             position++;
+            decimal tierPrice = RentalPriceCalculator.CalculateRackPriceAtPosition(position, tiers);
 
             var rental = new Rental
             {
@@ -380,7 +492,7 @@ public class RackViewModel : ViewModelBase
                 RenterId = FoundRenter.RenterId,
                 StartDate = DateTime.Now,
                 EndDate = null,
-                MonthlyRent = RentalPriceCalculator.CalculateRackPriceAtPosition(position, priceTiers)
+                MonthlyRent = tierPrice
             };
             _rentalRepository.Add(rental);
 
@@ -389,18 +501,15 @@ public class RackViewModel : ViewModelBase
             item.RefreshStatus();
 
             item.IsSelected = false;
-            RenterRacks.Add(new RenterRackDisplayItem(item, rental));
+            createdRackNumbers.Add(item.Rack.Number);
         }
 
-        _paymentRepository.Add(new Payment
+        if (paymentNow > 0 && OnSendToCheckout != null)
         {
-            RenterId = FoundRenter.RenterId,
-            Date = DateTime.Now,
-            Amount = firstMonthTotal,
-            Type = PaymentType.FirstMonthPayment
-        });
+            OnSendToCheckout(createdRackNumbers, paymentNow, $"{FoundRenter.FirstName} {FoundRenter.LastName}");
+        }
 
-        _selectedRacks.Clear();
+        ClearSelectedRacks();
         LoadRenterRacks();
     }
 
@@ -409,24 +518,19 @@ public class RackViewModel : ViewModelBase
         if (FoundRenter == null)
             return;
 
-        foreach (var item in _selectedRacks.ToList())
-        {
-            if (item.Rack.Status != RackStatus.Rented)
-            {
-                item.IsSelected = false;
-                continue;
-            }
+        var itemsToTerminate = SelectedRacks.Where(r => r.Rack.Status == RackStatus.Rented).ToList();
+        if (itemsToTerminate.Count == 0)
+            return;
 
+        var effectiveDate = CalculateTerminationEffectiveDate(DateTime.Now);
+
+        foreach (var item in itemsToTerminate)
+        {
             var rental = _rentalRepository.GetAll()
                 .FirstOrDefault(r => r.RackId == item.Rack.RackId && r.RenterId == FoundRenter.RenterId && r.EndDate == null);
 
             if (rental == null)
-            {
-                item.IsSelected = false;
                 continue;
-            }
-
-            var effectiveDate = CalculateTerminationEffectiveDate(DateTime.Now);
 
             rental.EndDate = effectiveDate;
             _rentalRepository.Update(rental);
@@ -437,13 +541,9 @@ public class RackViewModel : ViewModelBase
             item.RefreshStatus();
 
             item.IsSelected = false;
-            RenterRacks.RemoveAll(r => r.RackItem == item);
-            RenterRacks.Add(new RenterRackDisplayItem(item, rental));
         }
 
-        // Bemærk: de resterende reolers pris genberegnes IKKE her — hver reol beholder sin egen
-        // faste pristrins-pris for evigt, uanset hvad der sker med lejerens andre reoler.
-        _selectedRacks.Clear();
+        ClearSelectedRacks();
         LoadRenterRacks();
     }
 
@@ -452,24 +552,19 @@ public class RackViewModel : ViewModelBase
         if (FoundRenter == null)
             return;
 
-        foreach (var item in _selectedRacks.ToList())
-        {
-            if (item.Rack.Status != RackStatus.Terminated)
-            {
-                item.IsSelected = false;
-                continue;
-            }
+        var itemsToCancel = SelectedRacks.Where(r => r.Rack.Status == RackStatus.Terminated).ToList();
+        if (itemsToCancel.Count == 0)
+            return;
 
+        foreach (var item in itemsToCancel)
+        {
             var rental = _rentalRepository.GetAll()
                 .Where(r => r.RackId == item.Rack.RackId && r.RenterId == FoundRenter.RenterId && r.EndDate != null)
                 .OrderByDescending(r => r.EndDate)
                 .FirstOrDefault();
 
             if (rental == null)
-            {
-                item.IsSelected = false;
                 continue;
-            }
 
             rental.EndDate = null;
             _rentalRepository.Update(rental);
@@ -480,21 +575,10 @@ public class RackViewModel : ViewModelBase
             item.RefreshStatus();
 
             item.IsSelected = false;
-            RenterRacks.RemoveAll(r => r.RackItem == item);
-            RenterRacks.Add(new RenterRackDisplayItem(item, rental));
         }
 
-        // Samme princip som ved opsigelse: ingen genberegning af de andre reolers pris.
-        _selectedRacks.Clear();
+        ClearSelectedRacks();
         LoadRenterRacks();
-    }
-
-    private void ClearRenterSelection()
-    {
-        FoundRenter = null;
-        SearchQuery = string.Empty;
-        RenterRacks.Clear();
-        OnPropertyChanged(nameof(TotalMonthlyRent));
     }
 
     public static DateTime CalculateTerminationEffectiveDate(DateTime today)

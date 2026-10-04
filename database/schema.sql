@@ -1,164 +1,143 @@
--- Run this script once against your local SQL Server instance to create the
--- database and tables this project needs. Matches the model classes in
--- ReolmarkedetG12.Core.Models.
+-- ============================================================================
+-- Reolmarkedet - Database Schema & Seed Data
+-- ============================================================================
 
-IF NOT EXISTS (SELECT 1 FROM sys.databases WHERE name = 'Reolmarkedet')
+-- 1. Opret databasen hvis den ikke findes
+IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'Reolmarkedet')
 BEGIN
-    CREATE DATABASE Reolmarkedet;
+    CREATE DATABASE [Reolmarkedet];
 END
 GO
 
-USE Reolmarkedet;
+USE [Reolmarkedet];
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'RACK')
-BEGIN
-    CREATE TABLE RACK
-    (
-        RackId INT IDENTITY(1,1) PRIMARY KEY,
-        Number INT NOT NULL
-    );
-END
+-- 2. Ryd op i eksisterende tabeller (i omvendt rækkefølge af afhængigheder)
+IF OBJECT_ID('dbo.SALE_AUDIT_LOG', 'U') IS NOT NULL DROP TABLE dbo.SALE_AUDIT_LOG;
+IF OBJECT_ID('dbo.SALE', 'U') IS NOT NULL DROP TABLE dbo.SALE;
+IF OBJECT_ID('dbo.PAYMENT', 'U') IS NOT NULL DROP TABLE dbo.PAYMENT;
+IF OBJECT_ID('dbo.RENTAL', 'U') IS NOT NULL DROP TABLE dbo.RENTAL;
+IF OBJECT_ID('dbo.RENTAL_PRICE_TIER', 'U') IS NOT NULL DROP TABLE dbo.RENTAL_PRICE_TIER;
+IF OBJECT_ID('dbo.RACK', 'U') IS NOT NULL DROP TABLE dbo.RACK;
+IF OBJECT_ID('dbo.RENTER', 'U') IS NOT NULL DROP TABLE dbo.RENTER;
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('RACK') AND name = 'Status')
-BEGIN
-    ALTER TABLE RACK ADD Status INT NOT NULL DEFAULT 0;
-END
+-- 3. Opret tabeller
+
+-- RENTER (Kunder / Standlejere)
+CREATE TABLE dbo.RENTER (
+    RenterId INT IDENTITY(1,1) PRIMARY KEY,
+    Name NVARCHAR(100) NOT NULL,
+    Phone NVARCHAR(20) NOT NULL,
+    Email NVARCHAR(100) NOT NULL,
+    Address NVARCHAR(200) NOT NULL,
+    PostalCode NVARCHAR(10) NOT NULL,
+    City NVARCHAR(100) NOT NULL,
+    CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+);
 GO
 
--- Seed: opret de 80 reoler, men kun hvis tabellen er tom (undgår dubletter ved gentagne kørsler)
-IF NOT EXISTS (SELECT 1 FROM RACK)
-BEGIN
-    DECLARE @i INT = 1;
-    WHILE @i <= 80
-    BEGIN
-        INSERT INTO RACK (Number) VALUES (@i);
-        SET @i = @i + 1;
-    END
-END
+-- RACK (Reoler / Stande)
+CREATE TABLE dbo.RACK (
+    RackId INT IDENTITY(1,1) PRIMARY KEY,
+    Number INT NOT NULL CONSTRAINT UQ_RACK_Number UNIQUE,
+    Status INT NOT NULL DEFAULT 0 -- 0 = Available, 1 = Rented, 2 = UnderTermination
+);
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'RENTAL_PRICE_TIER')
-BEGIN
-    CREATE TABLE RENTAL_PRICE_TIER
-    (
-        TierId       INT IDENTITY(1,1) PRIMARY KEY,
-        MinRacks     INT NOT NULL,
-        MaxRacks     INT NULL,
-        PricePerRack DECIMAL(10,2) NOT NULL
-    );
-
-    INSERT INTO RENTAL_PRICE_TIER (MinRacks, MaxRacks, PricePerRack) VALUES
-    (1, 1, 850.00),
-    (2, 3, 825.00),
-    (4, NULL, 800.00);
-END
+-- RENTAL_PRICE_TIER (Prisregler for standleje)
+CREATE TABLE dbo.RENTAL_PRICE_TIER (
+    TierId INT IDENTITY(1,1) PRIMARY KEY,
+    MinRacks INT NOT NULL,
+    MaxRacks INT NULL,
+    MonthlyPrice DECIMAL(18,2) NOT NULL
+);
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'RENTER')
-BEGIN
-    CREATE TABLE RENTER
-    (
-        RenterId   INT IDENTITY(1,1) PRIMARY KEY,
-        FirstName  NVARCHAR(100) NOT NULL,
-        LastName   NVARCHAR(100) NOT NULL,
-        Address    NVARCHAR(200) NOT NULL,
-        PostalCode INT NOT NULL,
-        City       NVARCHAR(100) NOT NULL,
-        Email      NVARCHAR(200) NULL,
-        Phone      NVARCHAR(50) NULL
-    );
-END
+-- RENTAL (Lejeaftaler)
+CREATE TABLE dbo.RENTAL (
+    RentalId INT IDENTITY(1,1) PRIMARY KEY,
+    RenterId INT NOT NULL,
+    RackId INT NOT NULL,
+    StartDate DATETIME2 NOT NULL,
+    EndDate DATETIME2 NULL,
+    MonthlyRent DECIMAL(18,2) NOT NULL,
+    CreatedDate DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT FK_RENTAL_RENTER FOREIGN KEY (RenterId) REFERENCES dbo.RENTER(RenterId),
+    CONSTRAINT FK_RENTAL_RACK FOREIGN KEY (RackId) REFERENCES dbo.RACK(RackId)
+);
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'RENTAL')
-BEGIN
-    CREATE TABLE RENTAL
-    (
-        RentalId  INT IDENTITY(1,1) PRIMARY KEY,
-        RackId    INT NOT NULL,
-        RenterId  INT NOT NULL,
-        StartDate DATETIME NOT NULL,
-        EndDate   DATETIME NULL,
-        CONSTRAINT FK_Rental_Rack FOREIGN KEY (RackId) REFERENCES RACK(RackId),
-        CONSTRAINT FK_Rental_Renter FOREIGN KEY (RenterId) REFERENCES RENTER(RenterId)
-    );
-END
+-- PAYMENT (Lejeindbetalinger)
+CREATE TABLE dbo.PAYMENT (
+    PaymentId INT IDENTITY(1,1) PRIMARY KEY,
+    RentalId INT NOT NULL,
+    Amount DECIMAL(18,2) NOT NULL,
+    DueDate DATETIME2 NOT NULL,
+    PaidDate DATETIME2 NULL,
+    Status INT NOT NULL DEFAULT 0, -- 0 = Pending, 1 = Paid, 2 = Overdue
+    Type INT NOT NULL DEFAULT 0,   -- 0 = FirstMonthPayment, 1 = RegularMonthlyRent
+    PaymentMethod INT NOT NULL DEFAULT 0, -- 0 = Cash, 1 = MobilePay, 2 = BankTransfer
+    CONSTRAINT FK_PAYMENT_RENTAL FOREIGN KEY (RentalId) REFERENCES dbo.RENTAL(RentalId)
+);
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('RENTAL') AND name = 'MonthlyRent')
-BEGIN
-    ALTER TABLE RENTAL ADD MonthlyRent DECIMAL(10,2) NOT NULL DEFAULT 0;
-END
+-- SALE (Varesalg og butikssalg)
+CREATE TABLE dbo.SALE (
+    SaleId INT IDENTITY(1,1) PRIMARY KEY,
+    RackId INT NULL,              -- Nullable for at understøtte Reol 0 / Butikssalg
+    RenterId INT NULL,            -- Nullable ved butikkens eget salg
+    Amount DECIMAL(18,2) NOT NULL,
+    Description NVARCHAR(200) NOT NULL,
+    Date DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    PaymentMethod INT NOT NULL DEFAULT 0, -- 0 = Cash, 1 = MobilePay, 2 = BankTransfer
+    CONSTRAINT FK_SALE_RACK FOREIGN KEY (RackId) REFERENCES dbo.RACK(RackId),
+    CONSTRAINT FK_SALE_RENTER FOREIGN KEY (RenterId) REFERENCES dbo.RENTER(RenterId)
+);
 GO
 
--- Seed: 10 testlejere + 5 aktive og 5 opsagte lejemål, men kun ved en frisk opsætning (RENTER er tom)
-IF NOT EXISTS (SELECT 1 FROM RENTER)
-BEGIN
-    INSERT INTO RENTER (FirstName, LastName, Address, PostalCode, City, Email, Phone)
-    VALUES
-    ('Anna', 'Andersen', 'Testvej 2', 1234, 'Testby', 'anna.andersen@test.dk', '20000001'),
-    ('Bo', 'Bertelsen', 'Testvej 3', 1234, 'Testby', 'bo.bertelsen@test.dk', '20000002'),
-    ('Camilla', 'Christensen', 'Testvej 4', 1234, 'Testby', 'camilla.c@test.dk', '20000003'),
-    ('David', 'Dahl', 'Testvej 5', 1234, 'Testby', 'david.dahl@example.dk', '20000004'),
-    ('Emma', 'Eriksen', 'Testvej 6', 1234, 'Testby', 'emma.eriksen@test.dk', '20000005'),
-    ('Frederik', 'Falk', 'Testvej 7', 1234, 'Testby', 'frederik.falk@test.dk', '20000006'),
-    ('Gitte', 'Green', 'Testvej 8', 1234, 'Testby', 'gitte.green@test.dk', '20000007'),
-    ('Henrik', 'Holm', 'Testvej 9', 1234, 'Testby', 'henrik.holm@test.dk', '20000008'),
-    ('Ida', 'Iversen', 'Testvej 10', 1234, 'Testby', 'ida.iversen@test.dk', '20000009'),
-    ('Jonas', 'Juhl', 'Testvej 11', 1234, 'Testby', 'jonas.juhl@test.dk', '20000010');
-
-    -- Reol 1-5: aktivt udlejet (rød), til lejer 1-5
-    UPDATE RACK SET Status = 1 WHERE RackId IN (1, 2, 3, 4, 5);
-
-    INSERT INTO RENTAL (RackId, RenterId, StartDate, EndDate, MonthlyRent)
-    VALUES
-    (1, 1, GETDATE(), NULL, 850.00),
-    (2, 2, GETDATE(), NULL, 850.00),
-    (3, 3, GETDATE(), NULL, 850.00),
-    (4, 4, GETDATE(), NULL, 850.00),
-    (5, 5, GETDATE(), NULL, 850.00);
-
-    -- Reol 6-10: under opsigelse (gul), til lejer 6-10
-    UPDATE RACK SET Status = 2 WHERE RackId IN (6, 7, 8, 9, 10);
-
-    INSERT INTO RENTAL (RackId, RenterId, StartDate, EndDate, MonthlyRent)
-    VALUES
-    (6, 6, DATEADD(MONTH, -1, GETDATE()), '2026-11-01', 850.00),
-    (7, 7, DATEADD(MONTH, -1, GETDATE()), '2026-11-01', 850.00),
-    (8, 8, DATEADD(MONTH, -1, GETDATE()), '2026-11-01', 850.00),
-    (9, 9, DATEADD(MONTH, -1, GETDATE()), '2026-11-01', 850.00),
-    (10, 10, DATEADD(MONTH, -1, GETDATE()), '2026-11-01', 850.00);
-END
+-- SALE_AUDIT_LOG (Historik over administrative rettelser og sletninger i Søg/ret salg)
+CREATE TABLE dbo.SALE_AUDIT_LOG (
+    AuditId INT IDENTITY(1,1) PRIMARY KEY,
+    SaleId INT NOT NULL,
+    ActionType NVARCHAR(20) NOT NULL, -- 'UPDATE' eller 'DELETE'
+    OldAmount DECIMAL(18,2) NOT NULL,
+    NewAmount DECIMAL(18,2) NULL,
+    OldDescription NVARCHAR(200) NULL,
+    NewDescription NVARCHAR(200) NULL,
+    Timestamp DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+);
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'PAYMENT')
-BEGIN
-    CREATE TABLE PAYMENT
-    (
-        PaymentId     INT IDENTITY(1,1) PRIMARY KEY,
-        RenterId      INT NOT NULL,
-        Date          DATETIME NOT NULL,
-        Amount        DECIMAL(10,2) NOT NULL,
-        Type          INT NOT NULL,           -- 0 = FirstMonthPayment, 1 = MonthlyPayment
-        PaymentMethod INT NOT NULL DEFAULT 0, -- 0 = MobilePay, 1 = Bank
-        CONSTRAINT FK_Payment_Renter FOREIGN KEY (RenterId) REFERENCES RENTER(RenterId)
-    );
-END
+-- 4. Indekser for hurtige opslag og performance
+CREATE NONCLUSTERED INDEX IX_RENTAL_RenterId ON dbo.RENTAL(RenterId);
+CREATE NONCLUSTERED INDEX IX_RENTAL_RackId ON dbo.RENTAL(RackId);
+CREATE NONCLUSTERED INDEX IX_PAYMENT_RentalId ON dbo.PAYMENT(RentalId);
+CREATE NONCLUSTERED INDEX IX_SALE_RackId ON dbo.SALE(RackId);
+CREATE NONCLUSTERED INDEX IX_SALE_RenterId ON dbo.SALE(RenterId);
+CREATE NONCLUSTERED INDEX IX_SALE_Date ON dbo.SALE(Date);
 GO
-IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'SALE')
+
+-- 5. Seed Data
+
+-- Prisregler: 1. reol = 850 kr, 2-3 reoler = 825 kr/stk, 4+ reoler = 800 kr/stk
+INSERT INTO dbo.RENTAL_PRICE_TIER (MinRacks, MaxRacks, MonthlyPrice) VALUES
+(1, 1, 850.00),
+(2, 3, 825.00),
+(4, NULL, 800.00);
+GO
+
+-- Reol 0 oprettes som intern system-reol til butikssalg (poser, prismærker mv.)
+SET IDENTITY_INSERT dbo.RACK ON;
+INSERT INTO dbo.RACK (RackId, Number, Status) VALUES (0, 0, 0);
+SET IDENTITY_INSERT dbo.RACK OFF;
+GO
+
+-- Reoler 1 til 80 (fysiske stande i butikslokalet)
+DECLARE @i INT = 1;
+WHILE @i <= 80
 BEGIN
-    CREATE TABLE SALE
-    (
-        SaleId      INT IDENTITY(1,1) PRIMARY KEY,
-        RackId      INT NOT NULL,
-        RenterId    INT NOT NULL,
-        Date        DATETIME NOT NULL,
-        Amount      DECIMAL(10,2) NOT NULL,
-        Description NVARCHAR(200) NULL,
-        CONSTRAINT FK_Sale_Rack FOREIGN KEY (RackId) REFERENCES RACK(RackId),
-        CONSTRAINT FK_Sale_Renter FOREIGN KEY (RenterId) REFERENCES RENTER(RenterId)
-    );
-END
+    INSERT INTO dbo.RACK (Number, Status) VALUES (@i, 0);
+    SET @i = @i + 1;
+END;
 GO

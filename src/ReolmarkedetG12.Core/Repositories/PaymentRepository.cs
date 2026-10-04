@@ -1,5 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Data;
 using Microsoft.Data.SqlClient;
-using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.Core.Models;
 
 namespace ReolmarkedetG12.Core.Repositories
@@ -13,123 +15,144 @@ namespace ReolmarkedetG12.Core.Repositories
             _connectionString = connectionString;
         }
 
-        private SqlConnection OpenConnection()
+        public void Add(Payment entity)
         {
-            var connection = new SqlConnection(_connectionString);
-            try
-            {
-                connection.Open();
-                return connection;
-            }
-            catch (SqlException ex)
-            {
-                connection.Dispose();
-                throw new DatabaseConnectionException("Kunne ikke forbinde til databasen.", ex);
-            }
-        }
+            using var connection = new SqlConnection(_connectionString);
+            connection.Open();
 
-        public IEnumerable<Payment> GetAll()
-        {
-            var payments = new List<Payment>();
-            string query = "SELECT * FROM PAYMENT";
+            const string sql = @"
+                INSERT INTO dbo.PAYMENT (RenterId, Date, Amount, Type, PaymentMethod)
+                VALUES (@RenterId, @Date, @Amount, @Type, @PaymentMethod);
+                SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
-            using (SqlConnection connection = OpenConnection())
-            {
-                SqlCommand command = new SqlCommand(query, connection);
+            using var command = new SqlCommand(sql, connection);
+            command.Parameters.AddWithValue("@RenterId", entity.RenterId);
+            command.Parameters.AddWithValue("@Date", entity.Date);
+            command.Parameters.AddWithValue("@Amount", entity.Amount);
+            command.Parameters.AddWithValue("@Type", (int)entity.Type);
+            command.Parameters.AddWithValue("@PaymentMethod", (int)entity.PaymentMethod);
 
-                using (SqlDataReader reader = command.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        payments.Add(new Payment
-                        {
-                            PaymentId = (int)reader["PaymentId"],
-                            RenterId = (int)reader["RenterId"],
-                            Date = (DateTime)reader["Date"],
-                            Amount = (decimal)reader["Amount"],
-                            Type = (PaymentType)(int)reader["Type"],
-                            PaymentMethod = (PaymentMethod)(int)reader["PaymentMethod"]
-                        });
-                    }
-                }
-            }
-
-            return payments;
+            entity.PaymentId = (int)command.ExecuteScalar();
         }
 
         public Payment? GetById(int id)
         {
-            Payment? payment = null;
-            string query = "SELECT * FROM PAYMENT WHERE PaymentId = @PaymentId";
+            using var connection = new SqlConnection(_connectionString);
+            connection.Open();
 
-            using (SqlConnection connection = OpenConnection())
+            const string sql = @"
+                SELECT PaymentId, RenterId, Date, Amount, Type, PaymentMethod 
+                FROM dbo.PAYMENT 
+                WHERE PaymentId = @PaymentId;";
+
+            using var command = new SqlCommand(sql, connection);
+            command.Parameters.AddWithValue("@PaymentId", id);
+
+            using var reader = command.ExecuteReader();
+            if (reader.Read())
             {
-                SqlCommand command = new SqlCommand(query, connection);
-                command.Parameters.AddWithValue("@PaymentId", id);
-
-                using (SqlDataReader reader = command.ExecuteReader())
-                {
-                    if (reader.Read())
-                    {
-                        payment = new Payment
-                        {
-                            PaymentId = (int)reader["PaymentId"],
-                            RenterId = (int)reader["RenterId"],
-                            Date = (DateTime)reader["Date"],
-                            Amount = (decimal)reader["Amount"],
-                            Type = (PaymentType)(int)reader["Type"],
-                            PaymentMethod = (PaymentMethod)(int)reader["PaymentMethod"]
-                        };
-                    }
-                }
+                return MapPayment(reader);
             }
 
-            return payment;
+            return null;
         }
 
-        public void Add(Payment payment)
+        public IEnumerable<Payment> GetAll()
         {
-            string query = "INSERT INTO PAYMENT (RenterId, Date, Amount, Type, PaymentMethod) VALUES (@RenterId, @Date, @Amount, @Type, @PaymentMethod)";
+            var result = new List<Payment>();
 
-            using (SqlConnection connection = OpenConnection())
+            using var connection = new SqlConnection(_connectionString);
+            connection.Open();
+
+            const string sql = @"
+                SELECT PaymentId, RenterId, Date, Amount, Type, PaymentMethod 
+                FROM dbo.PAYMENT 
+                ORDER BY Date DESC;";
+
+            using var command = new SqlCommand(sql, connection);
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
             {
-                SqlCommand command = new SqlCommand(query, connection);
-                command.Parameters.AddWithValue("@RenterId", payment.RenterId);
-                command.Parameters.AddWithValue("@Date", payment.Date);
-                command.Parameters.AddWithValue("@Amount", payment.Amount);
-                command.Parameters.AddWithValue("@Type", (int)payment.Type);
-                command.Parameters.AddWithValue("@PaymentMethod", (int)payment.PaymentMethod);
-                command.ExecuteNonQuery();
+                result.Add(MapPayment(reader));
             }
+
+            return result;
         }
 
-        public void Update(Payment payment)
+        public IEnumerable<Payment> GetByRenterId(int renterId)
         {
-            string query = "UPDATE PAYMENT SET RenterId = @RenterId, Date = @Date, Amount = @Amount, Type = @Type, PaymentMethod = @PaymentMethod WHERE PaymentId = @PaymentId";
+            var result = new List<Payment>();
 
-            using (SqlConnection connection = OpenConnection())
+            using var connection = new SqlConnection(_connectionString);
+            connection.Open();
+
+            const string sql = @"
+                SELECT PaymentId, RenterId, Date, Amount, Type, PaymentMethod 
+                FROM dbo.PAYMENT 
+                WHERE RenterId = @RenterId 
+                ORDER BY Date DESC;";
+
+            using var command = new SqlCommand(sql, connection);
+            command.Parameters.AddWithValue("@RenterId", renterId);
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
             {
-                SqlCommand command = new SqlCommand(query, connection);
-                command.Parameters.AddWithValue("@RenterId", payment.RenterId);
-                command.Parameters.AddWithValue("@Date", payment.Date);
-                command.Parameters.AddWithValue("@Amount", payment.Amount);
-                command.Parameters.AddWithValue("@Type", (int)payment.Type);
-                command.Parameters.AddWithValue("@PaymentMethod", (int)payment.PaymentMethod);
-                command.Parameters.AddWithValue("@PaymentId", payment.PaymentId);
-                command.ExecuteNonQuery();
+                result.Add(MapPayment(reader));
             }
+
+            return result;
+        }
+
+        public void Update(Payment entity)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            connection.Open();
+
+            const string sql = @"
+                UPDATE dbo.PAYMENT 
+                SET RenterId = @RenterId,
+                    Date = @Date,
+                    Amount = @Amount,
+                    Type = @Type,
+                    PaymentMethod = @PaymentMethod
+                WHERE PaymentId = @PaymentId;";
+
+            using var command = new SqlCommand(sql, connection);
+            command.Parameters.AddWithValue("@RenterId", entity.RenterId);
+            command.Parameters.AddWithValue("@Date", entity.Date);
+            command.Parameters.AddWithValue("@Amount", entity.Amount);
+            command.Parameters.AddWithValue("@Type", (int)entity.Type);
+            command.Parameters.AddWithValue("@PaymentMethod", (int)entity.PaymentMethod);
+            command.Parameters.AddWithValue("@PaymentId", entity.PaymentId);
+
+            command.ExecuteNonQuery();
         }
 
         public void Delete(int id)
         {
-            string query = "DELETE FROM PAYMENT WHERE PaymentId = @PaymentId";
+            using var connection = new SqlConnection(_connectionString);
+            connection.Open();
 
-            using (SqlConnection connection = OpenConnection())
+            const string sql = "DELETE FROM dbo.PAYMENT WHERE PaymentId = @PaymentId;";
+            using var command = new SqlCommand(sql, connection);
+            command.Parameters.AddWithValue("@PaymentId", id);
+
+            command.ExecuteNonQuery();
+        }
+
+        private static Payment MapPayment(SqlDataReader reader)
+        {
+            return new Payment
             {
-                SqlCommand command = new SqlCommand(query, connection);
-                command.Parameters.AddWithValue("@PaymentId", id);
-                command.ExecuteNonQuery();
-            }
+                PaymentId = reader.GetInt32(reader.GetOrdinal("PaymentId")),
+                RenterId = reader.GetInt32(reader.GetOrdinal("RenterId")),
+                Date = reader.GetDateTime(reader.GetOrdinal("Date")),
+                Amount = reader.GetDecimal(reader.GetOrdinal("Amount")),
+                Type = (PaymentType)reader.GetInt32(reader.GetOrdinal("Type")),
+                PaymentMethod = (PaymentMethod)reader.GetInt32(reader.GetOrdinal("PaymentMethod"))
+            };
         }
     }
 }

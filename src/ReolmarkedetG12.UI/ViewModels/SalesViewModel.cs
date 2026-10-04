@@ -1,4 +1,7 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows.Input;
 using Microsoft.Data.SqlClient;
 using ReolmarkedetG12.Core.Exceptions;
@@ -158,6 +161,16 @@ public class SalesViewModel : ViewModelBase
         CurrentSaleItems.CollectionChanged += (_, _) => RecalculateTotals();
     }
 
+    public void AddRentalPaymentItem(int rackNumber, decimal amount, string renterName)
+    {
+        CurrentSaleItems.Add(new CartLineItem
+        {
+            RackNumber = rackNumber,
+            Remark = $"1. md. leje - {renterName}",
+            Amount = amount
+        });
+    }
+
     private void ValidateEnteredRack()
     {
         _activeRenterId = null;
@@ -166,6 +179,15 @@ public class SalesViewModel : ViewModelBase
         {
             RackValidationMessage = string.Empty;
             IsRackValid = false;
+            return;
+        }
+
+        // Reol 0 er butikkens eget salg (poser, mærker mv.)
+        if (NewRackNumber.Value == 0)
+        {
+            RackValidationMessage = "Butikken (poser/mærker)";
+            IsRackValid = true;
+            _activeRenterId = null;
             return;
         }
 
@@ -288,29 +310,60 @@ public class SalesViewModel : ViewModelBase
     private void RegisterSale()
     {
         var now = DateTime.Now;
+        var salesToInsert = new List<Sale>();
 
         foreach (var item in CurrentSaleItems)
         {
-            var rack = _rackRepository.GetAll().FirstOrDefault(r => r.Number == item.RackNumber);
-            if (rack == null)
-                throw new InvalidOperationException($"Reol {item.RackNumber} blev ikke fundet.");
+            int? rackId = null;
+            int? renterId = null;
 
-            var activeRental = _rentalRepository.GetAll()
-                .Where(r => r.RackId == rack.RackId && r.StartDate <= now && (r.EndDate == null || r.EndDate > now))
-                .OrderByDescending(r => r.StartDate)
-                .FirstOrDefault();
-
-            if (activeRental == null)
-                throw new InvalidOperationException($"Reol {item.RackNumber} har ikke længere et aktivt lejemål.");
-
-            _saleRepository.Add(new Sale
+            if (item.RackNumber == 0)
             {
-                RackId = rack.RackId,
-                RenterId = activeRental.RenterId,
+                // Find reol 0 i databasen hvis oprettet, ellers forbliver den null
+                var internalRack = _rackRepository.GetAll().FirstOrDefault(r => r.Number == 0);
+                rackId = internalRack?.RackId;
+                renterId = null;
+            }
+            else
+            {
+                var rack = _rackRepository.GetAll().FirstOrDefault(r => r.Number == item.RackNumber);
+                if (rack == null)
+                    throw new InvalidOperationException($"Reol {item.RackNumber} blev ikke fundet.");
+
+                var activeRental = _rentalRepository.GetAll()
+                    .Where(r => r.RackId == rack.RackId && r.StartDate <= now && (r.EndDate == null || r.EndDate > now))
+                    .OrderByDescending(r => r.StartDate)
+                    .FirstOrDefault();
+
+                if (activeRental == null)
+                    throw new InvalidOperationException($"Reol {item.RackNumber} har ikke længere et aktivt lejemål.");
+
+                rackId = rack.RackId;
+                renterId = activeRental.RenterId;
+            }
+
+            salesToInsert.Add(new Sale
+            {
+                RackId = rackId,
+                RenterId = renterId,
                 Date = now,
                 Amount = item.Amount,
-                Description = string.IsNullOrWhiteSpace(item.Remark) ? null : item.Remark
+                Description = string.IsNullOrWhiteSpace(item.Remark) ? string.Empty : item.Remark.Trim(),
+                PaymentMethod = PaymentMethod
             });
+        }
+
+        // Transaktionsstyret indsættelse af hele kurven
+        if (_saleRepository is SaleRepository concreteRepo)
+        {
+            concreteRepo.AddMany(salesToInsert);
+        }
+        else
+        {
+            foreach (var sale in salesToInsert)
+            {
+                _saleRepository.Add(sale);
+            }
         }
 
         _dialogService.ShowInfo($"Salget på {TotalAmount:0.00} kr. er gennemført!", "Salg afsluttet");

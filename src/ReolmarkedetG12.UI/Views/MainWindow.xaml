@@ -5,22 +5,101 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:ReolmarkedetG12.UI.Views"
         mc:Ignorable="d"
-        Title="Reolmarkedet" Height="450" Width="800">
-    <TabControl>
-        <TabItem Header="Reoler">
-            <views:RackView DataContext="{Binding RackViewModel}" />
-        </TabItem>
-        <TabItem Header="Kunder">
-            <views:RenterView DataContext="{Binding RenterViewModel}" />
-        </TabItem>
-        <TabItem Header="Salg">
-            <views:SalesView DataContext="{Binding SalesViewModel}" />
-        </TabItem>
-        <TabItem Header="Søg/ret salg">
-            <views:SearchSalesView DataContext="{Binding SearchSalesViewModel}" />
-        </TabItem>
-        <TabItem Header="Månedsopgørelse">
-            <views:MonthlyStatementView DataContext="{Binding MonthlyStatementViewModel}" />
-        </TabItem>
-    </TabControl>
+        Title="Reolmarkedet" 
+        Height="750" 
+        Width="1150"
+        MinHeight="600"
+        MinWidth="900"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource AppBackground}">
+
+    <Window.Resources>
+        <Style x:Key="MainAppTabControlStyle" TargetType="TabControl">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="{StaticResource AppBackground}" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabControl">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <Border Grid.Row="0" Background="#1E293B" Padding="20,0,20,0">
+                                <DockPanel LastChildFill="False">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,30,0">
+                                        <TextBlock Text="REOLMARKEDET" 
+                                                   FontSize="18" 
+                                                   FontWeight="Bold" 
+                                                   Foreground="White" 
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+
+                                    <TabPanel IsItemsHost="True" VerticalAlignment="Bottom" />
+                                </DockPanel>
+                            </Border>
+
+                            <Border Grid.Row="1" Background="{TemplateBinding Background}">
+                                <ContentPresenter ContentSource="SelectedContent" />
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TopNavTabItemStyle" TargetType="TabItem">
+            <Setter Property="Padding" Value="16,14" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#94A3B8" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="tabBorder" 
+                                Background="Transparent" 
+                                BorderThickness="0,0,0,3" 
+                                BorderBrush="Transparent" 
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="tabBorder" Property="BorderBrush" Value="{StaticResource PrimaryBlue}" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="#F8FAFC" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <TabControl SelectedIndex="{Binding SelectedTabIndex}"
+                    Style="{StaticResource MainAppTabControlStyle}" 
+                    ItemContainerStyle="{StaticResource TopNavTabItemStyle}">
+            <TabItem Header="Kunder">
+                <views:RenterView DataContext="{Binding RenterViewModel}" />
+            </TabItem>
+            <TabItem Header="Reoler">
+                <views:RackView DataContext="{Binding RackViewModel}" />
+            </TabItem>
+            <TabItem Header="Kasse / Salg">
+                <views:SalesView DataContext="{Binding SalesViewModel}" />
+            </TabItem>
+            <TabItem Header="Søg/ret salg">
+                <views:SearchSalesView DataContext="{Binding SearchSalesViewModel}" />
+            </TabItem>
+            <TabItem Header="Månedsopgørelse">
+                <views:MonthlyStatementView DataContext="{Binding MonthlyStatementViewModel}" />
+            </TabItem>
+        </TabControl>
+    </Grid>
 </Window>

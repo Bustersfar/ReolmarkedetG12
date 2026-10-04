@@ -82,7 +82,7 @@ public partial class App : Application
 
         var mainViewModel = new MainViewModel(
             new RackViewModel(rackRepository, renterRepository, rentalRepository, rentalPriceTierRepository, paymentRepository, dialogService),
-            new RenterViewModel(renterRepository, rentalRepository, dialogService),
+            new RenterViewModel(renterRepository, rentalRepository, dialogService, paymentRepository),
             new SalesViewModel(rackRepository, rentalRepository, saleRepository, renterRepository, dialogService),
             new SearchSalesViewModel(rackRepository, saleRepository, renterRepository, dialogService, secureAreaService),
             new MonthlyStatementViewModel(secureAreaService, dialogService));

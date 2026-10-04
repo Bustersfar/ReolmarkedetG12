@@ -2,6 +2,8 @@ using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
 using ReolmarkedetG12.UI.MVVM;
 using System.Collections.ObjectModel;
+using System.Linq;
+using System.Text.RegularExpressions;
 using System.Windows.Input;
 using ReolmarkedetG12.Core.Exceptions;
 using ReolmarkedetG12.UI.Services;
@@ -14,6 +16,9 @@ public class RenterViewModel : ViewModelBase
     private readonly IRepository<Renter> _renterRepository;
     private readonly IRepository<Rental> _rentalRepository;
     private readonly IDialogService _dialogService;
+    // Valgfri: bruges kun til at tjekke om en lejer har betalingshistorik, før den slettes.
+    // Nullable, så eksisterende tests der opretter RenterViewModel uden den stadig virker.
+    private readonly IRepository<Payment>? _paymentRepository;
 
     public ObservableCollection<Renter> Renters { get; }
 
@@ -110,12 +115,17 @@ public class RenterViewModel : ViewModelBase
     public RelayCommand DeleteCommand { get; }
     public RelayCommand GetAllCommand { get; }
 
-    public RenterViewModel(IRepository<Renter> renterRepository, IRepository<Rental> rentalRepository, IDialogService dialogService)
+    public RenterViewModel(
+        IRepository<Renter> renterRepository,
+        IRepository<Rental> rentalRepository,
+        IDialogService dialogService,
+        IRepository<Payment>? paymentRepository = null)
         : base(dialogService)
     {
         _renterRepository = renterRepository;
         _rentalRepository = rentalRepository;
         _dialogService = dialogService;
+        _paymentRepository = paymentRepository;
 
         Renters = new ObservableCollection<Renter>();
 
@@ -160,6 +170,41 @@ public class RenterViewModel : ViewModelBase
             _dialogService.ShowError("Fornavn, Efternavn, Adresse, Postnummer og By skal udfyldes.", "Fejl");
             return;
         }
+
+        // Danske postnumre er altid 4 cifre (1000-9999).
+        if (PostalCode < 1000 || PostalCode > 9999)
+        {
+            _dialogService.ShowError("Postnummer skal være 4 cifre (f.eks. 4200).", "Fejl");
+            return;
+        }
+
+        // E-mail er valgfri, men hvis den er udfyldt, skal den se ud som en e-mail.
+        if (!string.IsNullOrWhiteSpace(Email) && !Regex.IsMatch(Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+        {
+            _dialogService.ShowError("E-mailadressen ser ikke korrekt ud (f.eks. navn@eksempel.dk).", "Fejl");
+            return;
+        }
+
+        // Telefon er valgfri, men hvis den er udfyldt, skal det være 8 cifre (dansk mobil/fastnet).
+        if (!string.IsNullOrWhiteSpace(Phone) && !Regex.IsMatch(Phone, @"^\d{8}$"))
+        {
+            _dialogService.ShowError("Telefonnummer skal være 8 cifre (f.eks. 12345678).", "Fejl");
+            return;
+        }
+
+        // Tjek om lejeren allerede findes (samme navn og adresse), så vi ikke får dubletter.
+        var findesAllerede = _renterRepository.GetAll().Any(r =>
+            r.RenterId != RenterId &&
+            string.Equals(r.FirstName, FirstName, System.StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(r.LastName, LastName, System.StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(r.Address, Address, System.StringComparison.OrdinalIgnoreCase));
+
+        if (findesAllerede)
+        {
+            _dialogService.ShowError($"{FirstName} {LastName} findes allerede på adressen {Address}.", "Lejer findes allerede");
+            return;
+        }
+
         var renter = new Renter
         {
             RenterId = RenterId,
@@ -193,10 +238,12 @@ public class RenterViewModel : ViewModelBase
             return;
 
         var harLejemaal = _rentalRepository.GetAll().Any(r => r.RenterId == SelectedRenter.RenterId);
-        if (harLejemaal)
+        var harBetalinger = _paymentRepository?.GetAll().Any(p => p.RenterId == SelectedRenter.RenterId) ?? false;
+
+        if (harLejemaal || harBetalinger)
         {
             _dialogService.ShowError(
-                $"{SelectedRenter.FirstName} {SelectedRenter.LastName} har (eller har haft) lejemål og kan derfor ikke slettes.",
+                $"{SelectedRenter.FirstName} {SelectedRenter.LastName} har (eller har haft) lejemål eller betalinger registreret og kan derfor ikke slettes.",
                 "Kan ikke slette lejer");
             return;
         }

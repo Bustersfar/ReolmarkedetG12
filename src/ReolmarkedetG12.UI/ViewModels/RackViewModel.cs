@@ -100,6 +100,12 @@ public class RackViewModel : ViewModelBase, IDisposable
         set => SetProperty(ref _selectedRack, value);
     }
 
+    // Sand, når FoundRenter blev valgt direkte via SelectRenterCommand (søgningen),
+    // i modsætning til at være fundet automatisk ved at klikke en udlejet reol.
+    // Bruges til at afgøre, om lejeren skal blive stående, når man bagefter
+    // vælger en ledig reol til samme kunde (f.eks. reol nr. 5, 6, 7...).
+    private bool _renterSelectedManually;
+
     // --- Kommandoer ---
     public RelayCommand SelectRackCommand { get; }
     public RelayCommand SelectRenterCommand { get; }
@@ -270,6 +276,7 @@ public class RackViewModel : ViewModelBase, IDisposable
                 FoundRenter = null;
                 RenterRacks.Clear();
                 RackHistory.Clear();
+                _renterSelectedManually = false;
             }
             CommandManager.InvalidateRequerySuggested();
             return;
@@ -302,11 +309,11 @@ public class RackViewModel : ViewModelBase, IDisposable
         {
             // Nulstil kun den fundne lejer, hvis vedkommende ikke allerede er valgt
             // via SelectRenterCommand (så "Kundens reoler" ikke forsvinder, når man
-            // bagefter vælger en ledig reol til den samme kunde).
+            // bagefter vælger en ledig reol til den samme kunde - uanset hvor mange
+            // reoler kunden allerede har).
             bool hasOtherRentedSelected = SelectedRacks.Any(r => r != item && r.Rack.Status == RackStatus.Rented);
-            bool renterAlreadyChosenManually = FoundRenter != null && RenterRacks.Count == 0;
 
-            if (!hasOtherRentedSelected && !renterAlreadyChosenManually)
+            if (!hasOtherRentedSelected && !_renterSelectedManually)
             {
                 FoundRenter = null;
                 RenterRacks.Clear();
@@ -322,6 +329,7 @@ public class RackViewModel : ViewModelBase, IDisposable
 
         FoundRenter = renter;
         RenterRacks.Clear();
+        _renterSelectedManually = !retainSelectedRack;
 
         if (!retainSelectedRack)
         {

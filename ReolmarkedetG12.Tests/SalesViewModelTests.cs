@@ -102,7 +102,7 @@ public class SalesViewModelTests
         Assert.AreEqual(1, vm.CurrentSaleItems.Count);
         Assert.AreEqual(125m, vm.TotalAmount);
         Assert.IsNull(vm.NewRackNumber);
-        Assert.AreEqual(0m, vm.NewPrice);
+        Assert.IsNull(vm.NewPrice); // Prisfeltet skal ryddes helt, ikke vise "0"
     }
 
     [TestMethod]

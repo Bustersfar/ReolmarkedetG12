@@ -63,6 +63,72 @@ public class RenterViewModelTests
     }
 
     [TestMethod]
+    public void SaveCommand_InvalidPostalCode_ShowsErrorAndSavesNothing()
+    {
+        // Arrange: postnummer er ikke 4 cifre
+        var repo = new FakeRenterRepository();
+        var dialog = new FakeDialogService();
+        var viewModel = new RenterViewModel(repo, new FakeRentalRepository(), dialog);
+        viewModel.FirstName = "Anna";
+        viewModel.LastName = "Andersen";
+        viewModel.Address = "Testvej 1";
+        viewModel.PostalCode = 42;
+        viewModel.City = "Slagelse";
+
+        // Act
+        viewModel.SaveCommand.Execute(null);
+
+        // Assert
+        Assert.IsNotNull(dialog.LastError);
+        Assert.Contains("Postnummer", dialog.LastError);
+        Assert.HasCount(0, repo.Renters);
+    }
+
+    [TestMethod]
+    public void SaveCommand_InvalidEmail_ShowsErrorAndSavesNothing()
+    {
+        // Arrange: e-mailen mangler et punktum efter @
+        var repo = new FakeRenterRepository();
+        var dialog = new FakeDialogService();
+        var viewModel = new RenterViewModel(repo, new FakeRentalRepository(), dialog);
+        viewModel.FirstName = "Anna";
+        viewModel.LastName = "Andersen";
+        viewModel.Address = "Testvej 1";
+        viewModel.PostalCode = 4200;
+        viewModel.City = "Slagelse";
+        viewModel.Email = "anna@eksempel";
+
+        // Act
+        viewModel.SaveCommand.Execute(null);
+
+        // Assert
+        Assert.IsNotNull(dialog.LastError);
+        Assert.HasCount(0, repo.Renters);
+    }
+
+    [TestMethod]
+    public void SaveCommand_RenterAlreadyExistsOnSameAddress_ShowsErrorAndSavesNothing()
+    {
+        // Arrange: samme navn og adresse findes allerede
+        var repo = new FakeRenterRepository();
+        repo.Add(new Renter { FirstName = "Anna", LastName = "Andersen", Address = "Vej 1", PostalCode = 4200, City = "Slagelse" });
+        var dialog = new FakeDialogService();
+        var viewModel = new RenterViewModel(repo, new FakeRentalRepository(), dialog);
+        viewModel.FirstName = "Anna";
+        viewModel.LastName = "Andersen";
+        viewModel.Address = "Vej 1";
+        viewModel.PostalCode = 4200;
+        viewModel.City = "Slagelse";
+
+        // Act
+        viewModel.SaveCommand.Execute(null);
+
+        // Assert: der oprettes ikke en dublet
+        Assert.IsNotNull(dialog.LastError);
+        Assert.HasCount(1, repo.Renters);
+    }
+
+    [TestMethod]
     public void SaveCommand_DatabaseDown_ShowsErrorInsteadOfCrashing()
     {
         // Arrange: databasen er fin ved opstart, men går ned bagefter
@@ -142,6 +208,27 @@ public class RenterViewModelTests
         rentalRepo.Add(new Rental { RackId = 1, RenterId = repo.Renters[0].RenterId, StartDate = DateTime.Now });
         var dialog = new FakeDialogService { ConfirmResult = true };
         var viewModel = new RenterViewModel(repo, rentalRepo, dialog);
+        viewModel.SelectedRenter = viewModel.Renters[0];
+
+        // Act
+        viewModel.DeleteCommand.Execute(null);
+
+        // Assert: lejeren slettes ikke, og der vises en forklarende fejl (ikke en rå SQL-fejl)
+        Assert.HasCount(1, repo.Renters);
+        Assert.IsNotNull(dialog.LastError);
+        Assert.Contains("kan derfor ikke slettes", dialog.LastError);
+    }
+
+    [TestMethod]
+    public void DeleteCommand_RenterHasPayments_ShowsErrorAndKeepsRenter()
+    {
+        // Arrange: én lejer uden lejemål, men med en betaling registreret
+        var repo = new FakeRenterRepository();
+        repo.Add(new Renter { FirstName = "Anna", LastName = "Andersen", Address = "Vej 1", PostalCode = 4200, City = "Slagelse" });
+        var paymentRepo = new FakePaymentRepository();
+        paymentRepo.Add(new Payment { RenterId = repo.Renters[0].RenterId, Date = DateTime.Now, Amount = 850m, Type = PaymentType.FirstMonthPayment });
+        var dialog = new FakeDialogService { ConfirmResult = true };
+        var viewModel = new RenterViewModel(repo, new FakeRentalRepository(), dialog, paymentRepo);
         viewModel.SelectedRenter = viewModel.Renters[0];
 
         // Act

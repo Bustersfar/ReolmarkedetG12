@@ -59,8 +59,10 @@ public class SalesViewModel : ViewModelBase
         set => SetProperty(ref _newRemark, value);
     }
 
-    private decimal _newPrice;
-    public decimal NewPrice
+    // Nullable (ligesom NewRackNumber), så feltet kan vises helt tomt i stedet for "0"
+    // efter man har tilføjet en vare (se AddItem).
+    private decimal? _newPrice;
+    public decimal? NewPrice
     {
         get => _newPrice;
         set
@@ -149,7 +151,7 @@ public class SalesViewModel : ViewModelBase
 
         AddItemCommand = new RelayCommand(
             _ => AddItem(),
-            _ => IsRackValid && NewPrice > 0 && NewRackNumber.HasValue);
+            _ => IsRackValid && NewPrice.HasValue && NewPrice > 0 && NewRackNumber.HasValue);
 
         EditItemCommand = new RelayCommand(param => EditItem(param as CartLineItem));
         DeleteItemCommand = new RelayCommand(param => DeleteItem(param as CartLineItem));
@@ -192,9 +194,13 @@ public class SalesViewModel : ViewModelBase
                 return;
             }
 
-            var now = DateTime.Now;
+            // UTC her, fordi StartDate/EndDate på et lejemål sættes i UTC (se RackViewModel),
+            // og databasens egne tjek bruger SYSUTCDATETIME(). Lokal tid (DateTime.Now) ville
+            // kunne give et "forkert" svar på om lejemålet er aktivt lige nu, i et par timers
+            // vindue omkring midnat pga. tidszoneforskellen.
+            var nowUtc = DateTime.UtcNow;
             var activeRental = _rentalRepository.GetAll()
-                .Where(r => r.RackId == rack.RackId && r.StartDate <= now && (r.EndDate == null || r.EndDate > now))
+                .Where(r => r.RackId == rack.RackId && r.StartDate <= nowUtc && (r.EndDate == null || r.EndDate > nowUtc))
                 .OrderByDescending(r => r.StartDate)
                 .FirstOrDefault();
 
@@ -222,19 +228,19 @@ public class SalesViewModel : ViewModelBase
 
     private void AddItem()
     {
-        if (!IsRackValid || !NewRackNumber.HasValue || NewPrice <= 0)
+        if (!IsRackValid || !NewRackNumber.HasValue || !NewPrice.HasValue || NewPrice <= 0)
             return;
 
         CurrentSaleItems.Add(new CartLineItem
         {
             RackNumber = NewRackNumber.Value,
             Remark = string.IsNullOrWhiteSpace(NewRemark) ? string.Empty : NewRemark.Trim(),
-            Amount = NewPrice
+            Amount = NewPrice.Value
         });
 
         NewRackNumber = null;
         NewRemark = string.Empty;
-        NewPrice = 0;
+        NewPrice = null;
         RackValidationMessage = string.Empty;
         IsRackValid = false;
         _activeRenterId = null;
@@ -300,7 +306,8 @@ public class SalesViewModel : ViewModelBase
 
     private void RegisterSale()
     {
-        var now = DateTime.Now;
+        var now = DateTime.Now; // tidsstempel på selve salget - lokal tid, så søgning på dato (SearchSalesViewModel) matcher butikkens åbningstid
+        var nowUtc = DateTime.UtcNow; // bruges til at afgøre om lejemålet stadig er aktivt, se forklaring i ValidateEnteredRack
         var salesToInsert = new List<Sale>();
 
         foreach (var item in CurrentSaleItems)
@@ -322,7 +329,7 @@ public class SalesViewModel : ViewModelBase
                     throw new InvalidOperationException($"Reol {item.RackNumber} blev ikke fundet.");
 
                 var activeRental = _rentalRepository.GetAll()
-                    .Where(r => r.RackId == rack.RackId && r.StartDate <= now && (r.EndDate == null || r.EndDate > now))
+                    .Where(r => r.RackId == rack.RackId && r.StartDate <= nowUtc && (r.EndDate == null || r.EndDate > nowUtc))
                     .OrderByDescending(r => r.StartDate)
                     .FirstOrDefault();
 

@@ -82,7 +82,7 @@ CREATE TABLE dbo.PAYMENT (
     Date DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     Amount DECIMAL(18,2) NOT NULL,
     Type INT NOT NULL DEFAULT 0,   -- 0 = FirstMonthPayment, 1 = RegularMonthlyRent
-    PaymentMethod INT NOT NULL DEFAULT 0, -- 0 = Cash, 1 = MobilePay, 2 = BankTransfer
+        PaymentMethod INT NOT NULL DEFAULT 0, -- 0 = MobilePay, 1 = Bank, 2 = Cash
     CONSTRAINT FK_PAYMENT_RENTER FOREIGN KEY (RenterId) REFERENCES dbo.RENTER(RenterId)
 );
 GO
@@ -95,7 +95,7 @@ CREATE TABLE dbo.SALE (
     Amount DECIMAL(18,2) NOT NULL,
     Description NVARCHAR(200) NOT NULL,
     Date DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-    PaymentMethod INT NOT NULL DEFAULT 0, -- 0 = Cash, 1 = MobilePay, 2 = BankTransfer
+    PaymentMethod INT NOT NULL DEFAULT 0, -- 0 = MobilePay, 1 = Bank, 2 = Cash
     CONSTRAINT FK_SALE_RACK FOREIGN KEY (RackId) REFERENCES dbo.RACK(RackId),
     CONSTRAINT FK_SALE_RENTER FOREIGN KEY (RenterId) REFERENCES dbo.RENTER(RenterId)
 );

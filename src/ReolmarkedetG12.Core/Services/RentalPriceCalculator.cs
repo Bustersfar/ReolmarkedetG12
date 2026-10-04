@@ -38,10 +38,14 @@ public static class RentalPriceCalculator
         return matchingTier.PricePerRack;
     }
 
+    // Lejen for den første (delvise) måned, fra startdatoen og måneden ud.
+    // Afrundes til hele øre (2 decimaler), så beløbet matcher det, der gemmes i
+    // databasens DECIMAL(18,2)-kolonne, og det beløb kunden bliver vist.
     public static decimal CalculatePartialMonthRent(decimal monthlyRent, DateOnly startDate)
     {
         int daysInMonth = DateTime.DaysInMonth(startDate.Year, startDate.Month);
         int remainingDays = daysInMonth - startDate.Day + 1;
-        return monthlyRent * remainingDays / daysInMonth;
+        decimal rent = monthlyRent * remainingDays / daysInMonth;
+        return Math.Round(rent, 2, MidpointRounding.AwayFromZero);
     }
 }

@@ -85,4 +85,31 @@ public class RentalPriceCalculatorTests
         Assert.ThrowsExactly<InvalidOperationException>(() =>
             RentalPriceCalculator.CalculateMonthlyRent(1, tiers));
     }
+
+    [TestMethod]
+    public void CalculatePartialMonthRent_StartOnFirstDay_ReturnsFullMonthlyRent()
+    {
+        // Arrange: oktober har 31 dage, og lejen starter den 1.
+        var startDate = new DateOnly(2026, 10, 1);
+
+        // Act
+        decimal result = RentalPriceCalculator.CalculatePartialMonthRent(850m, startDate);
+
+        // Assert
+        Assert.AreEqual(850m, result);
+    }
+
+    [TestMethod]
+    public void CalculatePartialMonthRent_UnevenAmount_IsRoundedToTwoDecimals()
+    {
+        // Arrange: 22 af 31 dage tilbage i oktober, 850 * 22 / 31 = 603,2258...
+        var startDate = new DateOnly(2026, 10, 10);
+
+        // Act
+        decimal result = RentalPriceCalculator.CalculatePartialMonthRent(850m, startDate);
+
+        // Assert: afrundet til hele øre, så det matcher DECIMAL(18,2) i databasen
+        Assert.AreEqual(603.23m, result);
+        Assert.AreEqual(result, Math.Round(result, 2));
+    }
 }

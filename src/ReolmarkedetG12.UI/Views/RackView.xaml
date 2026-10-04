@@ -1,527 +1,123 @@
 <UserControl x:Class="ReolmarkedetG12.UI.Views.RackView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:local="clr-namespace:ReolmarkedetG12.UI.Converters"
-             mc:Ignorable="d"
-             d:DesignHeight="750" d:DesignWidth="1100"
-             FontSize="14">
-
-    <UserControl.Resources>
-        <local:EmptyToVisibilityConverter x:Key="EmptyToVisibilityConverter"/>
-
-        <!-- Moderne reol-knap til butikskortet -->
-        <Style x:Key="RackButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#10B981"/>
-            <!-- Grøn som standard (Ledig) -->
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Margin" Value="2"/>
-            <Setter Property="Width" Value="60"/>
-            <Setter Property="Height" Value="45"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="tileBorder" 
-                                Background="{TemplateBinding Background}" 
-                                CornerRadius="5" 
-                                BorderThickness="2" 
-                                BorderBrush="Transparent">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <DataTrigger Binding="{Binding Rack.Status}" Value="Rented">
-                                <Setter Property="Background" Value="#EF4444"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding Rack.Status}" Value="Terminated">
-                                <Setter Property="Background" Value="#F59E0B"/>
-                                <Setter Property="Foreground" Value="White"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                <Setter Property="Background" Value="#2563EB"/>
-                                <Setter TargetName="tileBorder" Property="BorderBrush" Value="#1E3A8A"/>
-                                <Setter TargetName="tileBorder" Property="BorderThickness" Value="2.5"/>
-                            </DataTrigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="ClusterRackButtonStyle" TargetType="Button" BasedOn="{StaticResource RackButtonStyle}">
-            <Setter Property="Height" Value="32"/>
-        </Style>
-
-        <Style x:Key="ClusterItemsControlStyle" TargetType="ItemsControl">
-            <Setter Property="HorizontalAlignment" Value="Left"/>
-            <Setter Property="ItemTemplate">
-                <Setter.Value>
-                    <DataTemplate>
-                        <Button Content="{Binding Rack.Number}"
-                                Style="{StaticResource ClusterRackButtonStyle}"
-                                ToolTip="{Binding TerminationDate, StringFormat='Opsagt til {0:dd-MM-yyyy}'}"
-                                Command="{Binding DataContext.SelectRackCommand,
-                                                  RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
-                                CommandParameter="{Binding}"/>
-                    </DataTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="LeftColumnRackButtonStyle" TargetType="Button" BasedOn="{StaticResource RackButtonStyle}">
-            <Setter Property="Width" Value="34"/>
-            <Setter Property="Height" Value="58"/>
-        </Style>
-
-        <Style x:Key="LeftColumnItemsControlStyle" TargetType="ItemsControl">
-            <Setter Property="HorizontalAlignment" Value="Left"/>
-            <Setter Property="ItemTemplate">
-                <Setter.Value>
-                    <DataTemplate>
-                        <Button Content="{Binding Rack.Number}"
-                                Style="{StaticResource LeftColumnRackButtonStyle}"
-                                ToolTip="{Binding TerminationDate, StringFormat='Opsagt til {0:dd-MM-yyyy}'}"
-                                Command="{Binding DataContext.SelectRackCommand,
-                                                  RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
-                                CommandParameter="{Binding}"/>
-                    </DataTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="PanelCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="#F8FAFC"/>
-            <Setter Property="BorderBrush" Value="#E2E8F0"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="MinHeight" Value="40"/>
-            <Setter Property="Margin" Value="0,0,0,12"/>
-        </Style>
-
-        <Style x:Key="PanelLabelStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="#475569"/>
-            <Setter Property="Margin" Value="0,0,0,4"/>
-        </Style>
-
-        <Style x:Key="PlaceholderTextStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Foreground" Value="#94A3B8"/>
-        </Style>
-
-        <Style x:Key="RackPillStyle" TargetType="Border">
-            <Setter Property="Background" Value="#EFF6FF"/>
-            <Setter Property="BorderBrush" Value="#BFDBFE"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="Padding" Value="10,5"/>
-            <Setter Property="Margin" Value="0,0,6,6"/>
-        </Style>
-    </UserControl.Resources>
-
-    <Grid Margin="16" HorizontalAlignment="Center">
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="780" d:DesignWidth="1100">
+    <Grid Background="#F4F6F9" Margin="24">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="320"/>
+            <ColumnDefinition Width="6*"/>
+            <ColumnDefinition Width="4*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- ============================================== -->
-        <!-- VENSTRE SIDE: BUTIKSKORTET (100% INTAKT)       -->
-        <!-- ============================================== -->
-        <Border Grid.Column="0" 
-                Background="White" 
-                BorderBrush="#E2E8F0" 
-                BorderThickness="1" 
-                CornerRadius="8" 
-                Padding="16"
-                Margin="0,0,16,0">
+        <!-- Venstre side: Reoloversigt -->
+        <Border Grid.Column="0" Background="White" CornerRadius="8" Padding="16" Margin="0,0,16,0">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.1"/>
+            </Border.Effect>
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <!-- Signaturforklaring -->
-                <DockPanel Grid.Row="0" Margin="0,0,0,14">
-                    <TextBlock Text="Butiksoversigt" FontSize="16" FontWeight="Bold" Foreground="#1E293B" DockPanel.Dock="Left"/>
-
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <Border Width="12" Height="12" Background="#10B981" CornerRadius="3" Margin="0,0,4,0"/>
-                        <TextBlock Text="Ledig" FontSize="12" Margin="0,0,12,0" Foreground="#64748B"/>
-
-                        <Border Width="12" Height="12" Background="#EF4444" CornerRadius="3" Margin="0,0,4,0"/>
-                        <TextBlock Text="Udlejet" FontSize="12" Margin="0,0,12,0" Foreground="#64748B"/>
-
-                        <Border Width="12" Height="12" Background="#F59E0B" CornerRadius="3" Margin="0,0,4,0"/>
-                        <TextBlock Text="Opsagt" FontSize="12" Foreground="#64748B"/>
-                    </StackPanel>
-                </DockPanel>
-
-                <!-- Reol-området -->
-                <Viewbox Grid.Row="1" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Top">
-                    <Grid Width="700" Height="900" Margin="10">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <!-- Venstre søjle (1-13) -->
-                        <ItemsControl Grid.Column="0"
-                                      ItemsSource="{Binding LeftColumnRacks}"
-                                      Style="{StaticResource LeftColumnItemsControlStyle}"/>
-
-                        <!-- Midten: klynger (14-80) -->
-                        <StackPanel Grid.Column="1" Margin="40,0,0,0" HorizontalAlignment="Left">
-
-                            <ItemsControl ItemsSource="{Binding Cluster_14_18}" Style="{StaticResource ClusterItemsControlStyle}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <UniformGrid Rows="1" Columns="5"/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                            </ItemsControl>
-
-                            <ItemsControl ItemsSource="{Binding Cluster_19_24}" Style="{StaticResource ClusterItemsControlStyle}" Margin="0,15,0,0">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <UniformGrid Rows="2" Columns="3"/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                            </ItemsControl>
-
-                            <ItemsControl ItemsSource="{Binding Cluster_25_38}" Style="{StaticResource ClusterItemsControlStyle}" Margin="0,15,0,0">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <UniformGrid Rows="2" Columns="7"/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                            </ItemsControl>
-
-                            <ItemsControl ItemsSource="{Binding Cluster_39_52}" Style="{StaticResource ClusterItemsControlStyle}" Margin="0,15,0,0">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <UniformGrid Rows="2" Columns="7"/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                            </ItemsControl>
-
-                            <ItemsControl ItemsSource="{Binding Cluster_53_66}" Style="{StaticResource ClusterItemsControlStyle}" Margin="0,15,0,0">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <UniformGrid Rows="2" Columns="7"/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                            </ItemsControl>
-
-                            <ItemsControl ItemsSource="{Binding Cluster_67_76}" Style="{StaticResource ClusterItemsControlStyle}" Margin="0,15,0,0">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <UniformGrid Rows="2" Columns="5"/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                            </ItemsControl>
-
-                            <StackPanel Orientation="Horizontal" Margin="0,15,0,0">
-                                <ItemsControl ItemsSource="{Binding Cluster_77_78}" Style="{StaticResource ClusterItemsControlStyle}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <UniformGrid Rows="1" Columns="2"/>
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                </ItemsControl>
-
-                                <ItemsControl ItemsSource="{Binding Cluster_79_80}" Style="{StaticResource ClusterItemsControlStyle}" Margin="30,0,0,0">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <UniformGrid Rows="1" Columns="2"/>
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                </ItemsControl>
-                            </StackPanel>
-
-                        </StackPanel>
-                    </Grid>
-                </Viewbox>
-            </Grid>
-        </Border>
-
-        <!-- ============================================== -->
-        <!-- HØJRE SIDE: LEJER-PANEL OG HANDLINGER          -->
-        <!-- ============================================== -->
-        <Border Grid.Column="1" 
-                Background="White" 
-                BorderBrush="#E2E8F0" 
-                BorderThickness="1" 
-                CornerRadius="8" 
-                Padding="16">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="1.3*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-
-                <DockPanel Grid.Row="0">
-                    <TextBlock Text="Vælg lejer" Style="{StaticResource PanelLabelStyle}" VerticalAlignment="Center"/>
-                    <Button Content="✕ Ryd lejer" 
-                            Command="{Binding ClearRenterCommand}" 
-                            HorizontalAlignment="Right" 
-                            Background="Transparent" 
-                            BorderThickness="0" 
-                            Foreground="#DC2626" 
-                            FontSize="12" 
-                            FontWeight="SemiBold" 
-                            Cursor="Hand"
-                            Visibility="{Binding FoundRenter, Converter={StaticResource EmptyToVisibilityConverter}, ConverterParameter=Invert}"/>
-                </DockPanel>
-
-                <Grid Grid.Row="1" Margin="0,0,0,8">
-                    <TextBox Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" 
-                             Height="34" 
-                             Padding="8,0"
-                             VerticalContentAlignment="Center"/>
-                    <TextBlock Text="Søg på navn, tlf eller by..."
-                               IsHitTestVisible="False"
-                               Margin="10,0,0,0"
-                               VerticalAlignment="Center"
-                               Foreground="#94A3B8"
-                               Visibility="{Binding SearchQuery, Converter={StaticResource EmptyToVisibilityConverter}}"/>
-                </Grid>
-
-                <!-- Søgeresultat / Valgt kunde -->
-                <Border Grid.Row="2" Style="{StaticResource PanelCardStyle}">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
-                            <TextBlock Text="Søg efter en lejer for at komme i gang"
-                                       Style="{StaticResource PlaceholderTextStyle}"
-                                       Visibility="{Binding SearchQuery, Converter={StaticResource EmptyToVisibilityConverter}}"/>
-
-                            <ItemsControl ItemsSource="{Binding SearchResults}"
-                                          Visibility="{Binding FoundRenter, Converter={StaticResource EmptyToVisibilityConverter}}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Button HorizontalContentAlignment="Left"
-                                                Background="Transparent"
-                                                BorderThickness="0"
-                                                Margin="0,0,0,4"
-                                                Cursor="Hand"
-                                                Command="{Binding DataContext.SelectRenterCommand,
-                                                          RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
-                                                CommandParameter="{Binding}">
-                                            <TextBlock>
-                                                <Run Text="{Binding FirstName}" FontWeight="SemiBold"/>
-                                                <Run Text="{Binding LastName}" FontWeight="SemiBold"/>
-                                                <LineBreak/>
-                                                <Run Text="{Binding Phone}" Foreground="#64748B" FontSize="11"/>
-                                                <Run Text=" · " Foreground="#94A3B8" FontSize="11"/>
-                                                <Run Text="{Binding City}" Foreground="#64748B" FontSize="11"/>
-                                            </TextBlock>
-                                        </Button>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-
-                            <StackPanel Visibility="{Binding FoundRenter, Converter={StaticResource EmptyToVisibilityConverter}, ConverterParameter=Invert}">
-                                <TextBlock FontWeight="Bold" FontSize="15" Foreground="#1E293B">
-                                    <Run Text="{Binding FoundRenter.FirstName}"/>
-                                    <Run Text="{Binding FoundRenter.LastName}"/>
-                                </TextBlock>
-                                <TextBlock FontSize="12" Foreground="#64748B" Text="{Binding FoundRenter.Email}"/>
-                                <TextBlock FontSize="12" Foreground="#64748B" Text="{Binding FoundRenter.Phone}"/>
-                                <TextBlock FontSize="12" Foreground="#64748B">
-                                    <Run Text="{Binding FoundRenter.Address}"/>
-                                    <Run Text=", "/>
-                                    <Run Text="{Binding FoundRenter.PostalCode}"/>
-                                    <Run Text=" "/>
-                                    <Run Text="{Binding FoundRenter.City}"/>
-                                </TextBlock>
-                            </StackPanel>
-                        </StackPanel>
-                    </ScrollViewer>
-                </Border>
-
-                <!-- Valgte reoler -->
-                <TextBlock Grid.Row="3" Text="Valgte reoler" Style="{StaticResource PanelLabelStyle}"/>
-
-                <Border Grid.Row="4" Style="{StaticResource PanelCardStyle}">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
-                            <TextBlock Text="Ingen reoler valgt"
-                                       Style="{StaticResource PlaceholderTextStyle}"
-                                       Visibility="{Binding SelectedRacks.Count, Converter={StaticResource EmptyToVisibilityConverter}}"/>
-
-                            <!-- Piller for hver valgt reol -->
-                            <ItemsControl ItemsSource="{Binding SelectedRacks}"
-                                          Visibility="{Binding SelectedRacks.Count, Converter={StaticResource EmptyToVisibilityConverter}, ConverterParameter=Invert}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <WrapPanel/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Style="{StaticResource RackPillStyle}">
-                                            <TextBlock FontSize="12" FontWeight="Bold" Foreground="#1E40AF">
-                                                <Run Text="Reol "/>
-                                                <Run Text="{Binding Rack.Number}"/>
-                                            </TextBlock>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-
-                            <!-- Prisoversigt: Vises KUN når ShowNewRentalPriceBox er true (mindst 1 ledig reol er valgt) -->
-                            <Border Margin="0,8,0,0" Padding="10" Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="6">
-                                <Border.Style>
-                                    <Style TargetType="Border">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding ShowNewRentalPriceBox}" Value="True">
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Border.Style>
-                                <StackPanel>
-                                    <DockPanel>
-                                        <TextBlock Text="Ekstra leje pr. md:" FontSize="12" Foreground="#1E40AF"/>
-                                        <TextBlock Text="{Binding AdditionalMonthlyRent, StringFormat='+{}{0:0.00} kr./md.'}" 
-                                                   FontSize="12" FontWeight="Bold" Foreground="#1E40AF" HorizontalAlignment="Right"/>
-                                    </DockPanel>
-
-                                    <DockPanel Margin="0,3,0,0">
-                                        <TextBlock Text="Ny samlet månedsleje:" FontSize="13" FontWeight="SemiBold" Foreground="#1E3A8A"/>
-                                        <TextBlock Text="{Binding NewMonthlyRent, StringFormat='{}{0:0.00} kr./md.'}" 
-                                                   FontSize="13" FontWeight="Bold" Foreground="#1E3A8A" HorizontalAlignment="Right"/>
-                                    </DockPanel>
-
-                                    <Separator Margin="0,6,0,6" Background="#BFDBFE"/>
-
-                                    <DockPanel>
-                                        <TextBlock Text="Til betaling nu (indeværende md.):" FontSize="11" Foreground="#475569"/>
-                                        <TextBlock Text="{Binding FirstMonthPaymentAmount, StringFormat='{}{0:0.00} kr.'}" 
-                                                   FontSize="11" FontWeight="Bold" Foreground="#1E293B" HorizontalAlignment="Right"/>
-                                    </DockPanel>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                    </ScrollViewer>
-                </Border>
-
-                <!-- Kundens aktive reoler -->
-                <TextBlock Grid.Row="5" Text="Kundens aktive lejemål" Style="{StaticResource PanelLabelStyle}"/>
-
-                <Border Grid.Row="6" Style="{StaticResource PanelCardStyle}">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
-                            <TextBlock Text="Ingen reoler tilknyttet"
-                                       Style="{StaticResource PlaceholderTextStyle}"
-                                       Visibility="{Binding RenterRacks.Count, Converter={StaticResource EmptyToVisibilityConverter}}"/>
-
-                            <!-- Nuværende samlet månedsleje -->
-                            <Border Background="#F1F5F9" CornerRadius="6" Padding="8" Margin="0,0,0,10"
-                                    Visibility="{Binding RenterRacks.Count, Converter={StaticResource EmptyToVisibilityConverter}, ConverterParameter=Invert}">
-                                <DockPanel>
-                                    <TextBlock Text="Nuværende husleje:" FontWeight="SemiBold" Foreground="#475569" VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding CurrentMonthlyRent, Mode=OneWay, StringFormat='{}{0:0.00} kr./md.'}" 
-                                               FontWeight="Bold" FontSize="15" Foreground="#1E293B" HorizontalAlignment="Right"/>
-                                </DockPanel>
-                            </Border>
-
-                            <ItemsControl ItemsSource="{Binding RenterRacks}"
-                                          Visibility="{Binding RenterRacks.Count, Converter={StaticResource EmptyToVisibilityConverter}, ConverterParameter=Invert}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border BorderThickness="0,0,0,1" BorderBrush="#E2E8F0" Padding="0,0,0,6" Margin="0,0,0,6">
-                                            <StackPanel>
-                                                <TextBlock FontWeight="Bold" Foreground="#1E293B">
-                                                    <Run Text="{Binding RackItem.Rack.Number, StringFormat='Reol {0}'}"/>
-                                                </TextBlock>
-
-                                                <TextBlock FontSize="11" Foreground="#64748B">
-                                                    <Run Text="Udlejet fra "/>
-                                                    <Run Text="{Binding Rental.StartDate, StringFormat='{}{0:dd-MM-yyyy}'}"/>
-                                                </TextBlock>
-
-                                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="#D97706"
-                                                           Visibility="{Binding Rental.EndDate, Converter={StaticResource EmptyToVisibilityConverter}, ConverterParameter=Invert}">
-                                                    <Run Text="Opsagt til "/>
-                                                    <Run Text="{Binding Rental.EndDate, StringFormat='{}{0:dd-MM-yyyy}'}"/>
-                                                </TextBlock>
-                                            </StackPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-                    </ScrollViewer>
-                </Border>
-
-                <!-- Handlingsknapper -->
-                <StackPanel Grid.Row="7">
-                    <!-- Opret lejemål -->
-                    <Button Content="Opret aftale" 
-                            Command="{Binding CreateRentalCommand}" 
-                            Height="38" 
-                            Background="#059669" 
-                            Foreground="White" 
-                            FontWeight="Bold" 
-                            BorderThickness="0" 
-                            Cursor="Hand" 
-                            Margin="0,0,0,8">
-                        <Button.Resources>
-                            <Style TargetType="Border">
-                                <Setter Property="CornerRadius" Value="6"/>
-                            </Style>
-                        </Button.Resources>
-                    </Button>
-
-                    <!-- Opsig aftale -->
-                    <Button Content="Opsig aftale" 
-                            Command="{Binding TerminateRentalCommand}" 
-                            Height="36" 
-                            Background="#F59E0B" 
-                            Foreground="White" 
-                            FontWeight="SemiBold" 
-                            BorderThickness="0" 
-                            Cursor="Hand" 
-                            Margin="0,0,0,8">
-                        <Button.Resources>
-                            <Style TargetType="Border">
-                                <Setter Property="CornerRadius" Value="6"/>
-                            </Style>
-                        </Button.Resources>
-                    </Button>
-
-                    <!-- Fortryd opsigelse -->
-                    <Button Content="Fortryd opsigelse" 
-                            Command="{Binding CancelTerminationCommand}" 
-                            Height="36" 
-                            Background="White" 
-                            BorderBrush="#CBD5E1" 
-                            BorderThickness="1" 
-                            Foreground="#475569" 
-                            FontWeight="Medium" 
-                            Cursor="Hand">
-                        <Button.Resources>
-                            <Style TargetType="Border">
-                                <Setter Property="CornerRadius" Value="6"/>
-                            </Style>
-                        </Button.Resources>
-                    </Button>
+                <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Stretch" Margin="0,0,0,12">
+                    <TextBlock Text="Oversigt over reoler" FontWeight="Bold" FontSize="16" Foreground="#2D3748" VerticalAlignment="Center"/>
+                    <Button Content="Opdater" Command="{Binding RefreshCommand}" 
+                            HorizontalAlignment="Right" Width="80" Height="28" Margin="20,0,0,0"
+                            Background="#E2E8F0" BorderThickness="0" Cursor="Hand"/>
                 </StackPanel>
+
+                <DataGrid Grid.Row="1" ItemsSource="{Binding Racks}" SelectedItem="{Binding SelectedRack}"
+                          AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                          GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                          RowHeight="34" SelectionMode="Single" Background="Transparent" BorderThickness="0">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Reolnr." Binding="{Binding Rack.Number}" Width="80"/>
+                        <DataGridTextColumn Header="Status" Binding="{Binding Rack.Status}" Width="120"/>
+                        <DataGridTextColumn Header="Nuværende lejer" Binding="{Binding CurrentRenter}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
             </Grid>
         </Border>
-    </Grid>
 
+        <!-- Højre side: Håndtering og Historik -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Håndtering af udlejning -->
+            <Border Grid.Row="0" Background="White" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.1"/>
+                </Border.Effect>
+                <StackPanel>
+                    <TextBlock Text="Udlejning af reol" FontWeight="Bold" FontSize="16" Foreground="#2D3748" Margin="0,0,0,12"/>
+
+                    <TextBlock Text="Valgt reol:" FontWeight="SemiBold" Margin="0,4,0,2"/>
+                    <TextBlock Text="{Binding SelectedRack.Rack.Number, StringFormat='Reol #{0}', FallbackValue='Ingen reol valgt'}" 
+                               FontSize="14" Foreground="#4A5568" Margin="0,0,0,10"/>
+
+                    <TextBlock Text="Vælg lejer:" FontWeight="SemiBold" Margin="0,4,0,2"/>
+                    <ComboBox ItemsSource="{Binding Renters}" SelectedItem="{Binding SelectedRenter}"
+                              Height="32" Margin="0,0,0,10" VerticalContentAlignment="Center">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock>
+                                    <Run Text="{Binding FirstName}"/>
+                                    <Run Text=" "/>
+                                    <Run Text="{Binding LastName}"/>
+                                    <Run Text=" (Tlf: "/>
+                                    <Run Text="{Binding Phone}"/>
+                                    <Run Text=")"/>
+                                </TextBlock>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <TextBlock Text="Månedlig leje (kr.):" FontWeight="SemiBold" Margin="0,4,0,2"/>
+                    <TextBox Text="{Binding NewMonthlyRent, UpdateSourceTrigger=PropertyChanged, StringFormat='0.00'}" 
+                             Height="32" VerticalContentAlignment="Center" Margin="0,0,0,14" Padding="6,0"/>
+
+                    <Button Content="Opret udlejning" Command="{Binding RentOutCommand}" 
+                            Height="36" Background="#2B6CB0" Foreground="White" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Margin="0,0,0,8"/>
+
+                    <Button Content="Afslut aktivt lejemål" Command="{Binding EndRentalCommand}" 
+                            Height="34" Background="#E53E3E" Foreground="White" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Punkt 14: Lejemålshistorik -->
+            <Border Grid.Row="1" Background="White" CornerRadius="8" Padding="16">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.1"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Margin="0,0,0,8">
+                        <TextBlock Text="Lejemålshistorik" FontWeight="Bold" FontSize="15" Foreground="#2D3748"/>
+                        <TextBlock Text="Tidligere lejemål for valgt reol" FontSize="11" Foreground="#718096"/>
+                    </StackPanel>
+
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding RackHistory}"
+                              AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                              GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                              RowHeight="30" Background="Transparent" BorderThickness="0">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Lejer" Binding="{Binding RenterName}" Width="*"/>
+                            <DataGridTextColumn Header="Periode" Binding="{Binding PeriodText}" Width="150"/>
+                            <DataGridTextColumn Header="Pris/md." Binding="{Binding MonthlyRent, StringFormat='0 kr.'}" Width="75"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
 </UserControl>

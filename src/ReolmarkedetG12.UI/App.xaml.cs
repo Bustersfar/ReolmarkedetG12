@@ -55,8 +55,6 @@ public partial class App : Application
 
         try
         {
-            // Et hurtigt, uskyldigt kald der beviser, om databaseforbindelsen reelt virker,
-            // før vi bygger resten af applikationen op omkring den.
             rackRepository.GetAll();
         }
         catch (DatabaseConnectionException ex)
@@ -80,8 +78,8 @@ public partial class App : Application
         var mainViewModel = new MainViewModel(
             new RackViewModel(rackRepository, renterRepository, rentalRepository, rentalPriceTierRepository, paymentRepository, dialogService),
             new RenterViewModel(renterRepository, rentalRepository, dialogService),
-            new SalesViewModel(rackRepository, rentalRepository, saleRepository, dialogService),
-            new SearchSalesViewModel(rackRepository, saleRepository, dialogService, secureAreaService),
+            new SalesViewModel(rackRepository, rentalRepository, saleRepository, renterRepository, dialogService),
+            new SearchSalesViewModel(rackRepository, saleRepository, renterRepository, dialogService, secureAreaService),
             new MonthlyStatementViewModel(secureAreaService, dialogService));
 
         var mainWindow = new MainWindow { DataContext = mainViewModel };

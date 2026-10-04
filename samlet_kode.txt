@@ -1,0 +1,4640 @@
+﻿================================================
+FIL: ReolmarkedetG12.Tests\Fakes\FakeDialogService.cs
+================================================
+using ReolmarkedetG12.UI.Services;
+
+namespace ReolmarkedetG12.Tests.Fakes;
+
+public class FakeDialogService : IDialogService
+{
+    public string? LastError { get; private set; }
+    public int ErrorCount { get; private set; }
+    public string? LastInfo { get; private set; }
+    public bool ConfirmResult { get; set; } = true;
+
+    public void ShowError(string message, string title)
+    {
+        LastError = message;
+        ErrorCount++;
+    }
+
+    public void ShowInfo(string message, string title) => LastInfo = message;
+
+    public bool Confirm(string message, string title) => ConfirmResult;
+}
+
+
+================================================
+FIL: ReolmarkedetG12.Tests\Fakes\FakePaymentRepository.cs
+================================================
+using ReolmarkedetG12.Core.Exceptions;
+using ReolmarkedetG12.Core.Models;
+using ReolmarkedetG12.Core.Repositories;
+
+namespace ReolmarkedetG12.Tests.Fakes;
+
+public class FakePaymentRepository : IRepository<Payment>
+{
+    public List<Payment> Payments { get; } = new();
+    public bool SimulateDatabaseDown { get; set; }
+    private int _nextId = 1;
+
+    private void CheckDatabase()
+    {
+        if (SimulateDatabaseDown)
+            throw new DatabaseConnectionException("Kunne ikke forbinde til databasen.", new Exception("Testfejl"));
+    }
+
+    public void Add(Payment payment)
+    {
+        CheckDatabase();
+        payment.PaymentId = _nextId++;
+        Payments.Add(payment);
+    }
+
+    public Payment? GetById(int id)
+    {
+        CheckDatabase();
+        return Payments.FirstOrDefault(p => p.PaymentId == id);
+    }
+
+    public void Update(Payment payment)
+    {
+        CheckDatabase();
+        var index = Payments.FindIndex(p => p.PaymentId == payment.PaymentId);
+        if (index >= 0) Payments[index] = payment;
+    }
+
+    public void Delete(int id)
+    {
+        CheckDatabase();
+        Payments.RemoveAll(p => p.PaymentId == id);
+    }
+
+    public IEnumerable<Payment> GetAll()
+    {
+        CheckDatabase();
+        return Payments.ToList();
+    }
+}
+
+
+
+================================================
+FIL: ReolmarkedetG12.Tests\Fakes\FakePriceTierRepository.cs
+================================================
+using ReolmarkedetG12.Core.Models;
+using ReolmarkedetG12.Core.Repositories;
+
+namespace ReolmarkedetG12.Tests.Fakes;
+
+public class FakePriceTierRepository : IRentalPriceTierRepository
+{
+    public List<RentalPriceTier> Tiers { get; } = new()
+    {
+        new RentalPriceTier { TierId = 1, MinRacks = 1, MaxRacks = 1, PricePerRack = 850 },
+        new RentalPriceTier { TierId = 2, MinRacks = 2, MaxRacks = 3, PricePerRack = 825 },
+        new RentalPriceTier { TierId = 3, MinRacks = 4, MaxRacks = null, PricePerRack = 800 }
+    };
+
+    public IEnumerable<RentalPriceTier> GetAll() => Tiers.ToList();
+}
+
+
+================================================
+FIL: ReolmarkedetG12.Tests\Fakes\FakeRackRepository.cs
+================================================
+using ReolmarkedetG12.Core.Exceptions;
+using ReolmarkedetG12.Core.Models;
+using ReolmarkedetG12.Core.Repositories;
+
+namespace ReolmarkedetG12.Tests.Fakes;
+
+public class FakeRackRepository : IRepository<Rack>
+{
+    public List<Rack> Racks { get; } = new();
+    public bool SimulateDatabaseDown { get; set; }
+    private int _nextId = 1;
+
+    private void CheckDatabase()
+    {
+        if (SimulateDatabaseDown)
+            throw new DatabaseConnectionException("Kunne ikke forbinde til databasen.", new Exception("Testfejl"));
+    }
+
+    public void Add(Rack rack)
+    {
+        CheckDatabase();
+        rack.RackId = _nextId++;
+        Racks.Add(rack);
+    }
+
+    public Rack? GetById(int id)
+    {
+        CheckDatabase();
+        return Racks.FirstOrDefault(r => r.RackId == id);
+    }
+
+    public void Update(Rack rack)
+    {
+        CheckDatabase();
+        var index = Racks.FindIndex(r => r.RackId == rack.RackId);
+        if (index >= 0) Racks[index] = rack;
+    }
+
+    public void Delete(int id)
+    {
+        CheckDatabase();
+        Racks.RemoveAll(r => r.RackId == id);
+    }
+
+    public IEnumerable<Rack> GetAll()
+    {
+        CheckDatabase();
+        return Racks.ToList();
+    }
+}
+
+
+================================================
+FIL: ReolmarkedetG12.Tests\Fakes\FakeRentalRepository.cs
+================================================
+using ReolmarkedetG12.Core.Exceptions;
+using ReolmarkedetG12.Core.Models;
+using ReolmarkedetG12.Core.Repositories;
+
+namespace ReolmarkedetG12.Tests.Fakes;
+
+public class FakeRentalRepository : IRepository<Rental>
+{
+    public List<Rental> Rentals { get; } = new();
+    public bool SimulateDatabaseDown { get; set; }
+    private int _nextId = 1;
+
+    private void CheckDatabase()
+    {
+        if (SimulateDatabaseDown)
+            throw new DatabaseConnectionException("Kunne ikke forbinde til databasen.", new Exception("Testfejl"));
+    }
+
+    public void Add(Rental rental)
+    {
+        CheckDatabase();
+        rental.RentalId = _nextId++;
+        Rentals.Add(rental);
+    }
+
+    public Rental? GetById(int id)
+    {
+        CheckDatabase();
+        return Rentals.FirstOrDefault(r => r.RentalId == id);
+    }
+
+    public void Update(Rental rental)
+    {
+        CheckDatabase();
+        var index = Rentals.FindIndex(r => r.RentalId == rental.RentalId);
+        if (index >= 0) Rentals[index] = rental;
+    }
+
+    public void Delete(int id)
+    {
+        CheckDatabase();
+        Rentals.RemoveAll(r => r.RentalId == id);
+    }
+
+    public IEnumerable<Rental> GetAll()
+    {
+        CheckDatabase();
+        return Rentals.ToList();
+    }
+}
+
+
+================================================
+FIL: ReolmarkedetG12.Tests\Fakes\FakeRenterRepository.cs
+================================================
+using ReolmarkedetG12.Core.Exceptions;
+using ReolmarkedetG12.Core.Models;
+using ReolmarkedetG12.Core.Repositories;
+
+namespace ReolmarkedetG12.Tests.Fakes;
+
+public class FakeRenterRepository : IRepository<Renter>
+{
+    public List<Renter> Renters { get; } = new();
+    public bool SimulateDatabaseDown { get; set; }
+    private int _nextId = 1;
+
+    private void CheckDatabase()
+    {
+        if (SimulateDatabaseDown)
+            throw new DatabaseConnectionException("Kunne ikke forbinde til databasen.", new Exception("Testfejl"));
+    }
+
+    public void Add(Renter renter)
+    {
+        CheckDatabase();
+        renter.RenterId = _nextId++;
+        Renters.Add(renter);
+    }
+
+    public Renter? GetById(int id)
+    {
+        CheckDatabase();
+        return Renters.FirstOrDefault(r => r.RenterId == id);
+    }
+
+    public void Update(Renter renter)
+    {
+        CheckDatabase();
+        var index = Renters.FindIndex(r => r.RenterId == renter.RenterId);
+        if (index >= 0) Renters[index] = renter;
+    }
+
+    public void Delete(int id)
+    {
+        CheckDatabase();
+        Renters.RemoveAll(r => r.RenterId == id);
+    }
+
+    public IEnumerable<Renter> GetAll()
+    {
+        CheckDatabase();
+        return Renters.ToList();
+    }
+}
+
+
+================================================
+FIL: ReolmarkedetG12.Tests\Fakes\FakeSaleRepository.cs
+================================================
+using ReolmarkedetG12.Core.Exceptions;
+using ReolmarkedetG12.Core.Models;
+using ReolmarkedetG12.Core.Repositories;
+
+namespace ReolmarkedetG12.Tests.Fakes;
+
+public class FakeSaleRepository : IRepository<Sale>
+{
+    public List<Sale> Sales { get; } = new();
+    public bool SimulateDatabaseDown { get; set; }
+    private int _nextId = 1;
+
+    private void CheckDatabase()
+    {
+        if (SimulateDatabaseDown)
+            throw new DatabaseConnectionException("Kunne ikke forbinde til databasen.", new Exception("Testfejl"));
+    }
+
+    public void Add(Sale sale)
+    {
+        CheckDatabase();
+        sale.SaleId = _nextId++;
+        Sales.Add(sale);
+    }
+
+    public Sale? GetById(int id)
+    {
+        CheckDatabase();
+        return Sales.FirstOrDefault(s => s.SaleId == id);
+    }
+
+    public void Update(Sale sale)
+    {
+        CheckDatabase();
+        var index = Sales.FindIndex(s => s.SaleId == sale.SaleId);
+        if (index >= 0) Sales[index] = sale;
+    }
+
+    public void Delete(int id)
+    {
+        CheckDatabase();
+        Sales.RemoveAll(s => s.SaleId == id);
+    }
+
+    public IEnumerable<Sale> GetAll()
+    {
+        CheckDatabase();
+        return Sales.ToList();
+    }
+}
+
+
+================================================
+FIL: ReolmarkedetG12.Tests\EmptyToVisibilityConverterTests.cs
+================================================
+using System.Globalization;
+using System.Windows;
+using ReolmarkedetG12.UI.Converters;
+
+namespace ReolmarkedetG12.Tests;
+
+[TestClass]
+public class EmptyToVisibilityConverterTests
+{
+    private readonly EmptyToVisibilityConverter _converter = new();
+
+    // parameter er tom, medmindre testen selv angiver "Invert"
+    private object Convert(object? value, string parameter = "") =>
+        _converter.Convert(value, typeof(Visibility), parameter, CultureInfo.InvariantCulture);
+
+    [TestMethod]
+    public void Convert_Null_ReturnsVisible()
+    {
+        Assert.AreEqual(Visibility.Visible, Convert(null));
+    }
+
+    [TestMethod]
+    public void Convert_EmptyString_ReturnsVisible()
+    {
+        Assert.AreEqual(Visibility.Visible, Convert(""));
+    }
+
+    [TestMethod]
+    public void Convert_TextWithContent_ReturnsCollapsed()
+    {
+        Assert.AreEqual(Visibility.Collapsed, Convert("Anna"));
+    }
+
+    [TestMethod]
+    public void Convert_EmptyList_ReturnsVisible()
+    {
+        Assert.AreEqual(Visibility.Visible, Convert(new List<int>()));
+    }
+
+    [TestMethod]
+    public void Convert_ListWithItems_ReturnsCollapsed()
+    {
+        Assert.AreEqual(Visibility.Collapsed, Convert(new List<int> { 1 }));
+    }
+
+    [TestMethod]
+    public void Convert_Zero_ReturnsVisible()
+    {
+        Assert.AreEqual(Visibility.Visible, Convert(0));
+    }
+
+    [TestMethod]
+    public void Convert_NullWithInvertParameter_ReturnsCollapsed()
+    {
+        Assert.AreEqual(Visibility.Collapsed, Convert(null, "Invert"));
+    }
+}
+
+
+================================================
+FIL: ReolmarkedetG12.Tests\MainViewModelTests.cs
+================================================
+using ReolmarkedetG12.Tests.Fakes;
+using ReolmarkedetG12.UI.Services;
+using ReolmarkedetG12.UI.ViewModels;
+
+namespace ReolmarkedetG12.Tests;
+
+[TestClass]
+public class MainViewModelTests
+{
+    [TestMethod]
+    public void Constructor_GivenViewModels_ExposesThem()
+    {
+        // Arrange
+        var dialog = new FakeDialogService();
+        var rackViewModel = new RackViewModel(
+            new FakeRackRepository(), new FakeRenterRepository(), new FakeRentalRepository(),
+            new FakePriceTierRepository(), new FakePaymentRepository(), dialog);
+        var renterViewModel = new RenterViewModel(new FakeRenterRepository(), new FakeRentalRepository(), dialog);
+        var salesViewModel = new SalesViewModel(
+            new FakeRackRepository(), new FakeRentalRepository(), new FakeSaleRepository(), dialog);
+        var searchSalesViewModel = new SearchSalesViewModel(
+            new FakeRackRepository(), new FakeSaleRepository(), dialog, new SecureAreaService("1234"));
+        var monthlyStatementViewModel = new MonthlyStatementViewModel(new SecureAreaService("1234"), dialog);
+
+        // Act
+        var mainViewModel = new MainViewModel(rackViewModel, renterViewModel, salesViewModel, searchSalesViewModel, monthlyStatementViewModel);
+
+        // Assert
+        Assert.AreSame(rackViewModel, mainViewModel.RackViewModel);
+        Assert.AreSame(renterViewModel, mainViewModel.RenterViewModel);
+        Assert.AreSame(salesViewModel, mainViewModel.SalesViewModel);
+        Assert.AreSame(searchSalesViewModel, mainViewModel.SearchSalesViewModel);
+        Assert.AreSame(monthlyStatementViewModel, mainViewModel.MonthlyStatementViewModel);
+    }
+}
+
+
+================================================
+FIL: ReolmarkedetG12.Tests\MSTestSettings.cs
+================================================
+[assembly: Parallelize(Scope = ExecutionScope.MethodLevel)]
+
+
+
+================================================
+FIL: ReolmarkedetG12.Tests\ObservableCollectionExtensionsTests.cs
+================================================
+using System.Collections.ObjectModel;
+using ReolmarkedetG12.UI.ViewModels;
+
+namespace ReolmarkedetG12.Tests;
+
+[TestClass]
+public class ObservableCollectionExtensionsTests
+{
+    [TestMethod]
+    public void RemoveAll_RemovesOnlyMatchingItems()
+    {
+        // Arrange
+        var collection = new ObservableCollection<int> { 1, 2, 3, 4 };
+
+        // Act: fjern alle lige tal
+        collection.RemoveAll(x => x % 2 == 0);
+
+        // Assert
+        CollectionAssert.AreEqual(new[] { 1, 3 }, collection.ToList());
+    }
+}
+
+
+================================================
+FIL: ReolmarkedetG12.Tests\RackRepositoryTests.cs
+================================================
+using ReolmarkedetG12.Core.Exceptions;
+using ReolmarkedetG12.Core.Models;
+using ReolmarkedetG12.Core.Repositories;
+
+namespace ReolmarkedetG12.Tests;
+
+[TestClass]
+[DoNotParallelize]
+public class RackRepositoryTests
+{
+    private const string TestConnectionString = TestDatabase.ConnectionString;
+
+    [TestMethod]
+    [TestCategory("Database")]
+    public void GetAll_TestDatabase_Returns80Racks()
+    {
+        // Arrange
+        var repo = new RackRepository(TestConnectionString);
+
+        // Act
+        var racks = repo.GetAll().ToList();
+
+        // Assert
+        Assert.HasCount(80, racks);
+    }
+
+    [TestMethod]
+    [TestCategory("Database")]
+    public void Add_NewRack_IsSavedInDatabase()
+    {
+        // Arrange
+        var repo = new RackRepository(TestConnectionString);
+        var rack = new Rack { Number = 999, Status = RackStatus.Available };
+
+        // Act
+        repo.Add(rack);
+
+        // Find den nye reol, og slet den igen (oprydning)
+        var saved = repo.GetAll().FirstOrDefault(r => r.Number == 999);
+        if (saved != null)
+        {
+            repo.Delete(saved.RackId);
+        }
+
+        // Assert
+        Assert.IsNotNull(saved);
+    }
+    [TestMethod]
+    [TestCategory("Database")]
+    public void GetById_NonExistingId_ReturnsNull()
+    {
+        // Arrange
+        var repo = new RackRepository(TestConnectionString);
+
+        // Act
+        var rack = repo.GetById(-1);
+
+        // Assert
+        Assert.IsNull(rack);
+    }
+    [TestMethod]
+    public void GetAll_ServerDoesNotExist_ThrowsDatabaseConnectionException()
+    {
+        // Arrange: en server der ikke findes
+        var repo = new RackRepository(
+            "Server=findes-ikke;Database=x;Connect Timeout=1;Trusted_Connection=True;TrustServerCertificate=True;");
+
+        // Act + Assert
+        Assert.ThrowsExactly<DatabaseConnectionException>(() => repo.GetAll());
+    }
+    [TestMethod]
+    [TestCategory("Database")]
+    public void Update_ChangeStatus_IsSavedInDatabase()
+    {
+        // Arrange: opret en reol
+        var repo = new RackRepository(TestConnectionString);
+        repo.Add(new Rack { Number = 999, Status = RackStatus.Available });
+        var rack = repo.GetAll().First(r => r.Number == 999);
+
+        // Act: ret status, og hent reolen igen
+        rack.Status = RackStatus.Rented;
+        repo.Update(rack);
+        var updated = repo.GetById(rack.RackId);
+
+        // Oprydning
+        repo.Delete(rack.RackId);
+
+        // Assert
+        Assert.IsNotNull(updated);
+        Assert.AreEqual(RackStatus.Rented, updated.Status);
+    }
+    [TestMethod]
+    [TestCategory("Database")]
+    public void Delete_ExistingRack_RemovesItFromDatabase()
+    {
+        // Arrange: opret en reol
+        var repo = new RackRepository(TestConnectionString);
+        repo.Add(new Rack { Number = 999, Status = RackStatus.Available });
+        var rack = repo.GetAll().First(r => r.Number == 999);
+
+        // Act: slet den
+        repo.Delete(rack.RackId);
+        var result = repo.GetById(rack.RackId);
+
+        // Assert
+        Assert.IsNull(result);
+    }
+}
+
+
+================================================
+FIL: ReolmarkedetG12.Tests\RackViewModelTests.cs
+================================================
+using ReolmarkedetG12.Core.Models;
+using ReolmarkedetG12.Core.Services;
+using ReolmarkedetG12.Tests.Fakes;
+using ReolmarkedetG12.UI.ViewModels;
+
+namespace ReolmarkedetG12.Tests;
+
+[TestClass]
+public class RackViewModelTests
+{
+    // MSTest laver en ny instans af klassen til hver test, så fakes starter altid tomme
+    private readonly FakeRackRepository _racks = new();
+    private readonly FakeRenterRepository _renters = new();
+    private readonly FakeRentalRepository _rentals = new();
+    private readonly FakePaymentRepository _payments = new();
+    private readonly FakeDialogService _dialog = new();
+
+    private RackViewModel CreateViewModel() =>
+        new RackViewModel(_racks, _renters, _rentals, new FakePriceTierRepository(), _payments, _dialog);
+
+    private void AddRack(int number) =>
+        _racks.Add(new Rack { Number = number, Status = RackStatus.Available });
+
+    private Renter AddRenter()
+    {
+        var renter = new Renter
+        {
+            FirstName = "Anna",
+            LastName = "Andersen",
+            Address = "Vej 1",
+            PostalCode = 4200,
+            City = "Slagelse"
+        };
+        _renters.Add(renter);
+        return renter;
+    }
+    private RackViewModel CreateViewModelWithTwoRenters()
+    {
+        _renters.Add(new Renter
+        {
+            FirstName = "Anna",
+            LastName = "Andersen",
+            Address = "Testvej 2",
+            PostalCode = 4200,
+            City = "Slagelse",
+            Email = "anna@test.dk",
+            Phone = "20000001"
+        });
+        _renters.Add(new Renter
+        {
+            FirstName = "Bo",
+            LastName = "Bertelsen",
+            Address = "Havnevej 5",
+            PostalCode = 4000,
+            City = "Roskilde",
+            Email = "bo@test.dk",
+            Phone = "20000002"
+        });
+        return CreateViewModel();
+    }
+    private Rack AddRackWithStatus(int number, RackStatus status)
+    {
+        var rack = new Rack { Number = number, Status = status };
+        _racks.Add(rack);
+        return rack;
+    }
+
+    private Rental AddRental(Rack rack, Renter renter, DateTime? endDate)
+    {
+        var rental = new Rental
+        {
+            RackId = rack.RackId,
+            RenterId = renter.RenterId,
+            StartDate = new DateTime(2026, 1, 1),
+            EndDate = endDate,
+            MonthlyRent = 850m
+        };
+        _rentals.Add(rental);
+        return rental;
+    }
+
+    [TestMethod]
+    public void Constructor_RacksInRepository_LoadsAllRacks()
+    {
+        // Arrange
+        AddRack(1);
+        AddRack(2);
+        AddRack(3);
+
+        // Act
+        var viewModel = CreateViewModel();
+
+        // Assert
+        Assert.HasCount(3, viewModel.Racks);
+    }
+
+    [TestMethod]
+    public void Constructor_RackNumbers_AreSortedIntoTheirArea()
+    {
+        // Arrange
+        AddRack(5);   // venstre kolonne (1-13)
+        AddRack(14);  // gruppe 14-18
+        AddRack(80);  // gruppe 79-80
+
+        // Act
+        var viewModel = CreateViewModel();
+
+        // Assert
+        Assert.HasCount(1, viewModel.LeftColumnRacks);
+        Assert.HasCount(1, viewModel.Cluster_14_18);
+        Assert.HasCount(1, viewModel.Cluster_79_80);
+    }
+
+    [TestMethod]
+    public void SelectRackCommand_AvailableRack_SelectsIt()
+    {
+        // Arrange
+        AddRack(1);
+        var viewModel = CreateViewModel();
+        var rackItem = viewModel.Racks[0];
+
+        // Act: klik på reolen
+        viewModel.SelectRackCommand.Execute(rackItem);
+
+        // Assert
+        Assert.IsTrue(rackItem.IsSelected);
+        Assert.HasCount(1, viewModel.SelectedRacks);
+    }
+
+    [TestMethod]
+    public void SelectRackCommand_ClickedTwice_DeselectsIt()
+    {
+        // Arrange
+        AddRack(1);
+        var viewModel = CreateViewModel();
+        var rackItem = viewModel.Racks[0];
+
+        // Act: klik to gange
+        viewModel.SelectRackCommand.Execute(rackItem);
+        viewModel.SelectRackCommand.Execute(rackItem);
+
+        // Assert
+        Assert.IsFalse(rackItem.IsSelected);
+        Assert.HasCount(0, viewModel.SelectedRacks);
+    }
+
+    [TestMethod]
+    public void CreateRentalCommand_OneRack_RentsRackToRenter()
+    {
+        // Arrange: én ledig reol, én lejer, og begge er valgt
+        AddRack(1);
+        var renter = AddRenter();
+        var viewModel = CreateViewModel();
+        viewModel.SelectRenterCommand.Execute(renter);
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[0]);
+
+        // Act
+        viewModel.CreateRentalCommand.Execute(null);
+
+        // Assert
+        Assert.HasCount(1, _rentals.Rentals);
+        Assert.AreEqual(renter.RenterId, _rentals.Rentals[0].RenterId);
+        Assert.AreEqual(RackStatus.Rented, _racks.Racks[0].Status);
+        Assert.AreEqual(850m, _rentals.Rentals[0].MonthlyRent);
+    }
+
+    [TestMethod]
+    public void CreateRentalCommand_TwoRacks_EachGetsItsOwnTierPrice()
+    {
+        // Arrange: to ledige reoler og én lejer
+        AddRack(1);
+        AddRack(2);
+        var renter = AddRenter();
+        var viewModel = CreateViewModel();
+        viewModel.SelectRenterCommand.Execute(renter);
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[0]);
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[1]);
+
+        // Act
+        viewModel.CreateRentalCommand.Execute(null);
+
+        // Assert: 1. reol = 850 (pristrin 1), 2. reol = 825 (pristrin 2) — ALDRIG et gennemsnit af de to
+        Assert.HasCount(2, _rentals.Rentals);
+        Assert.AreEqual(850m, _rentals.Rentals[0].MonthlyRent);
+        Assert.AreEqual(825m, _rentals.Rentals[1].MonthlyRent);
+    }
+
+    [TestMethod]
+    public void CreateRentalCommand_FifthRackForExistingRenter_GetsTierPriceNotAverage()
+    {
+        // Arrange: lejeren har allerede 4 aktive reoler, hver med sin egen oprindelige pristrins-pris
+        var renter = AddRenter();
+        var rack1 = AddRackWithStatus(1, RackStatus.Rented);
+        var rack2 = AddRackWithStatus(2, RackStatus.Rented);
+        var rack3 = AddRackWithStatus(3, RackStatus.Rented);
+        var rack4 = AddRackWithStatus(4, RackStatus.Rented);
+
+        var rental1 = new Rental { RackId = rack1.RackId, RenterId = renter.RenterId, StartDate = new DateTime(2026, 1, 1), MonthlyRent = 850m };
+        var rental2 = new Rental { RackId = rack2.RackId, RenterId = renter.RenterId, StartDate = new DateTime(2026, 1, 1), MonthlyRent = 825m };
+        var rental3 = new Rental { RackId = rack3.RackId, RenterId = renter.RenterId, StartDate = new DateTime(2026, 1, 1), MonthlyRent = 825m };
+        var rental4 = new Rental { RackId = rack4.RackId, RenterId = renter.RenterId, StartDate = new DateTime(2026, 1, 1), MonthlyRent = 800m };
+        _rentals.Add(rental1);
+        _rentals.Add(rental2);
+        _rentals.Add(rental3);
+        _rentals.Add(rental4);
+
+        AddRack(5);
+        var viewModel = CreateViewModel();
+        viewModel.SelectRenterCommand.Execute(renter);
+        viewModel.SelectRackCommand.Execute(viewModel.Racks.Single(r => r.Rack.Number == 5));
+
+        // Act
+        viewModel.CreateRentalCommand.Execute(null);
+
+        // Assert: den 5. reol koster 800 kr. (pristrinnet "4 reoler og derover") —
+        // IKKE 820 kr. (det forkerte gennemsnit af 4100/5, som var buggen)
+        var rack5Id = viewModel.Racks.Single(r => r.Rack.Number == 5).Rack.RackId;
+        var newRental = _rentals.Rentals.Single(r => r.RackId == rack5Id);
+        Assert.AreEqual(800m, newRental.MonthlyRent);
+
+        // De 4 eksisterende reolers priser er fuldstændig uændrede
+        Assert.AreEqual(850m, rental1.MonthlyRent);
+        Assert.AreEqual(825m, rental2.MonthlyRent);
+        Assert.AreEqual(825m, rental3.MonthlyRent);
+        Assert.AreEqual(800m, rental4.MonthlyRent);
+    }
+
+    [TestMethod]
+    public void CreateRentalCommand_Confirmed_CreatesFirstMonthPayment()
+    {
+        // Arrange: to ledige reoler og én lejer, brugeren svarer ja
+        AddRack(1);
+        AddRack(2);
+        var renter = AddRenter();
+        var viewModel = CreateViewModel();
+        viewModel.SelectRenterCommand.Execute(renter);
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[0]);
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[1]);
+
+        // Act
+        viewModel.CreateRentalCommand.Execute(null);
+
+        // Assert: betaling for første (del)måned = summen af hver reols EGEN pristrins-pris (850 + 825), ikke et gennemsnit
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        var expectedAmount = RentalPriceCalculator.CalculatePartialMonthRent(850m, today)
+                            + RentalPriceCalculator.CalculatePartialMonthRent(825m, today);
+        Assert.HasCount(1, _payments.Payments);
+        var payment = _payments.Payments[0];
+        Assert.AreEqual(renter.RenterId, payment.RenterId);
+        Assert.AreEqual(PaymentType.FirstMonthPayment, payment.Type);
+        Assert.AreEqual(PaymentMethod.MobilePay, payment.PaymentMethod);
+        Assert.AreEqual(expectedAmount, payment.Amount);
+    }
+
+    [TestMethod]
+    public void CreateRentalCommand_Declined_CreatesNoPaymentOrRental()
+    {
+        // Arrange: brugeren svarer nej i bekræftelsesdialogen
+        AddRack(1);
+        var renter = AddRenter();
+        var viewModel = CreateViewModel();
+        viewModel.SelectRenterCommand.Execute(renter);
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[0]);
+        _dialog.ConfirmResult = false;
+
+        // Act
+        viewModel.CreateRentalCommand.Execute(null);
+
+        // Assert
+        Assert.HasCount(0, _payments.Payments);
+        Assert.HasCount(0, _rentals.Rentals);
+    }
+    [TestMethod]
+    public void CalculateTerminationEffectiveDate_On19th_ReturnsFirstOfNextMonth()
+    {
+        var result = RackViewModel.CalculateTerminationEffectiveDate(new DateTime(2026, 1, 19));
+
+        Assert.AreEqual(new DateTime(2026, 2, 1), result);
+    }
+
+    [TestMethod]
+    public void CalculateTerminationEffectiveDate_On20th_ReturnsFirstOfMonthAfterNext()
+    {
+        var result = RackViewModel.CalculateTerminationEffectiveDate(new DateTime(2026, 1, 20));
+
+        Assert.AreEqual(new DateTime(2026, 3, 1), result);
+    }
+
+    [TestMethod]
+    public void CalculateTerminationEffectiveDate_InDecember_RollsOverToNextYear()
+    {
+        var result = RackViewModel.CalculateTerminationEffectiveDate(new DateTime(2026, 12, 25));
+
+        Assert.AreEqual(new DateTime(2027, 2, 1), result);
+    }
+
+    [TestMethod]
+    public void TerminateRentalCommand_RentedRack_SetsStatusTerminatedAndEndDate()
+    {
+        // Arrange: en udlejet reol med en aktiv lejeaftale
+        var renter = AddRenter();
+        var rack = AddRackWithStatus(1, RackStatus.Rented);
+        var rental = AddRental(rack, renter, null);
+        var viewModel = CreateViewModel();
+        viewModel.SelectRenterCommand.Execute(renter);
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[0]);
+
+        // Act
+        viewModel.TerminateRentalCommand.Execute(null);
+
+        // Assert
+        var expectedDate = RackViewModel.CalculateTerminationEffectiveDate(DateTime.Now);
+        Assert.AreEqual(RackStatus.Terminated, rack.Status);
+        Assert.IsNotNull(rental.EndDate);
+        Assert.AreEqual(expectedDate, rental.EndDate.Value);
+    }
+
+    [TestMethod]
+    public void CancelTerminationCommand_TerminatedRack_SetsStatusBackToRented()
+    {
+        // Arrange: en opsagt reol, hvor opsigelsen først træder i kraft i fremtiden
+        var renter = AddRenter();
+        var rack = AddRackWithStatus(1, RackStatus.Terminated);
+        var rental = AddRental(rack, renter, new DateTime(2100, 1, 1));
+        var viewModel = CreateViewModel();
+        viewModel.SelectRenterCommand.Execute(renter);
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[0]);
+
+        // Act
+        viewModel.CancelTerminationCommand.Execute(null);
+
+        // Assert
+        Assert.AreEqual(RackStatus.Rented, rack.Status);
+        Assert.IsNull(rental.EndDate);
+    }
+
+    [TestMethod]
+    public void Constructor_TerminationDateHasPassed_MakesRackAvailable()
+    {
+        // Arrange: en opsagt reol, hvor slutdatoen er overskredet for længe siden
+        var renter = AddRenter();
+        var rack = AddRackWithStatus(1, RackStatus.Terminated);
+        AddRental(rack, renter, new DateTime(2000, 1, 1));
+
+        // Act
+        _ = CreateViewModel();
+
+        // Assert
+        Assert.AreEqual(RackStatus.Available, rack.Status);
+    }
+
+    [TestMethod]
+    public void SelectRenterCommand_DatabaseDown_ShowsErrorInsteadOfCrashing()
+    {
+        // Arrange: databasen går ned, efter programmet er startet
+        var renter = AddRenter();
+        var viewModel = CreateViewModel();
+        _rentals.SimulateDatabaseDown = true;
+
+        // Act
+        viewModel.SelectRenterCommand.Execute(renter);
+
+        // Assert
+        Assert.IsNotNull(_dialog.LastError);
+        Assert.Contains("Kunne ikke forbinde", _dialog.LastError);
+    }
+    [TestMethod]
+    public void SearchQuery_ByFirstName_FindsRenterIgnoringCase()
+    {
+        var viewModel = CreateViewModelWithTwoRenters();
+
+        viewModel.SearchQuery = "anna";
+
+        Assert.HasCount(1, viewModel.SearchResults);
+        Assert.AreEqual("Anna", viewModel.SearchResults[0].FirstName);
+    }
+
+    [TestMethod]
+    public void SearchQuery_ByFullName_FindsRenter()
+    {
+        var viewModel = CreateViewModelWithTwoRenters();
+
+        viewModel.SearchQuery = "Anna Andersen";
+
+        Assert.HasCount(1, viewModel.SearchResults);
+        Assert.AreEqual("Anna", viewModel.SearchResults[0].FirstName);
+    }
+
+    [TestMethod]
+    public void SearchQuery_ByPhone_FindsRenter()
+    {
+        var viewModel = CreateViewModelWithTwoRenters();
+
+        viewModel.SearchQuery = "20000002";
+
+        Assert.HasCount(1, viewModel.SearchResults);
+        Assert.AreEqual("Bo", viewModel.SearchResults[0].FirstName);
+    }
+
+    [TestMethod]
+    public void SearchQuery_ByAddress_FindsRenter()
+    {
+        var viewModel = CreateViewModelWithTwoRenters();
+
+        viewModel.SearchQuery = "Havnevej";
+
+        Assert.HasCount(1, viewModel.SearchResults);
+        Assert.AreEqual("Bo", viewModel.SearchResults[0].FirstName);
+    }
+
+    [TestMethod]
+    public void SearchQuery_ByCity_FindsRenter()
+    {
+        var viewModel = CreateViewModelWithTwoRenters();
+
+        viewModel.SearchQuery = "Slagelse";
+
+        Assert.HasCount(1, viewModel.SearchResults);
+        Assert.AreEqual("Anna", viewModel.SearchResults[0].FirstName);
+    }
+
+    [TestMethod]
+    public void SearchQuery_NoMatch_ReturnsEmptyList()
+    {
+        var viewModel = CreateViewModelWithTwoRenters();
+
+        viewModel.SearchQuery = "xyz";
+
+        Assert.HasCount(0, viewModel.SearchResults);
+    }
+    [TestMethod]
+    public void CheckTerminationDatesFromTimer_DatabaseStaysDown_ShowsErrorOnlyOnce()
+    {
+        // Arrange: en opsagt reol, så tjekket rammer databasen
+        var renter = AddRenter();
+        var rack = AddRackWithStatus(1, RackStatus.Terminated);
+        AddRental(rack, renter, new DateTime(2100, 1, 1));
+        var viewModel = CreateViewModel();
+        _rentals.SimulateDatabaseDown = true;
+
+        // Act: timeren tikker tre gange, mens databasen er nede
+        viewModel.CheckTerminationDatesFromTimer();
+        viewModel.CheckTerminationDatesFromTimer();
+        viewModel.CheckTerminationDatesFromTimer();
+
+        // Assert
+        Assert.AreEqual(1, _dialog.ErrorCount);
+    }
+
+    [TestMethod]
+    public void CheckTerminationDatesFromTimer_DatabaseComesBackAndFailsAgain_ShowsErrorAgain()
+    {
+        // Arrange
+        var renter = AddRenter();
+        var rack = AddRackWithStatus(1, RackStatus.Terminated);
+        AddRental(rack, renter, new DateTime(2100, 1, 1));
+        var viewModel = CreateViewModel();
+
+        // Act: databasen går ned, kommer op igen, og går ned igen
+        _rentals.SimulateDatabaseDown = true;
+        viewModel.CheckTerminationDatesFromTimer();
+        _rentals.SimulateDatabaseDown = false;
+        viewModel.CheckTerminationDatesFromTimer();
+        _rentals.SimulateDatabaseDown = true;
+        viewModel.CheckTerminationDatesFromTimer();
+
+        // Assert: fejlen vises én gang for hver gang, databasen går ned
+        Assert.AreEqual(2, _dialog.ErrorCount);
+    }
+    [TestMethod]
+    public void SelectRackCommand_RackBelongsToOtherRenter_ShowsInfoAndDoesNotSelect()
+    {
+        // Arrange: to lejere, som hver har en udlejet reol
+        var renterA = AddRenter();
+        var renterB = AddRenter();
+        var rackA = AddRackWithStatus(1, RackStatus.Rented);
+        var rackB = AddRackWithStatus(2, RackStatus.Rented);
+        AddRental(rackA, renterA, null);
+        AddRental(rackB, renterB, null);
+        var viewModel = CreateViewModel();
+        viewModel.SelectRenterCommand.Execute(renterA);
+
+        // Act: klik på lejer B's reol, mens lejer A er valgt
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[1]);
+
+        // Assert
+        Assert.IsNotNull(_dialog.LastInfo);
+        Assert.IsFalse(viewModel.Racks[1].IsSelected);
+    }
+}
+
+
+================================================
+FIL: ReolmarkedetG12.Tests\RelayCommandTests.cs
+================================================
+using ReolmarkedetG12.UI.MVVM;
+
+namespace ReolmarkedetG12.Tests;
+
+[TestClass]
+public class RelayCommandTests
+{
+    [TestMethod]
+    public void Execute_RunsTheAction()
+    {
+        // Arrange
+        bool wasCalled = false;
+        var command = new RelayCommand(_ => wasCalled = true);
+
+        // Act
+        command.Execute(null);
+
+        // Assert
+        Assert.IsTrue(wasCalled);
+    }
+
+    [TestMethod]
+    public void CanExecute_NoCondition_ReturnsTrue()
+    {
+        var command = new RelayCommand(_ => { });
+
+        Assert.IsTrue(command.CanExecute(null));
+    }
+
+    [TestMethod]
+    public void CanExecute_ConditionIsFalse_ReturnsFalse()
+    {
+        var command = new RelayCommand(_ => { }, _ => false);
+
+        Assert.IsFalse(command.CanExecute(null));
+    }
+}
+
+
+================================================
+FIL: ReolmarkedetG12.Tests\RentalPriceCalculatorTests.cs
+================================================
+using ReolmarkedetG12.Core.Models;
+using ReolmarkedetG12.Core.Services;
+
+namespace ReolmarkedetG12.Tests;
+
+[TestClass]
+public class RentalPriceCalculatorTests
+{
+    private static List<RentalPriceTier> GetTiers()
+    {
+        return new List<RentalPriceTier>
+        {
+            new RentalPriceTier { MinRacks = 1, MaxRacks = 1, PricePerRack = 850 },
+            new RentalPriceTier { MinRacks = 2, MaxRacks = 3, PricePerRack = 825 },
+            new RentalPriceTier { MinRacks = 4, MaxRacks = null, PricePerRack = 800 }
+        };
+    }
+
+    [TestMethod]
+    public void CalculateMonthlyRent_OneRack_Returns850()
+    {
+        // Arrange
+        var tiers = GetTiers();
+
+        // Act
+        decimal result = RentalPriceCalculator.CalculateMonthlyRent(1, tiers);
+
+        // Assert
+        Assert.AreEqual(850m, result);
+    }
+
+    [TestMethod]
+    public void CalculateMonthlyRent_TwoRacks_Returns1675()
+    {
+        // Arrange
+        var tiers = GetTiers();
+
+        // Act
+        decimal result = RentalPriceCalculator.CalculateMonthlyRent(2, tiers);
+
+        // Assert
+        Assert.AreEqual(1675m, result);
+    }
+    [TestMethod]
+    public void CalculateMonthlyRent_ThreeRacks_Returns2500()
+    {
+        // Arrange
+        var tiers = GetTiers();
+
+        // Act
+        decimal result = RentalPriceCalculator.CalculateMonthlyRent(3, tiers);
+
+        // Assert
+        Assert.AreEqual(2500m, result);
+    }
+    [TestMethod]
+    public void CalculateMonthlyRent_FourRacks_Returns3300()
+    {
+        // Arrange
+        var tiers = GetTiers();
+
+        // Act
+        decimal result = RentalPriceCalculator.CalculateMonthlyRent(4, tiers);
+
+        // Assert
+        Assert.AreEqual(3300m, result);
+    }
+    [TestMethod]
+    public void CalculateMonthlyRent_ZeroRacks_ThrowsArgumentException()
+    {
+        // Arrange
+        var tiers = GetTiers();
+
+        // Act + Assert
+        Assert.ThrowsExactly<ArgumentException>(() =>
+            RentalPriceCalculator.CalculateMonthlyRent(0, tiers));
+    }
+    [TestMethod]
+    public void CalculateMonthlyRent_NoPriceTiers_ThrowsInvalidOperationException()
+    {
+        // Arrange: en tom liste uden prisregler
+        var tiers = new List<RentalPriceTier>();
+
+        // Act + Assert
+        Assert.ThrowsExactly<InvalidOperationException>(() =>
+            RentalPriceCalculator.CalculateMonthlyRent(1, tiers));
+    }
+}
+
+
+================================================
+FIL: ReolmarkedetG12.Tests\RentalPriceTierRepositoryTests.cs
+================================================
+using ReolmarkedetG12.Core.Exceptions;
+using ReolmarkedetG12.Core.Repositories;
+
+namespace ReolmarkedetG12.Tests;
+
+[TestClass]
+public class RentalPriceTierRepositoryTests
+{
+    private const string TestConnectionString = TestDatabase.ConnectionString;
+
+    [TestMethod]
+    [TestCategory("Database")]
+    public void GetAll_TestDatabase_Returns3Tiers()
+    {
+        // Arrange
+        var repo = new RentalPriceTierRepository(TestConnectionString);
+
+        // Act
+        var tiers = repo.GetAll().ToList();
+
+        // Assert
+        Assert.HasCount(3, tiers);
+    }
+
+    [TestMethod]
+    [TestCategory("Database")]
+    public void GetAll_TestDatabase_ReturnsCorrectPrices()
+    {
+        // Arrange
+        var repo = new RentalPriceTierRepository(TestConnectionString);
+
+        // Act
+        var tiers = repo.GetAll().OrderBy(t => t.MinRacks).ToList();
+
+        // Assert: første trin er 1 reol til 850 kr.
+        Assert.AreEqual(1, tiers[0].MinRacks);
+        Assert.AreEqual(1, tiers[0].MaxRacks);
+        Assert.AreEqual(850m, tiers[0].PricePerRack);
+
+        // Assert: sidste trin har ingen øvre grænse (4 reoler og op) til 800 kr.
+        Assert.AreEqual(4, tiers[2].MinRacks);
+        Assert.IsNull(tiers[2].MaxRacks);
+        Assert.AreEqual(800m, tiers[2].PricePerRack);
+    }
+
+    [TestMethod]
+    public void GetAll_ServerDoesNotExist_ThrowsDatabaseConnectionException()
+    {
+        // Arrange: en server der ikke findes
+        var repo = new RentalPriceTierRepository(
+            "Server=findes-ikke;Database=x;Connect Timeout=1;Trusted_Connection=True;TrustServerCertificate=True;");
+
+        // Act + Assert
+        Assert.ThrowsExactly<DatabaseConnectionException>(() => repo.GetAll());
+    }
+}
+
+
+================================================
+FIL: ReolmarkedetG12.Tests\RentalRepositoryTests.cs
+================================================
+using ReolmarkedetG12.Core.Exceptions;
+using ReolmarkedetG12.Core.Models;
+using ReolmarkedetG12.Core.Repositories;
+
+namespace ReolmarkedetG12.Tests;
+
+[TestClass]
+[DoNotParallelize]
+public class RentalRepositoryTests
+{
+    private const string TestConnectionString = TestDatabase.ConnectionString;
+
+    // En lejeaftale skal høre til en lejer, så vi opretter en testlejer
+    private static Renter CreateTestRenter()
+    {
+        var renterRepo = new RenterRepository(TestConnectionString);
+        renterRepo.Add(new Renter
+        {
+            FirstName = "RentalTest",
+            LastName = "Test",
+            Address = "Testvej 1",
+            PostalCode = 4200,
+            City = "Slagelse"
+        });
+        return renterRepo.GetAll().First(r => r.FirstName == "RentalTest");
+    }
+
+    // En lejeaftale skal også høre til en reol, så vi bruger den første reol
+    private static int GetAnyRackId()
+    {
+        return new RackRepository(TestConnectionString).GetAll().First().RackId;
+    }
+
+    // Sletter testlejerens lejeaftaler først og derefter selve lejeren
+    private static void DeleteTestRenter(Renter renter)
+    {
+        var rentalRepo = new RentalRepository(TestConnectionString);
+        foreach (var rental in rentalRepo.GetAll().Where(r => r.RenterId == renter.RenterId))
+        {
+            rentalRepo.Delete(rental.RentalId);
+        }
+        new RenterRepository(TestConnectionString).Delete(renter.RenterId);
+    }
+
+    [TestMethod]
+    [TestCategory("Database")]
+    public void Add_NewRental_AllFieldsAreSavedInDatabase()
+    {
+        // Arrange
+        var renter = CreateTestRenter();
+        int rackId = GetAnyRackId();
+        var repo = new RentalRepository(TestConnectionString);
+
+        // Act
+        repo.Add(new Rental
+        {
+            RackId = rackId,
+            RenterId = renter.RenterId,
+            StartDate = new DateTime(2026, 1, 15),
+            EndDate = null,
+            MonthlyRent = 850m
+        });
+        var saved = repo.GetAll().FirstOrDefault(r => r.RenterId == renter.RenterId);
+
+        // Oprydning
+        DeleteTestRenter(renter);
+
+        // Assert
+        Assert.IsNotNull(saved);
+        Assert.AreEqual(rackId, saved.RackId);
+        Assert.AreEqual(new DateTime(2026, 1, 15), saved.StartDate);
+        Assert.IsNull(saved.EndDate);
+        Assert.AreEqual(850m, saved.MonthlyRent);
+    }
+
+    [TestMethod]
+    [TestCategory("Database")]
+    public void Add_RentalWithEndDate_SavesEndDate()
+    {
+        // Arrange
+        var renter = CreateTestRenter();
+        var repo = new RentalRepository(TestConnectionString);
+
+        // Act
+        repo.Add(new Rental
+        {
+            RackId = GetAnyRackId(),
+            RenterId = renter.RenterId,
+            StartDate = new DateTime(2026, 1, 15),
+            EndDate = new DateTime(2026, 6, 30),
+            MonthlyRent = 850m
+        });
+        var saved = repo.GetAll().FirstOrDefault(r => r.RenterId == renter.RenterId);
+
+        // Oprydning
+        DeleteTestRenter(renter);
+
+        // Assert
+        Assert.IsNotNull(saved);
+        Assert.AreEqual(new DateTime(2026, 6, 30), saved.EndDate);
+    }
+
+    [TestMethod]
+    [TestCategory("Database")]
+    public void GetById_NonExistingId_ReturnsNull()
+    {
+        // Arrange
+        var repo = new RentalRepository(TestConnectionString);
+
+        // Act
+        var rental = repo.GetById(-1);
+
+        // Assert
+        Assert.IsNull(rental);
+    }
+
+    [TestMethod]
+    [TestCategory("Database")]
+    public void Update_ChangeMonthlyRent_IsSavedInDatabase()
+    {
+        // Arrange: opret en lejeaftale
+        var renter = CreateTestRenter();
+        var repo = new RentalRepository(TestConnectionString);
+        repo.Add(new Rental
+        {
+            RackId = GetAnyRackId(),
+            RenterId = renter.RenterId,
+            StartDate = new DateTime(2026, 1, 15),
+            MonthlyRent = 850m
+        });
+        var rental = repo.GetAll().First(r => r.RenterId == renter.RenterId);
+
+        // Act: ret huslejen, og hent lejeaftalen igen
+        rental.MonthlyRent = 1675m;
+        repo.Update(rental);
+        var updated = repo.GetById(rental.RentalId);
+
+        // Oprydning
+        DeleteTestRenter(renter);
+
+        // Assert
+        Assert.IsNotNull(updated);
+        Assert.AreEqual(1675m, updated.MonthlyRent);
+    }
+
+    [TestMethod]
+    [TestCategory("Database")]
+    public void Delete_ExistingRental_RemovesItFromDatabase()
+    {
+        // Arrange: opret en lejeaftale
+        var renter = CreateTestRenter();
+        var repo = new RentalRepository(TestConnectionString);
+        repo.Add(new Rental
+        {
+            RackId = GetAnyRackId(),
+            RenterId = renter.RenterId,
+            StartDate = new DateTime(2026, 1, 15),
+            MonthlyRent = 850m
+        });
+        var rental = repo.GetAll().First(r => r.RenterId == renter.RenterId);
+
+        // Act: slet lejeaftalen
+        repo.Delete(rental.RentalId);
+        var result = repo.GetById(rental.RentalId);
+
+        // Oprydning
+        DeleteTestRenter(renter);
+
+        // Assert
+        Assert.IsNull(result);
+    }
+
+    [TestMethod]
+    public void GetAll_ServerDoesNotExist_ThrowsDatabaseConnectionException()
+    {
+        // Arrange: en server der ikke findes
+        var repo = new RentalRepository(
+            "Server=findes-ikke;Database=x;Connect Timeout=1;Trusted_Connection=True;TrustServerCertificate=True;");
+
+        // Act + Assert
+        Assert.ThrowsExactly<DatabaseConnectionException>(() => repo.GetAll());
+    }
+}
+
+
+================================================
+FIL: ReolmarkedetG12.Tests\RenterRepositoryTests.cs
+================================================
+using ReolmarkedetG12.Core.Models;
+using ReolmarkedetG12.Core.Repositories;
+using ReolmarkedetG12.Core.Exceptions;
+
+namespace ReolmarkedetG12.Tests;
+
+[TestClass]
+[DoNotParallelize]
+public class RenterRepositoryTests
+{
+    private const string TestConnectionString = TestDatabase.ConnectionString;
+
+    [TestMethod]
+    [TestCategory("Database")]
+    public void Add_NewRenter_AllFieldsAreSavedInDatabase()
+    {
+        // Arrange: alle felter er udfyldt
+        var repo = new RenterRepository(TestConnectionString);
+        var renter = new Renter
+        {
+            FirstName = "TestFornavn",
+            LastName = "TestEfternavn",
+            Address = "Testvej 1",
+            PostalCode = 4200,
+            City = "Slagelse",
+            Email = "test@test.dk",
+            Phone = "12345678"
+        };
+
+        // Act
+        repo.Add(renter);
+
+        // Find den nye lejer, og slet den igen (oprydning)
+        var saved = repo.GetAll().FirstOrDefault(r => r.FirstName == "TestFornavn");
+        if (saved != null)
+        {
+            repo.Delete(saved.RenterId);
+        }
+
+        // Assert
+        Assert.IsNotNull(saved);
+        Assert.AreEqual("TestEfternavn", saved.LastName);
+        Assert.AreEqual("Testvej 1", saved.Address);
+        Assert.AreEqual(4200, saved.PostalCode);
+        Assert.AreEqual("Slagelse", saved.City);
+        Assert.AreEqual("test@test.dk", saved.Email);
+        Assert.AreEqual("12345678", saved.Phone);
+    }
+
+    [TestMethod]
+    [TestCategory("Database")]
+    public void Add_RenterWithoutEmailAndPhone_SavesThemAsNull()
+    {
+        // Arrange: Email og Phone er ikke udfyldt
+        var repo = new RenterRepository(TestConnectionString);
+        repo.Add(new Renter
+        {
+            FirstName = "NullTest",
+            LastName = "Test",
+            Address = "Testvej 1",
+            PostalCode = 4200,
+            City = "Slagelse"
+        });
+
+        // Act
+        var saved = repo.GetAll().FirstOrDefault(r => r.FirstName == "NullTest");
+
+        // Oprydning
+        if (saved != null)
+        {
+            repo.Delete(saved.RenterId);
+        }
+
+        // Assert
+        Assert.IsNotNull(saved);
+        Assert.IsNull(saved.Email);
+        Assert.IsNull(saved.Phone);
+    }
+
+    [TestMethod]
+    [TestCategory("Database")]
+    public void GetById_NonExistingId_ReturnsNull()
+    {
+        // Arrange
+        var repo = new RenterRepository(TestConnectionString);
+
+        // Act
+        var renter = repo.GetById(-1);
+
+        // Assert
+        Assert.IsNull(renter);
+    }
+
+    [TestMethod]
+    [TestCategory("Database")]
+    public void Update_ChangeCity_IsSavedInDatabase()
+    {
+        // Arrange: opret en lejer
+        var repo = new RenterRepository(TestConnectionString);
+        repo.Add(new Renter
+        {
+            FirstName = "UpdateTest",
+            LastName = "Test",
+            Address = "Testvej 1",
+            PostalCode = 4200,
+            City = "Slagelse"
+        });
+        var renter = repo.GetAll().First(r => r.FirstName == "UpdateTest");
+
+        // Act: ret byen, og hent lejeren igen
+        renter.City = "Korsør";
+        repo.Update(renter);
+        var updated = repo.GetById(renter.RenterId);
+
+        // Oprydning
+        repo.Delete(renter.RenterId);
+
+        // Assert
+        Assert.IsNotNull(updated);
+        Assert.AreEqual("Korsør", updated.City);
+    }
+
+    [TestMethod]
+    [TestCategory("Database")]
+    public void Delete_ExistingRenter_RemovesItFromDatabase()
+    {
+        // Arrange: opret en lejer
+        var repo = new RenterRepository(TestConnectionString);
+        repo.Add(new Renter
+        {
+            FirstName = "DeleteTest",
+            LastName = "Test",
+            Address = "Testvej 1",
+            PostalCode = 4200,
+            City = "Slagelse"
+        });
+        var renter = repo.GetAll().First(r => r.FirstName == "DeleteTest");
+
+        // Act: slet lejeren
+        repo.Delete(renter.RenterId);
+        var result = repo.GetById(renter.RenterId);
+
+        // Assert
+        Assert.IsNull(result);
+    }
+    [TestMethod]
+    public void GetAll_ServerDoesNotExist_ThrowsDatabaseConnectionException()
+    {
+        // Arrange: en server der ikke findes
+        var repo = new RenterRepository(
+            "Server=findes-ikke;Database=x;Connect Timeout=1;Trusted_Connection=True;TrustServerCertificate=True;");
+
+        // Act + Assert
+        Assert.ThrowsExactly<DatabaseConnectionException>(() => repo.GetAll());
+    }
+}
+
+
+================================================
+FIL: ReolmarkedetG12.Tests\RenterViewModelTests.cs
+================================================
+using ReolmarkedetG12.Core.Models;
+using ReolmarkedetG12.Tests.Fakes;
+using ReolmarkedetG12.UI.ViewModels;
+
+namespace ReolmarkedetG12.Tests;
+
+[TestClass]
+public class RenterViewModelTests
+{
+    [TestMethod]
+    public void Constructor_RentersInRepository_LoadsThemIntoList()
+    {
+        // Arrange: to lejere i den falske database
+        var repo = new FakeRenterRepository();
+        repo.Add(new Renter { FirstName = "Anna", LastName = "Andersen", Address = "Vej 1", PostalCode = 4200, City = "Slagelse" });
+        repo.Add(new Renter { FirstName = "Bo", LastName = "Bertelsen", Address = "Vej 2", PostalCode = 4200, City = "Slagelse" });
+
+        // Act
+        var viewModel = new RenterViewModel(repo, new FakeRentalRepository(), new FakeDialogService());
+
+        // Assert
+        Assert.HasCount(2, viewModel.Renters);
+    }
+
+    [TestMethod]
+    public void SaveCommand_NewRenter_AddsRenterToRepository()
+    {
+        // Arrange: udfyld formularen
+        var repo = new FakeRenterRepository();
+        var viewModel = new RenterViewModel(repo, new FakeRentalRepository(), new FakeDialogService());
+        viewModel.FirstName = "Anna";
+        viewModel.LastName = "Andersen";
+        viewModel.Address = "Testvej 1";
+        viewModel.PostalCode = 4200;
+        viewModel.City = "Slagelse";
+
+        // Act: tryk Gem
+        viewModel.SaveCommand.Execute(null);
+
+        // Assert
+        Assert.HasCount(1, repo.Renters);
+        Assert.AreEqual("Anna", repo.Renters[0].FirstName);
+    }
+
+    [TestMethod]
+    public void SaveCommand_MissingFirstName_ShowsErrorAndSavesNothing()
+    {
+        // Arrange: fornavn mangler
+        var repo = new FakeRenterRepository();
+        var dialog = new FakeDialogService();
+        var viewModel = new RenterViewModel(repo, new FakeRentalRepository(), dialog);
+        viewModel.LastName = "Andersen";
+        viewModel.Address = "Testvej 1";
+        viewModel.PostalCode = 4200;
+        viewModel.City = "Slagelse";
+
+        // Act
+        viewModel.SaveCommand.Execute(null);
+
+        // Assert
+        Assert.IsNotNull(dialog.LastError);
+        Assert.HasCount(0, repo.Renters);
+    }
+
+    [TestMethod]
+    public void SaveCommand_DatabaseDown_ShowsErrorInsteadOfCrashing()
+    {
+        // Arrange: databasen er fin ved opstart, men går ned bagefter
+        var repo = new FakeRenterRepository();
+        var dialog = new FakeDialogService();
+        var viewModel = new RenterViewModel(repo, new FakeRentalRepository(), dialog);
+        viewModel.FirstName = "Anna";
+        viewModel.LastName = "Andersen";
+        viewModel.Address = "Testvej 1";
+        viewModel.PostalCode = 4200;
+        viewModel.City = "Slagelse";
+        repo.SimulateDatabaseDown = true;
+
+        // Act
+        viewModel.SaveCommand.Execute(null);
+
+        // Assert
+        Assert.IsNotNull(dialog.LastError);
+        Assert.Contains("Kunne ikke forbinde", dialog.LastError);
+    }
+
+    [TestMethod]
+    public void Constructor_DatabaseDown_ShowsErrorInsteadOfCrashing()
+    {
+        // Arrange: databasen er nede fra start
+        var repo = new FakeRenterRepository { SimulateDatabaseDown = true };
+        var dialog = new FakeDialogService();
+
+        // Act
+        var viewModel = new RenterViewModel(repo, new FakeRentalRepository(), dialog);
+
+        // Assert
+        Assert.IsNotNull(dialog.LastError);
+        Assert.HasCount(0, viewModel.Renters);
+    }
+    [TestMethod]
+    public void DeleteCommand_UserConfirms_RemovesRenter()
+    {
+        // Arrange: én lejer, og brugeren svarer Ja
+        var repo = new FakeRenterRepository();
+        repo.Add(new Renter { FirstName = "Anna", LastName = "Andersen", Address = "Vej 1", PostalCode = 4200, City = "Slagelse" });
+        var dialog = new FakeDialogService { ConfirmResult = true };
+        var viewModel = new RenterViewModel(repo, new FakeRentalRepository(), dialog);
+        viewModel.SelectedRenter = viewModel.Renters[0];
+
+        // Act
+        viewModel.DeleteCommand.Execute(null);
+
+        // Assert
+        Assert.HasCount(0, repo.Renters);
+    }
+
+    [TestMethod]
+    public void DeleteCommand_UserDeclines_KeepsRenter()
+    {
+        // Arrange: én lejer, og brugeren svarer Nej
+        var repo = new FakeRenterRepository();
+        repo.Add(new Renter { FirstName = "Anna", LastName = "Andersen", Address = "Vej 1", PostalCode = 4200, City = "Slagelse" });
+        var dialog = new FakeDialogService { ConfirmResult = false };
+        var viewModel = new RenterViewModel(repo, new FakeRentalRepository(), dialog);
+        viewModel.SelectedRenter = viewModel.Renters[0];
+
+        // Act
+        viewModel.DeleteCommand.Execute(null);
+
+        // Assert
+        Assert.HasCount(1, repo.Renters);
+    }
+
+    [TestMethod]
+    public void DeleteCommand_RenterHasRentals_ShowsErrorAndKeepsRenter()
+    {
+        // Arrange: én lejer, som har et lejemål registreret
+        var repo = new FakeRenterRepository();
+        repo.Add(new Renter { FirstName = "Anna", LastName = "Andersen", Address = "Vej 1", PostalCode = 4200, City = "Slagelse" });
+        var rentalRepo = new FakeRentalRepository();
+        rentalRepo.Add(new Rental { RackId = 1, RenterId = repo.Renters[0].RenterId, StartDate = DateTime.Now });
+        var dialog = new FakeDialogService { ConfirmResult = true };
+        var viewModel = new RenterViewModel(repo, rentalRepo, dialog);
+        viewModel.SelectedRenter = viewModel.Renters[0];
+
+        // Act
+        viewModel.DeleteCommand.Execute(null);
+
+        // Assert: lejeren slettes ikke, og der vises en forklarende fejl (ikke en rå SQL-fejl)
+        Assert.HasCount(1, repo.Renters);
+        Assert.IsNotNull(dialog.LastError);
+        Assert.Contains("kan derfor ikke slettes", dialog.LastError);
+    }
+
+    [TestMethod]
+    public void SaveCommand_ExistingRenter_UpdatesInsteadOfAddingNew()
+    {
+        // Arrange: vælg en eksisterende lejer, og ret byen
+        var repo = new FakeRenterRepository();
+        repo.Add(new Renter { FirstName = "Anna", LastName = "Andersen", Address = "Vej 1", PostalCode = 4200, City = "Slagelse" });
+        var viewModel = new RenterViewModel(repo, new FakeRentalRepository(), new FakeDialogService());
+        viewModel.SelectedRenter = viewModel.Renters[0];
+        viewModel.City = "Korsør";
+
+        // Act
+        viewModel.SaveCommand.Execute(null);
+
+        // Assert: der er stadig kun én lejer, og byen er ændret
+        Assert.HasCount(1, repo.Renters);
+        Assert.AreEqual("Korsør", repo.Renters[0].City);
+    }
+}
+
+
+================================================
+FIL: ReolmarkedetG12.Tests\ReolmarkedetG12.Tests.csproj
+================================================
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	  <TargetFramework>net10.0-windows</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MSTest" Version="4.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\src\ReolmarkedetG12.Core\ReolmarkedetG12.Core.csproj" />
+	<ProjectReference Include="..\src\ReolmarkedetG12.UI\ReolmarkedetG12.UI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+  </ItemGroup>
+
+</Project>
+
+
+
+================================================
+FIL: ReolmarkedetG12.Tests\TestDatabase.cs
+================================================
+namespace ReolmarkedetG12.Tests;
+
+public static class TestDatabase
+{
+    // Ret servernavnet her, hvis din SQL Server ikke hedder localhost
+    public const string ConnectionString =
+        "Server=localhost;Database=ReolmarkedetTest;Trusted_Connection=True;TrustServerCertificate=True;";
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.Core\Exceptions\DatabaseConnectionException.cs
+================================================
+namespace ReolmarkedetG12.Core.Exceptions;
+
+public class DatabaseConnectionException : Exception
+{
+    public DatabaseConnectionException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.Core\Models\Payment.cs
+================================================
+namespace ReolmarkedetG12.Core.Models;
+
+public class Payment
+{
+    public int PaymentId { get; set; }
+    public int RenterId { get; set; }
+    public DateTime Date { get; set; }
+    public decimal Amount { get; set; }
+    public PaymentType Type { get; set; }
+    public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.MobilePay;
+}
+
+
+
+================================================
+FIL: src\ReolmarkedetG12.Core\Models\PaymentMethod.cs
+================================================
+namespace ReolmarkedetG12.Core.Models;
+
+public enum PaymentMethod
+{
+    MobilePay,
+    Bank,
+    Cash
+}
+
+
+
+================================================
+FIL: src\ReolmarkedetG12.Core\Models\PaymentType.cs
+================================================
+namespace ReolmarkedetG12.Core.Models;
+
+public enum PaymentType
+{
+    FirstMonthPayment,
+    MonthlyPayment
+}
+
+
+
+================================================
+FIL: src\ReolmarkedetG12.Core\Models\Rack.cs
+================================================
+namespace ReolmarkedetG12.Core.Models;
+
+public class Rack
+{
+    public int RackId { get; set; }
+    public int Number { get; set; }
+    public RackStatus Status { get; set; }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.Core\Models\RackStatus.cs
+================================================
+namespace ReolmarkedetG12.Core.Models;
+
+public enum RackStatus
+{
+    Available,
+    Rented,
+    Terminated
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.Core\Models\Rental.cs
+================================================
+namespace ReolmarkedetG12.Core.Models;
+
+public class Rental
+{
+    public int RentalId { get; set; }
+    public int RackId { get; set; }
+    public int RenterId { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public decimal MonthlyRent { get; set; }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.Core\Models\RentalPriceTier.cs
+================================================
+namespace ReolmarkedetG12.Core.Models;
+
+public class RentalPriceTier
+{
+    public int TierId { get; set; }
+    public int MinRacks { get; set; }
+    public int? MaxRacks { get; set; }
+    public decimal PricePerRack { get; set; }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.Core\Models\Renter.cs
+================================================
+namespace ReolmarkedetG12.Core.Models;
+
+public class Renter
+{
+    public int RenterId { get; set; }
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public string Address { get; set; } = string.Empty;
+    public int PostalCode { get; set; }
+    public string City { get; set; } = string.Empty;
+    public string? Phone { get; set; }
+    public string? Email { get; set; }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.Core\Models\Sale.cs
+================================================
+namespace ReolmarkedetG12.Core.Models;
+
+public class Sale
+{
+    public int SaleId { get; set; }
+    public int RackId { get; set; }
+    public int RenterId { get; set; }
+    public DateTime Date { get; set; }
+    public decimal Amount { get; set; }
+    public string? Description { get; set; }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.Core\Repositories\IRentalPriceTierRepository.cs
+================================================
+using ReolmarkedetG12.Core.Models;
+
+namespace ReolmarkedetG12.Core.Repositories;
+
+public interface IRentalPriceTierRepository
+{
+    IEnumerable<RentalPriceTier> GetAll();
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.Core\Repositories\IRepository.cs
+================================================
+namespace ReolmarkedetG12.Core.Repositories;
+
+public interface IRepository<T>
+{
+    void Add(T item); // Create
+    T? GetById(int id); // Read
+    void Update(T item); // Update
+    void Delete(int id); // Delete
+    IEnumerable<T> GetAll();
+}
+
+
+
+================================================
+FIL: src\ReolmarkedetG12.Core\Repositories\PaymentRepository.cs
+================================================
+using Microsoft.Data.SqlClient;
+using ReolmarkedetG12.Core.Exceptions;
+using ReolmarkedetG12.Core.Models;
+
+namespace ReolmarkedetG12.Core.Repositories
+{
+    public class PaymentRepository : IRepository<Payment>
+    {
+        private readonly string _connectionString;
+
+        public PaymentRepository(string connectionString)
+        {
+            _connectionString = connectionString;
+        }
+
+        private SqlConnection OpenConnection()
+        {
+            var connection = new SqlConnection(_connectionString);
+            try
+            {
+                connection.Open();
+                return connection;
+            }
+            catch (SqlException ex)
+            {
+                connection.Dispose();
+                throw new DatabaseConnectionException("Kunne ikke forbinde til databasen.", ex);
+            }
+        }
+
+        public IEnumerable<Payment> GetAll()
+        {
+            var payments = new List<Payment>();
+            string query = "SELECT * FROM PAYMENT";
+
+            using (SqlConnection connection = OpenConnection())
+            {
+                SqlCommand command = new SqlCommand(query, connection);
+
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        payments.Add(new Payment
+                        {
+                            PaymentId = (int)reader["PaymentId"],
+                            RenterId = (int)reader["RenterId"],
+                            Date = (DateTime)reader["Date"],
+                            Amount = (decimal)reader["Amount"],
+                            Type = (PaymentType)(int)reader["Type"],
+                            PaymentMethod = (PaymentMethod)(int)reader["PaymentMethod"]
+                        });
+                    }
+                }
+            }
+
+            return payments;
+        }
+
+        public Payment? GetById(int id)
+        {
+            Payment? payment = null;
+            string query = "SELECT * FROM PAYMENT WHERE PaymentId = @PaymentId";
+
+            using (SqlConnection connection = OpenConnection())
+            {
+                SqlCommand command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@PaymentId", id);
+
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        payment = new Payment
+                        {
+                            PaymentId = (int)reader["PaymentId"],
+                            RenterId = (int)reader["RenterId"],
+                            Date = (DateTime)reader["Date"],
+                            Amount = (decimal)reader["Amount"],
+                            Type = (PaymentType)(int)reader["Type"],
+                            PaymentMethod = (PaymentMethod)(int)reader["PaymentMethod"]
+                        };
+                    }
+                }
+            }
+
+            return payment;
+        }
+
+        public void Add(Payment payment)
+        {
+            string query = "INSERT INTO PAYMENT (RenterId, Date, Amount, Type, PaymentMethod) VALUES (@RenterId, @Date, @Amount, @Type, @PaymentMethod)";
+
+            using (SqlConnection connection = OpenConnection())
+            {
+                SqlCommand command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@RenterId", payment.RenterId);
+                command.Parameters.AddWithValue("@Date", payment.Date);
+                command.Parameters.AddWithValue("@Amount", payment.Amount);
+                command.Parameters.AddWithValue("@Type", (int)payment.Type);
+                command.Parameters.AddWithValue("@PaymentMethod", (int)payment.PaymentMethod);
+                command.ExecuteNonQuery();
+            }
+        }
+
+        public void Update(Payment payment)
+        {
+            string query = "UPDATE PAYMENT SET RenterId = @RenterId, Date = @Date, Amount = @Amount, Type = @Type, PaymentMethod = @PaymentMethod WHERE PaymentId = @PaymentId";
+
+            using (SqlConnection connection = OpenConnection())
+            {
+                SqlCommand command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@RenterId", payment.RenterId);
+                command.Parameters.AddWithValue("@Date", payment.Date);
+                command.Parameters.AddWithValue("@Amount", payment.Amount);
+                command.Parameters.AddWithValue("@Type", (int)payment.Type);
+                command.Parameters.AddWithValue("@PaymentMethod", (int)payment.PaymentMethod);
+                command.Parameters.AddWithValue("@PaymentId", payment.PaymentId);
+                command.ExecuteNonQuery();
+            }
+        }
+
+        public void Delete(int id)
+        {
+            string query = "DELETE FROM PAYMENT WHERE PaymentId = @PaymentId";
+
+            using (SqlConnection connection = OpenConnection())
+            {
+                SqlCommand command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@PaymentId", id);
+                command.ExecuteNonQuery();
+            }
+        }
+    }
+}
+
+
+
+================================================
+FIL: src\ReolmarkedetG12.Core\Repositories\RackRepository.cs
+================================================
+using Microsoft.Data.SqlClient;
+using ReolmarkedetG12.Core.Exceptions;
+using ReolmarkedetG12.Core.Models;
+namespace ReolmarkedetG12.Core.Repositories;
+
+public class RackRepository : IRepository<Rack>
+{
+    private readonly string _connectionString;
+
+    public RackRepository(string connectionString)
+    {
+        _connectionString = connectionString;
+    }
+
+    private SqlConnection OpenConnection()
+    {
+        var connection = new SqlConnection(_connectionString);
+        try
+        {
+            connection.Open();
+            return connection;
+        }
+        catch (SqlException ex)
+        {
+            connection.Dispose();
+            throw new DatabaseConnectionException("Kunne ikke forbinde til databasen.", ex);
+        }
+    }
+
+    public IEnumerable<Rack> GetAll()
+    {
+        var racks = new List<Rack>();
+        string query = "SELECT * FROM RACK";
+
+        using (SqlConnection connection = OpenConnection())
+        {
+            SqlCommand command = new SqlCommand(query, connection);
+
+            using (SqlDataReader reader = command.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    racks.Add(new Rack
+                    {
+                        RackId = (int)reader["RackId"],
+                        Number = (int)reader["Number"],
+                        Status = (RackStatus)(int)reader["Status"]
+                    });
+                }
+            }
+        }
+
+        return racks;
+    }
+
+    public Rack? GetById(int id)
+    {
+        Rack? rack = null;
+        string query = "SELECT * FROM RACK WHERE RackId = @RackId";
+
+        using (SqlConnection connection = OpenConnection())
+        {
+            SqlCommand command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@RackId", id);
+
+            using (SqlDataReader reader = command.ExecuteReader())
+            {
+                if (reader.Read())
+                {
+                    rack = new Rack
+                    {
+                        RackId = (int)reader["RackId"],
+                        Number = (int)reader["Number"],
+                        Status = (RackStatus)(int)reader["Status"]
+                    };
+                }
+            }
+        }
+
+        return rack;
+    }
+
+    public void Add(Rack rack)
+    {
+        string query = "INSERT INTO RACK (Number, Status) VALUES (@Number, @Status)";
+
+        using (SqlConnection connection = OpenConnection())
+        {
+            SqlCommand command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@Number", rack.Number);
+            command.Parameters.AddWithValue("@Status", (int)rack.Status);
+            command.ExecuteNonQuery();
+        }
+    }
+
+    public void Update(Rack rack)
+    {
+        string query = "UPDATE RACK SET Number = @Number, Status = @Status WHERE RackId = @RackId";
+
+        using (SqlConnection connection = OpenConnection())
+        {
+            SqlCommand command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@Number", rack.Number);
+            command.Parameters.AddWithValue("@Status", (int)rack.Status);
+            command.Parameters.AddWithValue("@RackId", rack.RackId);
+            command.ExecuteNonQuery();
+        }
+    }
+
+    public void Delete(int id)
+    {
+        string query = "DELETE FROM RACK WHERE RackId = @RackId";
+
+        using (SqlConnection connection = OpenConnection())
+        {
+            SqlCommand command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@RackId", id);
+            command.ExecuteNonQuery();
+        }
+    }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.Core\Repositories\RentalPriceTierRepository.cs
+================================================
+using Microsoft.Data.SqlClient;
+using ReolmarkedetG12.Core.Exceptions;
+using ReolmarkedetG12.Core.Models;
+
+namespace ReolmarkedetG12.Core.Repositories;
+
+public class RentalPriceTierRepository : IRentalPriceTierRepository
+{
+    private readonly string _connectionString;
+
+    public RentalPriceTierRepository(string connectionString)
+    {
+        _connectionString = connectionString;
+    }
+
+    private SqlConnection OpenConnection()
+    {
+        var connection = new SqlConnection(_connectionString);
+        try
+        {
+            connection.Open();
+            return connection;
+        }
+        catch (SqlException ex)
+        {
+            connection.Dispose();
+            throw new DatabaseConnectionException("Kunne ikke forbinde til databasen.", ex);
+        }
+    }
+
+    public IEnumerable<RentalPriceTier> GetAll()
+    {
+        var tiers = new List<RentalPriceTier>();
+        string query = "SELECT * FROM RENTAL_PRICE_TIER";
+
+        using (SqlConnection connection = OpenConnection())
+        {
+            SqlCommand command = new SqlCommand(query, connection);
+
+            using (SqlDataReader reader = command.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    tiers.Add(new RentalPriceTier
+                    {
+                        TierId = (int)reader["TierId"],
+                        MinRacks = (int)reader["MinRacks"],
+                        MaxRacks = reader["MaxRacks"] as int?,
+                        PricePerRack = (decimal)reader["PricePerRack"]
+                    });
+                }
+            }
+        }
+
+        return tiers;
+    }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.Core\Repositories\RentalRepository.cs
+================================================
+using Microsoft.Data.SqlClient;
+using ReolmarkedetG12.Core.Exceptions;
+using ReolmarkedetG12.Core.Models;
+
+namespace ReolmarkedetG12.Core.Repositories
+{
+    public class RentalRepository : IRepository<Rental>
+    {
+        private readonly string _connectionString;
+
+        public RentalRepository(string connectionString)
+        {
+            _connectionString = connectionString;
+        }
+
+        private SqlConnection OpenConnection()
+        {
+            var connection = new SqlConnection(_connectionString);
+            try
+            {
+                connection.Open();
+                return connection;
+            }
+            catch (SqlException ex)
+            {
+                connection.Dispose();
+                throw new DatabaseConnectionException("Kunne ikke forbinde til databasen.", ex);
+            }
+        }
+
+        public IEnumerable<Rental> GetAll()
+        {
+            var rentals = new List<Rental>();
+            string query = "SELECT * FROM RENTAL";
+
+            using (SqlConnection connection = OpenConnection())
+            {
+                SqlCommand command = new SqlCommand(query, connection);
+
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        rentals.Add(new Rental
+                        {
+                            RentalId = (int)reader["RentalId"],
+                            RackId = (int)reader["RackId"],
+                            RenterId = (int)reader["RenterId"],
+                            StartDate = (DateTime)reader["StartDate"],
+                            EndDate = reader["EndDate"] == DBNull.Value ? null : (DateTime?)reader["EndDate"],
+                            MonthlyRent = (decimal)reader["MonthlyRent"]
+                        });
+                    }
+                }
+            }
+
+            return rentals;
+        }
+
+        public Rental? GetById(int id)
+        {
+            Rental? rental = null;
+            string query = "SELECT * FROM RENTAL WHERE RentalId = @RentalId";
+
+            using (SqlConnection connection = OpenConnection())
+            {
+                SqlCommand command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@RentalId", id);
+
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        rental = new Rental
+                        {
+                            RentalId = (int)reader["RentalId"],
+                            RackId = (int)reader["RackId"],
+                            RenterId = (int)reader["RenterId"],
+                            StartDate = (DateTime)reader["StartDate"],
+                            EndDate = reader["EndDate"] == DBNull.Value ? null : (DateTime?)reader["EndDate"],
+                            MonthlyRent = (decimal)reader["MonthlyRent"]
+                        };
+                    }
+                }
+            }
+
+            return rental;
+        }
+
+        public void Add(Rental rental)
+        {
+            string query = "INSERT INTO RENTAL (RackId, RenterId, StartDate, EndDate, MonthlyRent) VALUES (@RackId, @RenterId, @StartDate, @EndDate, @MonthlyRent)";
+
+            using (SqlConnection connection = OpenConnection())
+            {
+                SqlCommand command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@RackId", rental.RackId);
+                command.Parameters.AddWithValue("@RenterId", rental.RenterId);
+                command.Parameters.AddWithValue("@StartDate", rental.StartDate);
+                command.Parameters.AddWithValue("@EndDate", rental.EndDate ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@MonthlyRent", rental.MonthlyRent);
+                command.ExecuteNonQuery();
+            }
+        }
+
+        public void Update(Rental rental)
+        {
+            string query = "UPDATE RENTAL SET RackId = @RackId, RenterId = @RenterId, StartDate = @StartDate, EndDate = @EndDate, MonthlyRent = @MonthlyRent WHERE RentalId = @RentalId";
+
+            using (SqlConnection connection = OpenConnection())
+            {
+                SqlCommand command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@RackId", rental.RackId);
+                command.Parameters.AddWithValue("@RenterId", rental.RenterId);
+                command.Parameters.AddWithValue("@StartDate", rental.StartDate);
+                command.Parameters.AddWithValue("@EndDate", rental.EndDate ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@MonthlyRent", rental.MonthlyRent);
+                command.Parameters.AddWithValue("@RentalId", rental.RentalId);
+                command.ExecuteNonQuery();
+            }
+        }
+
+        public void Delete(int id)
+        {
+            string query = "DELETE FROM RENTAL WHERE RentalId = @RentalId";
+
+            using (SqlConnection connection = OpenConnection())
+            {
+                SqlCommand command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@RentalId", id);
+                command.ExecuteNonQuery();
+            }
+        }
+    }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.Core\Repositories\RenterRepository.cs
+================================================
+using Microsoft.Data.SqlClient;
+using System;
+using System.Collections.Generic;
+using System.Text;
+using ReolmarkedetG12.Core.Exceptions;
+using ReolmarkedetG12.Core.Models;
+
+namespace ReolmarkedetG12.Core.Repositories
+{
+    public class RenterRepository : IRepository<Renter>
+    {
+        private readonly string _connectionString;
+
+        public RenterRepository(string connectionString)
+        {
+            _connectionString = connectionString;
+        }
+
+        private SqlConnection OpenConnection()
+        {
+            var connection = new SqlConnection(_connectionString);
+            try
+            {
+                connection.Open();
+                return connection;
+            }
+            catch (SqlException ex)
+            {
+                connection.Dispose();
+                throw new DatabaseConnectionException("Kunne ikke forbinde til databasen.", ex);
+            }
+        }
+
+        public IEnumerable<Renter> GetAll()
+        {
+            var renters = new List<Renter>();
+            string query = "SELECT * FROM RENTER";
+
+            using (SqlConnection connection = OpenConnection())
+            {
+                SqlCommand command = new SqlCommand(query, connection);
+
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        renters.Add(new Renter
+                        {
+                            RenterId = (int)reader["RenterId"],
+                            FirstName = (string)reader["FirstName"],
+                            LastName = (string)reader["LastName"],
+                            Address = (string)reader["Address"],
+                            PostalCode = (int)reader["PostalCode"],
+                            City = (string)reader["City"],
+                            Email = reader["Email"] == DBNull.Value ? null : (string)reader["Email"],
+                            Phone = reader["Phone"] == DBNull.Value ? null : (string)reader["Phone"]
+                        });
+                    }
+                }
+            }
+
+            return renters;
+        }
+
+        public Renter? GetById(int id)
+        {
+            Renter? renter = null;
+            string query = "SELECT * FROM RENTER WHERE RenterId = @RenterId";
+
+            using (SqlConnection connection = OpenConnection())
+            {
+                SqlCommand command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@RenterId", id);
+
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        renter = new Renter
+                        {
+                            RenterId = (int)reader["RenterId"],
+                            FirstName = (string)reader["FirstName"],
+                            LastName = (string)reader["LastName"],
+                            Address = (string)reader["Address"],
+                            PostalCode = (int)reader["PostalCode"],
+                            City = (string)reader["City"],
+                            Email = reader["Email"] == DBNull.Value ? null : (string)reader["Email"],
+                            Phone = reader["Phone"] == DBNull.Value ? null : (string)reader["Phone"]
+                        };
+                    }
+                }
+            }
+
+            return renter;
+        }
+
+        public void Add(Renter renter)
+        {
+            string query = "INSERT INTO RENTER (FirstName, LastName, Address, PostalCode, City, Email, Phone) VALUES (@FirstName, @LastName, @Address, @PostalCode, @City, @Email, @Phone)";
+
+            using (SqlConnection connection = OpenConnection())
+            {
+                SqlCommand command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@FirstName", renter.FirstName);
+                command.Parameters.AddWithValue("@LastName", renter.LastName);
+                command.Parameters.AddWithValue("@Address", renter.Address);
+                command.Parameters.AddWithValue("@PostalCode", renter.PostalCode);
+                command.Parameters.AddWithValue("@City", renter.City);
+                command.Parameters.AddWithValue("@Email", (object?)renter.Email ?? DBNull.Value);
+                command.Parameters.AddWithValue("@Phone", (object?)renter.Phone ?? DBNull.Value);
+                command.ExecuteNonQuery();
+            }
+        }
+
+        public void Update(Renter renter)
+        {
+            string query = "UPDATE RENTER SET FirstName = @FirstName, LastName = @LastName, Address = @Address, PostalCode = @PostalCode, City = @City, Email = @Email, Phone = @Phone WHERE RenterId = @RenterId";
+
+            using (SqlConnection connection = OpenConnection())
+            {
+                SqlCommand command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@FirstName", renter.FirstName);
+                command.Parameters.AddWithValue("@LastName", renter.LastName);
+                command.Parameters.AddWithValue("@Address", renter.Address);
+                command.Parameters.AddWithValue("@PostalCode", renter.PostalCode);
+                command.Parameters.AddWithValue("@City", renter.City);
+                command.Parameters.AddWithValue("@Email", (object?)renter.Email ?? DBNull.Value);
+                command.Parameters.AddWithValue("@Phone", (object?)renter.Phone ?? DBNull.Value);
+                command.Parameters.AddWithValue("@RenterId", renter.RenterId);
+                command.ExecuteNonQuery();
+            }
+        }
+
+        public void Delete(int id)
+        {
+            string query = "DELETE FROM RENTER WHERE RenterId = @RenterId";
+
+            using (SqlConnection connection = OpenConnection())
+            {
+                SqlCommand command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@RenterId", id);
+                command.ExecuteNonQuery();
+            }
+        }
+    }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.Core\Repositories\SaleRepository.cs
+================================================
+using Microsoft.Data.SqlClient;
+using ReolmarkedetG12.Core.Exceptions;
+using ReolmarkedetG12.Core.Models;
+
+namespace ReolmarkedetG12.Core.Repositories
+{
+    public class SaleRepository : IRepository<Sale>
+    {
+        private readonly string _connectionString;
+
+        public SaleRepository(string connectionString)
+        {
+            _connectionString = connectionString;
+        }
+
+        private SqlConnection OpenConnection()
+        {
+            var connection = new SqlConnection(_connectionString);
+            try
+            {
+                connection.Open();
+                return connection;
+            }
+            catch (SqlException ex)
+            {
+                connection.Dispose();
+                throw new DatabaseConnectionException("Kunne ikke forbinde til databasen.", ex);
+            }
+        }
+
+        public IEnumerable<Sale> GetAll()
+        {
+            var sales = new List<Sale>();
+            string query = "SELECT * FROM SALE";
+
+            using (SqlConnection connection = OpenConnection())
+            {
+                SqlCommand command = new SqlCommand(query, connection);
+
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        sales.Add(new Sale
+                        {
+                            SaleId = (int)reader["SaleId"],
+                            RackId = (int)reader["RackId"],
+                            RenterId = (int)reader["RenterId"],
+                            Date = (DateTime)reader["Date"],
+                            Amount = (decimal)reader["Amount"],
+                            Description = reader["Description"] as string
+                        });
+                    }
+                }
+            }
+
+            return sales;
+        }
+
+        public Sale? GetById(int id)
+        {
+            Sale? sale = null;
+            string query = "SELECT * FROM SALE WHERE SaleId = @SaleId";
+
+            using (SqlConnection connection = OpenConnection())
+            {
+                SqlCommand command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@SaleId", id);
+
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        sale = new Sale
+                        {
+                            SaleId = (int)reader["SaleId"],
+                            RackId = (int)reader["RackId"],
+                            RenterId = (int)reader["RenterId"],
+                            Date = (DateTime)reader["Date"],
+                            Amount = (decimal)reader["Amount"],
+                            Description = reader["Description"] as string
+                        };
+                    }
+                }
+            }
+
+            return sale;
+        }
+
+        public void Add(Sale sale)
+        {
+            string query = "INSERT INTO SALE (RackId, RenterId, Date, Amount, Description) VALUES (@RackId, @RenterId, @Date, @Amount, @Description)";
+
+            using (SqlConnection connection = OpenConnection())
+            {
+                SqlCommand command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@RackId", sale.RackId);
+                command.Parameters.AddWithValue("@RenterId", sale.RenterId);
+                command.Parameters.AddWithValue("@Date", sale.Date);
+                command.Parameters.AddWithValue("@Amount", sale.Amount);
+                command.Parameters.AddWithValue("@Description", sale.Description ?? (object)DBNull.Value);
+                command.ExecuteNonQuery();
+            }
+        }
+
+        public void Update(Sale sale)
+        {
+            string query = "UPDATE SALE SET RackId = @RackId, RenterId = @RenterId, Date = @Date, Amount = @Amount, Description = @Description WHERE SaleId = @SaleId";
+
+            using (SqlConnection connection = OpenConnection())
+            {
+                SqlCommand command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@RackId", sale.RackId);
+                command.Parameters.AddWithValue("@RenterId", sale.RenterId);
+                command.Parameters.AddWithValue("@Date", sale.Date);
+                command.Parameters.AddWithValue("@Amount", sale.Amount);
+                command.Parameters.AddWithValue("@Description", sale.Description ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@SaleId", sale.SaleId);
+                command.ExecuteNonQuery();
+            }
+        }
+
+        public void Delete(int id)
+        {
+            string query = "DELETE FROM SALE WHERE SaleId = @SaleId";
+
+            using (SqlConnection connection = OpenConnection())
+            {
+                SqlCommand command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@SaleId", id);
+                command.ExecuteNonQuery();
+            }
+        }
+    }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.Core\Services\RentalPriceCalculator.cs
+================================================
+using ReolmarkedetG12.Core.Models;
+
+namespace ReolmarkedetG12.Core.Services;
+
+public static class RentalPriceCalculator
+{
+    public static decimal CalculateMonthlyRent(int numberOfRacks, IEnumerable<RentalPriceTier> priceTiers)
+    {
+        if (numberOfRacks <= 0)
+            throw new ArgumentException("Antal reoler skal være mindst 1.", nameof(numberOfRacks));
+
+        var tiers = priceTiers.ToList();
+        decimal total = 0;
+
+        for (int position = 1; position <= numberOfRacks; position++)
+        {
+            total += CalculateRackPriceAtPosition(position, tiers);
+        }
+
+        return total;
+    }
+
+    // Prisen for ÉN bestemt reol, ud fra hvilken "plads" den fylder i lejerens stak af reoler
+    // (1. reol = 850, 2.-3. reol = 825 hver, 4. reol og opefter = 800 hver).
+    // Bruges til at give hver reol sin egen faste pristrins-pris — ALDRIG et gennemsnit på tværs af reoler.
+    public static decimal CalculateRackPriceAtPosition(int position, IEnumerable<RentalPriceTier> priceTiers)
+    {
+        if (position <= 0)
+            throw new ArgumentException("Position skal være mindst 1.", nameof(position));
+
+        var matchingTier = priceTiers.FirstOrDefault(tier =>
+            position >= tier.MinRacks &&
+            (tier.MaxRacks == null || position <= tier.MaxRacks));
+
+        if (matchingTier == null)
+            throw new InvalidOperationException($"Ingen prisregel matcher reol nr. {position}.");
+
+        return matchingTier.PricePerRack;
+    }
+
+    public static decimal CalculatePartialMonthRent(decimal monthlyRent, DateOnly startDate)
+    {
+        int daysInMonth = DateTime.DaysInMonth(startDate.Year, startDate.Month);
+        int remainingDays = daysInMonth - startDate.Day + 1;
+        return monthlyRent * remainingDays / daysInMonth;
+    }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.Core\ReolmarkedetG12.Core.csproj
+================================================
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.3" />
+  </ItemGroup>
+
+</Project>
+
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\Converters\NullToVisibilityConverter.cs
+================================================
+using System.Collections;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Data;
+
+namespace ReolmarkedetG12.UI.Converters
+{
+    // Viser et element, når værdien er "tom" (null, tom streng, tom collection, eller 0).
+    // Sæt ConverterParameter="Invert" for at vende logikken om (vis når IKKE tom).
+    public class EmptyToVisibilityConverter : IValueConverter
+    {
+    public object Convert(object? value, Type targetType, object parameter, CultureInfo culture)
+    {
+        bool isEmpty = value switch
+        {
+            null => true,
+            string s => string.IsNullOrEmpty(s),
+            ICollection c => c.Count == 0,
+            int i => i == 0,
+            _ => false
+        };
+
+        bool invert = string.Equals(parameter as string, "Invert", StringComparison.OrdinalIgnoreCase);
+        if (invert)
+            isEmpty = !isEmpty;
+
+        return isEmpty ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => throw new NotSupportedException();
+    }
+}
+
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\MVVM\RelayCommand.cs
+================================================
+using System.Windows.Input;
+
+namespace ReolmarkedetG12.UI.MVVM;
+
+public class RelayCommand : ICommand
+{
+    private readonly Action<object?> execute;
+    private readonly Func<object?, bool>? canExecute;
+
+    public event EventHandler? CanExecuteChanged
+    {
+        add => CommandManager.RequerySuggested += value;
+        remove => CommandManager.RequerySuggested -= value;
+    }
+
+    public RelayCommand(Action<object?> execute, Func<object?, bool>? canExecute = null)
+    {
+        this.execute = execute;
+        this.canExecute = canExecute;
+    }
+
+    public bool CanExecute(object? parameter) => canExecute == null || canExecute(parameter);
+
+    public void Execute(object? parameter) => execute(parameter);
+}
+
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\MVVM\ViewModelBase.cs
+================================================
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+
+namespace ReolmarkedetG12.UI.MVVM;
+
+public class ViewModelBase : INotifyPropertyChanged
+{
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+    {
+        if (EqualityComparer<T>.Default.Equals(field, value))
+            return false;
+        field = value;
+        OnPropertyChanged(propertyName);
+        return true;
+    }
+}
+
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\Services\IDialogService.cs
+================================================
+namespace ReolmarkedetG12.UI.Services;
+
+public interface IDialogService
+{
+    void ShowError(string message, string title);
+    void ShowInfo(string message, string title);
+    bool Confirm(string message, string title);
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\Services\ISecureAreaService.cs
+================================================
+using System.ComponentModel;
+
+namespace ReolmarkedetG12.UI.Services;
+
+// Fælles, simpel adgangsspærre for de "følsomme" faneblade (Søg/ret salg, månedsopgørelse, ...).
+// Det er IKKE rigtig sikkerhed - bare en nem spærre mod at klikke forkert ind.
+public interface ISecureAreaService : INotifyPropertyChanged
+{
+    bool IsUnlocked { get; }
+    bool TryUnlock(string password);
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\Services\MessageBoxDialogService.cs
+================================================
+using System.Windows;
+
+namespace ReolmarkedetG12.UI.Services;
+
+public class MessageBoxDialogService : IDialogService
+{
+    public void ShowError(string message, string title) =>
+        MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
+
+    public void ShowInfo(string message, string title) =>
+        MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
+
+    public bool Confirm(string message, string title) =>
+        MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\Services\SecureAreaService.cs
+================================================
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+
+namespace ReolmarkedetG12.UI.Services;
+
+public class SecureAreaService : ISecureAreaService
+{
+    private readonly string _password;
+    private bool _isUnlocked;
+
+    public SecureAreaService(string password)
+    {
+        _password = password;
+    }
+
+    public bool IsUnlocked
+    {
+        get => _isUnlocked;
+        private set
+        {
+            if (_isUnlocked == value)
+                return;
+
+            _isUnlocked = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsUnlocked)));
+        }
+    }
+
+    public bool TryUnlock(string password)
+    {
+        if (password != _password)
+            return false;
+
+        IsUnlocked = true;
+        return true;
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\ViewModels\CartLineItem.cs
+================================================
+namespace ReolmarkedetG12.UI.ViewModels;
+
+// Én vare i det igangværende salg, endnu ikke gemt nogen steder.
+// Når "Registrer betaling" trykkes, bliver hver linje i kurven til sit eget Sale-salg.
+public class CartLineItem
+{
+    public int RackNumber { get; set; }
+    public string Remark { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\ViewModels\LockScreenViewModel.cs
+================================================
+using ReolmarkedetG12.UI.MVVM;
+using ReolmarkedetG12.UI.Services;
+
+namespace ReolmarkedetG12.UI.ViewModels;
+
+// Delt af enhver ViewModel, der skal ligge bag kodeords-spærren.
+// IsUnlocked afspejler den fælles SecureAreaService, så man kun skal
+// taste kodeordet én gang, uanset hvilket beskyttet faneblad man åbner først.
+public class LockScreenViewModel : ViewModelBase
+{
+    private readonly ISecureAreaService _secureAreaService;
+    private readonly IDialogService _dialogService;
+
+    public bool IsUnlocked => _secureAreaService.IsUnlocked;
+
+    private string _passwordInput = string.Empty;
+    public string PasswordInput
+    {
+        get => _passwordInput;
+        set => SetProperty(ref _passwordInput, value);
+    }
+
+    public RelayCommand UnlockCommand { get; }
+
+    public LockScreenViewModel(ISecureAreaService secureAreaService, IDialogService dialogService)
+    {
+        _secureAreaService = secureAreaService;
+        _dialogService = dialogService;
+
+        _secureAreaService.PropertyChanged += (_, _) => OnPropertyChanged(nameof(IsUnlocked));
+
+        UnlockCommand = new RelayCommand(_ => Unlock());
+    }
+
+    private void Unlock()
+    {
+        if (_secureAreaService.TryUnlock(PasswordInput))
+        {
+            PasswordInput = string.Empty;
+            return;
+        }
+
+        _dialogService.ShowError("Forkert kodeord.", "Adgang");
+        PasswordInput = string.Empty;
+    }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\ViewModels\MainViewModel.cs
+================================================
+using ReolmarkedetG12.UI.MVVM;
+
+namespace ReolmarkedetG12.UI.ViewModels;
+
+public class MainViewModel : ViewModelBase
+{
+    public RackViewModel RackViewModel { get; }
+    public RenterViewModel RenterViewModel { get; }
+    public SalesViewModel SalesViewModel { get; }
+    public SearchSalesViewModel SearchSalesViewModel { get; }
+    public MonthlyStatementViewModel MonthlyStatementViewModel { get; }
+
+    public MainViewModel(
+        RackViewModel rackVm,
+        RenterViewModel RenterVm,
+        SalesViewModel salesVm,
+        SearchSalesViewModel searchSalesVm,
+        MonthlyStatementViewModel monthlyStatementVm)
+    {
+        RackViewModel = rackVm;
+        RenterViewModel = RenterVm;
+        SalesViewModel = salesVm;
+        SearchSalesViewModel = searchSalesVm;
+        MonthlyStatementViewModel = monthlyStatementVm;
+    }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\ViewModels\MonthlyStatementViewModel.cs
+================================================
+using ReolmarkedetG12.UI.MVVM;
+using ReolmarkedetG12.UI.Services;
+
+namespace ReolmarkedetG12.UI.ViewModels;
+
+// Skelet for nu - selve indholdet (hvad en månedsopgørelse faktisk skal vise) bygges senere.
+public class MonthlyStatementViewModel : ViewModelBase
+{
+    public LockScreenViewModel Lock { get; }
+
+    public MonthlyStatementViewModel(ISecureAreaService secureAreaService, IDialogService dialogService)
+    {
+        Lock = new LockScreenViewModel(secureAreaService, dialogService);
+    }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\ViewModels\ObservableCollectionExtensions.cs
+================================================
+using System.Collections.ObjectModel;
+
+namespace ReolmarkedetG12.UI.ViewModels;
+
+public static class ObservableCollectionExtensions
+{
+    public static void RemoveAll<T>(this ObservableCollection<T> collection, Func<T, bool> predicate)
+    {
+        foreach (var item in collection.Where(predicate).ToList())
+            collection.Remove(item);
+    }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\ViewModels\RackDisplayItem.cs
+================================================
+using ReolmarkedetG12.Core.Models;
+using ReolmarkedetG12.UI.MVVM;
+
+namespace ReolmarkedetG12.UI.ViewModels;
+
+public class RackDisplayItem : ViewModelBase
+{
+    public Rack Rack { get; }
+
+    private decimal _monthRent;
+    public decimal MonthRent
+    {
+        get => _monthRent;
+        set { _monthRent = value; OnPropertyChanged(); }
+    }
+
+    private bool _isSelected;
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set { _isSelected = value; OnPropertyChanged(); }
+    }
+
+    private DateTime? _terminationDate;
+    public DateTime? TerminationDate
+    {
+        get => _terminationDate;
+        set { _terminationDate = value; OnPropertyChanged(); }
+    }
+
+    public RackDisplayItem(Rack rack)
+    {
+        Rack = rack;
+    }
+
+    public void RefreshStatus() => OnPropertyChanged(nameof(Rack));
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\ViewModels\RackViewModel.cs
+================================================
+using System.Collections.ObjectModel;
+using System.Windows.Input;
+using System.Windows.Threading;
+using ReolmarkedetG12.Core.Exceptions;
+using ReolmarkedetG12.Core.Models;
+using ReolmarkedetG12.Core.Repositories;
+using ReolmarkedetG12.Core.Services;
+using ReolmarkedetG12.UI.MVVM;
+using ReolmarkedetG12.UI.Services;
+using Microsoft.Data.SqlClient;
+
+namespace ReolmarkedetG12.UI.ViewModels;
+
+public class RackViewModel : ViewModelBase
+{
+    private readonly IRepository<Rack> _rackRepository;
+    private readonly IRepository<Renter> _renterRepository;
+    private readonly IRepository<Rental> _rentalRepository;
+    private readonly IRentalPriceTierRepository _rentalPriceTierRepository;
+    private readonly IRepository<Payment> _paymentRepository;
+    private readonly IDialogService _dialogService;
+    private readonly DispatcherTimer _terminationCheckTimer;
+    private bool _timerCheckFailed;
+
+    private readonly ObservableCollection<RackDisplayItem> _selectedRacks = new();
+
+    public ObservableCollection<RackDisplayItem> Racks { get; } = new();
+
+    public ObservableCollection<RackDisplayItem> LeftColumnRacks { get; } = new();
+    public ObservableCollection<RackDisplayItem> Cluster_14_18 { get; } = new();
+    public ObservableCollection<RackDisplayItem> Cluster_19_24 { get; } = new();
+    public ObservableCollection<RackDisplayItem> Cluster_25_38 { get; } = new();
+    public ObservableCollection<RackDisplayItem> Cluster_39_52 { get; } = new();
+    public ObservableCollection<RackDisplayItem> Cluster_53_66 { get; } = new();
+    public ObservableCollection<RackDisplayItem> Cluster_67_76 { get; } = new();
+    public ObservableCollection<RackDisplayItem> Cluster_77_78 { get; } = new();
+    public ObservableCollection<RackDisplayItem> Cluster_79_80 { get; } = new();
+
+    public ObservableCollection<RackDisplayItem> SelectedRacks => _selectedRacks;
+
+    public ObservableCollection<RenterRackDisplayItem> RenterRacks { get; } = new();
+
+    // Samlet mÃ¥nedsbelÃ¸b for lejerens aktive/opsagte reoler â€” udledes af RenterRacks,
+    // ikke gemt separat. Raises OnPropertyChanged manuelt, hver gang RenterRacks Ã¦ndres.
+    public decimal TotalMonthlyRent => RenterRacks.Sum(r => r.Rental.MonthlyRent);
+
+    public ObservableCollection<Renter> SearchResults { get; } = new();
+
+    private string _searchQuery = string.Empty;
+    public string SearchQuery
+    {
+        get => _searchQuery;
+        set
+        {
+            _searchQuery = value;
+            OnPropertyChanged();
+            PerformSearch();
+        }
+    }
+
+    private Renter? _foundRenter;
+    public Renter? FoundRenter
+    {
+        get => _foundRenter;
+        private set { _foundRenter = value; OnPropertyChanged(); }
+    }
+
+    public ICommand SelectRackCommand { get; }
+    public ICommand SelectRenterCommand { get; }
+    public ICommand CreateRentalCommand { get; }
+    public ICommand TerminateRentalCommand { get; }
+    public ICommand CancelTerminationCommand { get; }
+
+    public RackViewModel(IRepository<Rack> rackRepository, IRepository<Renter> renterRepository, IRepository<Rental> rentalRepository, IRentalPriceTierRepository rentalPriceTierRepository, IRepository<Payment> paymentRepository, IDialogService dialogService)
+    {
+        _rackRepository = rackRepository;
+        _renterRepository = renterRepository;
+        _rentalRepository = rentalRepository;
+        _rentalPriceTierRepository = rentalPriceTierRepository;
+        _paymentRepository = paymentRepository;
+        _dialogService = dialogService;
+
+        List<RackDisplayItem> allItems;
+        try
+        {
+            allItems = _rackRepository.GetAll()
+                .Select(rack => new RackDisplayItem(rack))
+                .ToList();
+        }
+        catch (DatabaseConnectionException ex)
+        {
+            _dialogService.ShowError(
+                $"{ex.Message}\n\nTeknisk besked: {ex.InnerException?.Message ?? "ukendt"}",
+                "Forbindelsesfejl");
+            allItems = new List<RackDisplayItem>();
+        }
+        catch (SqlException ex)
+        {
+            _dialogService.ShowError(
+                $"Der opstod en fejl i databasen.\n\nTeknisk besked: {ex.Message}",
+                "Databasefejl");
+            allItems = new List<RackDisplayItem>();
+        }
+
+        foreach (var item in allItems)
+            Racks.Add(item);
+
+        AddRange(LeftColumnRacks, allItems.Where(i => i.Rack.Number is >= 1 and <= 13)
+            .OrderByDescending(i => i.Rack.Number));
+
+        AddRange(Cluster_14_18, InRange(allItems, 14, 18));
+        AddRange(Cluster_19_24, InRange(allItems, 19, 24));
+        AddRange(Cluster_25_38, InRange(allItems, 25, 38));
+        AddRange(Cluster_39_52, InRange(allItems, 39, 52));
+        AddRange(Cluster_53_66, InRange(allItems, 53, 66));
+        AddRange(Cluster_67_76, InRange(allItems, 67, 76));
+        AddRange(Cluster_77_78, InRange(allItems, 77, 78));
+        AddRange(Cluster_79_80, InRange(allItems, 79, 80));
+
+        SafeExecute(RefreshAllTerminationInfo);
+
+        _terminationCheckTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMinutes(1)
+        };
+        _terminationCheckTimer.Tick += (_, _) => CheckTerminationDatesFromTimer();
+        _terminationCheckTimer.Start();
+
+        SelectRackCommand = new RelayCommand(item =>
+        {
+            SafeExecute(() =>
+            {
+                var clicked = (RackDisplayItem)item!;
+
+                RefreshTerminationInfo(clicked);
+
+                if (!clicked.IsSelected &&
+                    (clicked.Rack.Status == RackStatus.Rented || clicked.Rack.Status == RackStatus.Terminated))
+                {
+                    var relevantRental = clicked.Rack.Status == RackStatus.Rented
+                        ? _rentalRepository.GetAll().FirstOrDefault(r => r.RackId == clicked.Rack.RackId && r.EndDate == null)
+                        : _rentalRepository.GetAll().Where(r => r.RackId == clicked.Rack.RackId && r.EndDate != null)
+                            .OrderByDescending(r => r.EndDate).FirstOrDefault();
+
+                    if (relevantRental != null)
+                    {
+                        if (FoundRenter != null && relevantRental.RenterId != FoundRenter.RenterId)
+                        {
+                            _dialogService.ShowInfo(
+                                "Denne reol tilhÃ¸rer en anden lejer end den, du allerede har valgt. " +
+                                "Ryd sÃ¸gefeltet, hvis du vil skifte til en anden lejer.",
+                                "Reol tilhÃ¸rer en anden lejer");
+                            return;
+                        }
+                        clicked.MonthRent = relevantRental.MonthlyRent;
+                        var renter = _renterRepository.GetById(relevantRental.RenterId);
+                        if (renter != null)
+                        {
+                            FoundRenter = renter;
+                            SearchResults.Clear();
+                            LoadRenterRacks();
+                        }
+                    }
+                }
+
+                clicked.IsSelected = !clicked.IsSelected;
+
+                if (clicked.IsSelected)
+                {
+                    _selectedRacks.Add(clicked);
+                }
+                else
+                {
+                    _selectedRacks.Remove(clicked);
+
+                    if (_selectedRacks.Count == 0)
+                    {
+                        ClearRenterSelection();
+                    }
+                }
+
+                UpdateSelectedRackPrices();
+            });
+        });
+
+        SelectRenterCommand = new RelayCommand(item =>
+        {
+            SafeExecute(() =>
+            {
+                FoundRenter = (Renter)item!;
+                SearchResults.Clear();
+                LoadRenterRacks();
+            });
+        });
+
+        CreateRentalCommand = new RelayCommand(
+            _ => SafeExecute(CreateRental),
+            _ => FoundRenter != null && _selectedRacks.Any(r => r.Rack.Status == RackStatus.Available));
+
+        TerminateRentalCommand = new RelayCommand(
+            _ => SafeExecute(TerminateRental),
+            _ => FoundRenter != null && _selectedRacks.Any(r => r.Rack.Status == RackStatus.Rented));
+
+        CancelTerminationCommand = new RelayCommand(
+            _ => SafeExecute(CancelTermination),
+            _ => FoundRenter != null && _selectedRacks.Any(r => r.Rack.Status == RackStatus.Terminated));
+    }
+
+    private bool SafeExecute(Action action, bool showError = true)
+    {
+        try
+        {
+            action();
+            return true;
+        }
+        catch (DatabaseConnectionException ex)
+        {
+            if (showError)
+            {
+                _dialogService.ShowError(
+                    $"{ex.Message}\n\nTeknisk besked: {ex.InnerException?.Message ?? "ukendt"}",
+                    "Forbindelsesfejl");
+            }
+            return false;
+        }
+        catch (SqlException ex)
+        {
+            if (showError)
+            {
+                _dialogService.ShowError(
+                    $"Der opstod en fejl i databasen.\n\nTeknisk besked: {ex.Message}",
+                    "Databasefejl");
+            }
+            return false;
+        }
+    }
+
+    private void RefreshAllTerminationInfo()
+    {
+        foreach (var item in Racks)
+            RefreshTerminationInfo(item);
+    }
+
+    public void CheckTerminationDatesFromTimer()
+    {
+        // Vis kun fejlen fÃ¸rste gang. Er databasen stadig nede, prÃ¸ver vi stille igen nÃ¦ste minut.
+        _timerCheckFailed = !SafeExecute(RefreshAllTerminationInfo, showError: !_timerCheckFailed);
+    }
+
+    private void RefreshTerminationInfo(RackDisplayItem item)
+    {
+        if (item.Rack.Status != RackStatus.Terminated)
+        {
+            item.TerminationDate = null;
+            return;
+        }
+
+        var relevantRental = _rentalRepository.GetAll()
+            .Where(r => r.RackId == item.Rack.RackId && r.EndDate != null)
+            .OrderByDescending(r => r.EndDate)
+            .FirstOrDefault();
+
+        if (relevantRental == null)
+        {
+            item.TerminationDate = null;
+            return;
+        }
+
+        if (relevantRental.EndDate <= DateTime.Now.Date)
+        {
+            item.Rack.Status = RackStatus.Available;
+            _rackRepository.Update(item.Rack);
+            item.TerminationDate = null;
+            item.RefreshStatus();
+        }
+        else
+        {
+            item.TerminationDate = relevantRental.EndDate;
+        }
+    }
+
+    private void PerformSearch()
+    {
+        SearchResults.Clear();
+
+        if (string.IsNullOrWhiteSpace(SearchQuery))
+        {
+            FoundRenter = null;
+            RenterRacks.Clear();
+            OnPropertyChanged(nameof(TotalMonthlyRent));
+            return;
+        }
+
+        SafeExecute(() =>
+        {
+            var matches = _renterRepository.GetAll()
+                .Where(r =>
+                    $"{r.FirstName} {r.LastName} {r.Email} {r.Phone} {r.Address} {r.PostalCode} {r.City}"
+                        .Contains(SearchQuery, StringComparison.OrdinalIgnoreCase));
+
+            foreach (var renter in matches)
+                SearchResults.Add(renter);
+        });
+
+        FoundRenter = null;
+        RenterRacks.Clear();
+        OnPropertyChanged(nameof(TotalMonthlyRent));
+    }
+
+    private void LoadRenterRacks()
+    {
+        RenterRacks.Clear();
+
+        if (FoundRenter == null)
+        {
+            OnPropertyChanged(nameof(TotalMonthlyRent));
+            return;
+        }
+
+        var relevantRentals = _rentalRepository.GetAll()
+            .Where(r => r.RenterId == FoundRenter.RenterId &&
+                        (r.EndDate == null || r.EndDate > DateTime.Now.Date));
+
+        foreach (var rental in relevantRentals)
+        {
+            var rackItem = Racks.FirstOrDefault(r => r.Rack.RackId == rental.RackId);
+            if (rackItem != null)
+                RenterRacks.Add(new RenterRackDisplayItem(rackItem, rental));
+        }
+
+        OnPropertyChanged(nameof(TotalMonthlyRent));
+        UpdateSelectedRackPrices();
+    }
+
+    // Viser fÃ¸rste (del)mÃ¥neds leje for hver valgt ledig reol. Hver NY reol fÃ¥r sin egen
+    // pristrins-pris ud fra hvilken plads den fylder i lejerens stak af reoler (ALDRIG et gennemsnit) â€”
+    // lejerens eksisterende reoler beholder deres oprindelige pris og rÃ¸rs ikke her.
+    private void UpdateSelectedRackPrices()
+    {
+        var newRacks = _selectedRacks.Where(r => r.Rack.Status == RackStatus.Available).ToList();
+        if (newRacks.Count == 0)
+            return;
+
+        int existingCount = RenterRacks.Count(r => r.Rental.EndDate == null);
+        var priceTiers = _rentalPriceTierRepository.GetAll();
+
+        for (int i = 0; i < newRacks.Count; i++)
+        {
+            int position = existingCount + i + 1;
+            decimal rackMonthlyRent = RentalPriceCalculator.CalculateRackPriceAtPosition(position, priceTiers);
+            newRacks[i].MonthRent = RentalPriceCalculator.CalculatePartialMonthRent(rackMonthlyRent, DateOnly.FromDateTime(DateTime.Now));
+        }
+    }
+
+    private void CreateRental()
+    {
+        if (FoundRenter == null)
+            return;
+
+        var newItems = _selectedRacks.Where(r => r.Rack.Status == RackStatus.Available).ToList();
+        if (newItems.Count == 0)
+            return;
+
+        var firstMonthTotal = newItems.Sum(r => r.MonthRent);
+        if (!_dialogService.Confirm($"Leje fÃ¸rste mÃ¥ned udgÃ¸r {firstMonthTotal:0.00} kr. Modtag betaling. Ã˜nsker du at fortsÃ¦tte?", "Oprettelse"))
+            return;
+
+        // Hver ny reol fÃ¥r sin egen faste pristrins-pris ud fra sin plads i lejerens stak â€”
+        // lejerens EKSISTERENDE reoler beholder deres oprindelige pris og genberegnes ikke.
+        int position = RenterRacks.Count(r => r.Rental.EndDate == null);
+        var priceTiers = _rentalPriceTierRepository.GetAll();
+
+        foreach (var item in newItems)
+        {
+            position++;
+
+            var rental = new Rental
+            {
+                RackId = item.Rack.RackId,
+                RenterId = FoundRenter.RenterId,
+                StartDate = DateTime.Now,
+                EndDate = null,
+                MonthlyRent = RentalPriceCalculator.CalculateRackPriceAtPosition(position, priceTiers)
+            };
+            _rentalRepository.Add(rental);
+
+            item.Rack.Status = RackStatus.Rented;
+            _rackRepository.Update(item.Rack);
+            item.RefreshStatus();
+
+            item.IsSelected = false;
+            RenterRacks.Add(new RenterRackDisplayItem(item, rental));
+        }
+
+        _paymentRepository.Add(new Payment
+        {
+            RenterId = FoundRenter.RenterId,
+            Date = DateTime.Now,
+            Amount = firstMonthTotal,
+            Type = PaymentType.FirstMonthPayment
+        });
+
+        _selectedRacks.Clear();
+        LoadRenterRacks();
+    }
+
+    private void TerminateRental()
+    {
+        if (FoundRenter == null)
+            return;
+
+        foreach (var item in _selectedRacks.ToList())
+        {
+            if (item.Rack.Status != RackStatus.Rented)
+            {
+                item.IsSelected = false;
+                continue;
+            }
+
+            var rental = _rentalRepository.GetAll()
+                .FirstOrDefault(r => r.RackId == item.Rack.RackId && r.RenterId == FoundRenter.RenterId && r.EndDate == null);
+
+            if (rental == null)
+            {
+                item.IsSelected = false;
+                continue;
+            }
+
+            var effectiveDate = CalculateTerminationEffectiveDate(DateTime.Now);
+
+            rental.EndDate = effectiveDate;
+            _rentalRepository.Update(rental);
+
+            item.Rack.Status = RackStatus.Terminated;
+            item.TerminationDate = effectiveDate;
+            _rackRepository.Update(item.Rack);
+            item.RefreshStatus();
+
+            item.IsSelected = false;
+            RenterRacks.RemoveAll(r => r.RackItem == item);
+            RenterRacks.Add(new RenterRackDisplayItem(item, rental));
+        }
+
+        // BemÃ¦rk: de resterende reolers pris genberegnes IKKE her â€” hver reol beholder sin egen
+        // faste pristrins-pris for evigt, uanset hvad der sker med lejerens andre reoler.
+        _selectedRacks.Clear();
+        LoadRenterRacks();
+    }
+
+    private void CancelTermination()
+    {
+        if (FoundRenter == null)
+            return;
+
+        foreach (var item in _selectedRacks.ToList())
+        {
+            if (item.Rack.Status != RackStatus.Terminated)
+            {
+                item.IsSelected = false;
+                continue;
+            }
+
+            var rental = _rentalRepository.GetAll()
+                .Where(r => r.RackId == item.Rack.RackId && r.RenterId == FoundRenter.RenterId && r.EndDate != null)
+                .OrderByDescending(r => r.EndDate)
+                .FirstOrDefault();
+
+            if (rental == null)
+            {
+                item.IsSelected = false;
+                continue;
+            }
+
+            rental.EndDate = null;
+            _rentalRepository.Update(rental);
+
+            item.Rack.Status = RackStatus.Rented;
+            item.TerminationDate = null;
+            _rackRepository.Update(item.Rack);
+            item.RefreshStatus();
+
+            item.IsSelected = false;
+            RenterRacks.RemoveAll(r => r.RackItem == item);
+            RenterRacks.Add(new RenterRackDisplayItem(item, rental));
+        }
+
+        // Samme princip som ved opsigelse: ingen genberegning af de andre reolers pris.
+        _selectedRacks.Clear();
+        LoadRenterRacks();
+    }
+
+    private void ClearRenterSelection()
+    {
+        FoundRenter = null;
+        SearchQuery = string.Empty;
+        RenterRacks.Clear();
+        OnPropertyChanged(nameof(TotalMonthlyRent));
+    }
+
+    public static DateTime CalculateTerminationEffectiveDate(DateTime today)
+    {
+        var monthsToAdd = today.Day < 20 ? 1 : 2;
+        var target = today.AddMonths(monthsToAdd);
+        return new DateTime(target.Year, target.Month, 1);
+    }
+
+    private static IEnumerable<RackDisplayItem> InRange(List<RackDisplayItem> items, int min, int max) =>
+        items.Where(i => i.Rack.Number >= min && i.Rack.Number <= max)
+             .OrderBy(i => i.Rack.Number);
+
+    private static void AddRange(ObservableCollection<RackDisplayItem> target, IEnumerable<RackDisplayItem> source)
+    {
+        foreach (var item in source)
+            target.Add(item);
+    }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\ViewModels\RenterRackDisplayItem.cs
+================================================
+using ReolmarkedetG12.Core.Models;
+
+namespace ReolmarkedetG12.UI.ViewModels;
+
+public class RenterRackDisplayItem
+{
+    public RackDisplayItem RackItem { get; }
+    public Rental Rental { get; }
+
+    public RenterRackDisplayItem(RackDisplayItem rackItem, Rental rental)
+    {
+        RackItem = rackItem;
+        Rental = rental;
+    }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\ViewModels\RenterViewModel.cs
+================================================
+using ReolmarkedetG12.Core.Models;
+using ReolmarkedetG12.Core.Repositories;
+using ReolmarkedetG12.UI.MVVM;
+using System.Collections.ObjectModel;
+using System.Windows.Input;
+using ReolmarkedetG12.Core.Exceptions;
+using ReolmarkedetG12.UI.Services;
+using Microsoft.Data.SqlClient;
+
+namespace ReolmarkedetG12.UI.ViewModels;
+
+public class RenterViewModel : ViewModelBase
+{
+    private readonly IRepository<Renter> _renterRepository;
+    private readonly IRepository<Rental> _rentalRepository;
+    private readonly IDialogService _dialogService;
+
+    public ObservableCollection<Renter> Renters { get; }
+
+    private string _searchQuery = string.Empty;
+    public string SearchQuery
+    {
+        get => _searchQuery;
+        set
+        {
+            if (SetProperty(ref _searchQuery, value))
+            {
+                FilterRenters();
+            }
+        }
+    }
+
+    private Renter? _selectedRenter;
+    public Renter? SelectedRenter
+    {
+        get => _selectedRenter;
+        set
+        {
+            if (SetProperty(ref _selectedRenter, value))
+            {
+                if (value != null)
+                {
+                    RenterId = value.RenterId;
+                    FirstName = value.FirstName;
+                    LastName = value.LastName;
+                    Address = value.Address;
+                    PostalCode = value.PostalCode;
+                    City = value.City;
+                    Phone = value.Phone ?? string.Empty;
+                    Email = value.Email ?? string.Empty;
+                }
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
+    }
+
+    private int _renterId;
+    public int RenterId
+    {
+        get => _renterId;
+        set => SetProperty(ref _renterId, value);
+    }
+
+    private string _firstName = string.Empty;
+    public string FirstName
+    {
+        get => _firstName;
+        set => SetProperty(ref _firstName, value);
+    }
+
+    private string _lastName = string.Empty;
+    public string LastName
+    {
+        get => _lastName;
+        set => SetProperty(ref _lastName, value);
+    }
+    private string _city = string.Empty;
+    public string City
+    {
+        get => _city;
+        set => SetProperty(ref _city, value);
+    }
+    private string _phone = string.Empty;
+    public string Phone
+    {
+        get => _phone;
+        set => SetProperty(ref _phone, value);
+    }
+    private string _email = string.Empty;
+    public string Email
+    {
+        get => _email;
+        set => SetProperty(ref _email, value);
+    }
+    private int _postalCode = 0;
+    public int PostalCode
+    {
+        get => _postalCode;
+        set => SetProperty(ref _postalCode, value);
+    }
+    private string _address = string.Empty;
+    public string Address
+    {
+        get => _address;
+        set => SetProperty(ref _address, value);
+    }
+
+    public ICommand NewCommand { get; }
+    public ICommand SaveCommand { get; }
+    public ICommand DeleteCommand { get; }
+    public ICommand GetAllCommand { get; }
+
+    public RenterViewModel(IRepository<Renter> renterRepository, IRepository<Rental> rentalRepository, IDialogService dialogService)
+    {
+        _renterRepository = renterRepository;
+        _rentalRepository = rentalRepository;
+        _dialogService = dialogService;
+
+        Renters = new ObservableCollection<Renter>();
+
+        NewCommand = new RelayCommand(_ => NewRenter());
+        SaveCommand = new RelayCommand(_ => SafeExecute(SaveRenter));
+        DeleteCommand = new RelayCommand(_ => SafeExecute(DeleteRenter), _ => SelectedRenter != null && SelectedRenter.RenterId > 0);
+        GetAllCommand = new RelayCommand(_ => SafeExecute(LoadRenters));
+
+        SafeExecute(LoadRenters);
+        NewRenter();
+    }
+
+    private void SafeExecute(Action action)
+    {
+        try
+        {
+            action();
+        }
+        catch (DatabaseConnectionException ex)
+        {
+            _dialogService.ShowError(
+                $"{ex.Message}\n\nTeknisk besked: {ex.InnerException?.Message ?? "ukendt"}",
+                "Forbindelsesfejl");
+        }
+        catch (SqlException ex)
+        {
+            _dialogService.ShowError(
+                $"Der opstod en fejl i databasen.\n\nTeknisk besked: {ex.Message}",
+                "Databasefejl");
+        }
+    }
+
+    private void NewRenter()
+    {
+        SelectedRenter = null;
+
+        RenterId = 0;
+        FirstName = string.Empty;
+        LastName = string.Empty;
+        Email = string.Empty;
+        PostalCode = 0;
+        Address = string.Empty;
+        City = string.Empty;
+        Phone = string.Empty;
+    }
+
+    private void LoadRenters()
+    {
+        Renters.Clear();
+        foreach (var renter in _renterRepository.GetAll())
+        {
+            Renters.Add(renter);
+        }
+    }
+
+    private void SaveRenter()
+    {
+        if (string.IsNullOrWhiteSpace(FirstName) || string.IsNullOrWhiteSpace(LastName) || string.IsNullOrWhiteSpace(Address) || PostalCode <= 0 || string.IsNullOrWhiteSpace(City))
+        {
+            _dialogService.ShowError("Fornavn, Efternavn, Adresse, Postnummer og By skal udfyldes.", "Fejl");
+            return;
+        }
+        var renter = new Renter
+        {
+            RenterId = RenterId,
+            FirstName = FirstName,
+            LastName = LastName,
+            Address = Address,
+            PostalCode = PostalCode,
+            City = City,
+            Phone = string.IsNullOrWhiteSpace(Phone) ? null : Phone,
+            Email = string.IsNullOrWhiteSpace(Email) ? null : Email
+        };
+
+        if (renter.RenterId == 0)
+        {
+            // New renter
+            _renterRepository.Add(renter);
+        }
+        else
+        {
+            // Existing renter
+            _renterRepository.Update(renter);
+        }
+
+        LoadRenters();
+        NewRenter(); // Clear fields after saving
+    }
+
+    private void DeleteRenter()
+    {
+        if (SelectedRenter == null)
+            return;
+
+        var harLejemaal = _rentalRepository.GetAll().Any(r => r.RenterId == SelectedRenter.RenterId);
+        if (harLejemaal)
+        {
+            _dialogService.ShowError(
+                $"{SelectedRenter.FirstName} {SelectedRenter.LastName} har (eller har haft) lejemål og kan derfor ikke slettes.",
+                "Kan ikke slette lejer");
+            return;
+        }
+
+        if (_dialogService.Confirm($"Er du sikker på, at du vil slette lejer: {SelectedRenter.FirstName} {SelectedRenter.LastName}?", "Bekræft sletning"))
+        {
+            _renterRepository.Delete(SelectedRenter.RenterId);
+            LoadRenters();
+            NewRenter();
+        }
+    }
+
+    private void FilterRenters()
+    {
+        if (string.IsNullOrWhiteSpace(SearchQuery))
+        {
+            LoadRenters();
+            return;
+        }
+
+        var search = SearchQuery.ToLower();
+
+        var results = _renterRepository.GetAll().Where(r =>
+            r.FirstName.ToLower().Contains(search) ||
+            r.LastName.ToLower().Contains(search) ||
+            (r.Phone != null && r.Phone.ToLower().Contains(search)) ||
+            (r.Email != null && r.Email.ToLower().Contains(search)));
+
+        Renters.Clear();
+        foreach (var renter in results)
+        {
+            Renters.Add(renter);
+        }
+    }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\ViewModels\SaleDisplayItem.cs
+================================================
+using ReolmarkedetG12.UI.MVVM;
+
+namespace ReolmarkedetG12.UI.ViewModels;
+
+// Én række i søge/ret-gridet på "Søg/ret salg"-fanen.
+public class SaleDisplayItem : ViewModelBase
+{
+    private decimal _amount;
+    private string _description = string.Empty;
+
+    public int SaleId { get; set; }
+    public int RackNumber { get; set; }
+    public DateTime Date { get; set; }
+
+    public decimal Amount
+    {
+        get => _amount;
+        set => SetProperty(ref _amount, value);
+    }
+
+    public string Description
+    {
+        get => _description;
+        set => SetProperty(ref _description, value);
+    }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\ViewModels\SalesViewModel.cs
+================================================
+using ReolmarkedetG12.Core.Models;
+using ReolmarkedetG12.Core.Repositories;
+using ReolmarkedetG12.UI.MVVM;
+using ReolmarkedetG12.UI.Services;
+using System.Collections.ObjectModel;
+
+namespace ReolmarkedetG12.UI.ViewModels;
+
+public class SalesViewModel : ViewModelBase
+{
+    private readonly IRepository<Rack> _rackRepository;
+    private readonly IRepository<Rental> _rentalRepository;
+    private readonly IRepository<Sale> _saleRepository;
+    private readonly IDialogService _dialogService;
+
+    // --- "Tilføj vare"-felterne ---
+
+    private int? _newRackNumber;
+    public int? NewRackNumber
+    {
+        get => _newRackNumber;
+        set => SetProperty(ref _newRackNumber, value);
+    }
+
+    private string _newRemark = string.Empty;
+    public string NewRemark
+    {
+        get => _newRemark;
+        set => SetProperty(ref _newRemark, value);
+    }
+
+    private decimal _newPrice;
+    public decimal NewPrice
+    {
+        get => _newPrice;
+        set => SetProperty(ref _newPrice, value);
+    }
+
+    public RelayCommand AddItemCommand { get; }
+
+    // --- "Nuværende salg"-kurven ---
+
+    public ObservableCollection<CartLineItem> CurrentSaleItems { get; } = new();
+
+    private decimal _totalAmount;
+    public decimal TotalAmount
+    {
+        get => _totalAmount;
+        private set => SetProperty(ref _totalAmount, value);
+    }
+
+    public RelayCommand EditItemCommand { get; }
+    public RelayCommand DeleteItemCommand { get; }
+
+    // --- Betaling ---
+
+    public IEnumerable<PaymentMethod> PaymentMethods => Enum.GetValues<PaymentMethod>();
+
+    private PaymentMethod _paymentMethod = PaymentMethod.Cash;
+    public PaymentMethod PaymentMethod
+    {
+        get => _paymentMethod;
+        set
+        {
+            if (SetProperty(ref _paymentMethod, value))
+                RecalculateChange();
+        }
+    }
+
+    private decimal? _cashReceived;
+    public decimal? CashReceived
+    {
+        get => _cashReceived;
+        set
+        {
+            if (SetProperty(ref _cashReceived, value))
+                RecalculateChange();
+        }
+    }
+
+    private decimal _change;
+    public decimal Change
+    {
+        get => _change;
+        private set => SetProperty(ref _change, value);
+    }
+
+    public RelayCommand RegisterSaleCommand { get; }
+
+    public SalesViewModel(
+        IRepository<Rack> rackRepository,
+        IRepository<Rental> rentalRepository,
+        IRepository<Sale> saleRepository,
+        IDialogService dialogService)
+    {
+        _rackRepository = rackRepository;
+        _rentalRepository = rentalRepository;
+        _saleRepository = saleRepository;
+        _dialogService = dialogService;
+
+        AddItemCommand = new RelayCommand(_ => AddItem());
+        EditItemCommand = new RelayCommand(param => EditItem(param as CartLineItem));
+        DeleteItemCommand = new RelayCommand(param => DeleteItem(param as CartLineItem));
+        RegisterSaleCommand = new RelayCommand(_ => RegisterSale(), _ => CurrentSaleItems.Count > 0);
+
+        CurrentSaleItems.CollectionChanged += (_, _) => RecalculateTotals();
+    }
+
+    private void AddItem()
+    {
+        if (NewRackNumber == null || NewPrice <= 0)
+            return;
+
+        CurrentSaleItems.Add(new CartLineItem
+        {
+            RackNumber = NewRackNumber.Value,
+            Remark = NewRemark,
+            Amount = NewPrice
+        });
+
+        NewRackNumber = null;
+        NewRemark = string.Empty;
+        NewPrice = 0;
+    }
+
+    private void EditItem(CartLineItem? item)
+    {
+        if (item == null)
+            return;
+
+        // Hent linjen tilbage op i tilføj-felterne, så den kan rettes og lægges ind igen.
+        NewRackNumber = item.RackNumber;
+        NewRemark = item.Remark;
+        NewPrice = item.Amount;
+        CurrentSaleItems.Remove(item);
+    }
+
+    private void DeleteItem(CartLineItem? item)
+    {
+        if (item == null)
+            return;
+
+        CurrentSaleItems.Remove(item);
+    }
+
+    private void RecalculateTotals()
+    {
+        TotalAmount = CurrentSaleItems.Sum(i => i.Amount);
+        RecalculateChange();
+    }
+
+    private void RecalculateChange()
+    {
+        Change = PaymentMethod == PaymentMethod.Cash && CashReceived.HasValue
+            ? CashReceived.Value - TotalAmount
+            : 0m;
+    }
+
+    private void RegisterSale()
+    {
+        foreach (var item in CurrentSaleItems)
+        {
+            var rack = _rackRepository.GetAll().FirstOrDefault(r => r.Number == item.RackNumber);
+            if (rack == null)
+            {
+                _dialogService.ShowError($"Reol {item.RackNumber} findes ikke.", "Kunne ikke registrere salg");
+                return;
+            }
+
+            var now = DateTime.Now;
+            var activeRental = _rentalRepository.GetAll()
+                .Where(r => r.RackId == rack.RackId && r.StartDate <= now && (r.EndDate == null || r.EndDate > now))
+                .OrderByDescending(r => r.StartDate)
+                .FirstOrDefault();
+            if (activeRental == null)
+            {
+                _dialogService.ShowError($"Reol {item.RackNumber} har ingen aktiv lejer lige nu.", "Kunne ikke registrere salg");
+                return;
+            }
+
+            _saleRepository.Add(new Sale
+            {
+                RackId = rack.RackId,
+                RenterId = activeRental.RenterId,
+                Date = DateTime.Now,
+                Amount = item.Amount,
+                Description = string.IsNullOrWhiteSpace(item.Remark) ? null : item.Remark
+            });
+        }
+
+        CurrentSaleItems.Clear();
+        CashReceived = null;
+    }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\ViewModels\SearchSalesViewModel.cs
+================================================
+using ReolmarkedetG12.Core.Models;
+using ReolmarkedetG12.Core.Repositories;
+using ReolmarkedetG12.UI.MVVM;
+using ReolmarkedetG12.UI.Services;
+using System.Collections.ObjectModel;
+
+namespace ReolmarkedetG12.UI.ViewModels;
+
+public class SearchSalesViewModel : ViewModelBase
+{
+    private readonly IRepository<Rack> _rackRepository;
+    private readonly IRepository<Sale> _saleRepository;
+
+    public LockScreenViewModel Lock { get; }
+
+    private int? _searchRackNumber;
+    public int? SearchRackNumber
+    {
+        get => _searchRackNumber;
+        set => SetProperty(ref _searchRackNumber, value);
+    }
+
+    private DateTime? _searchDate;
+    public DateTime? SearchDate
+    {
+        get => _searchDate;
+        set => SetProperty(ref _searchDate, value);
+    }
+
+    public ObservableCollection<SaleDisplayItem> SaleResults { get; } = new();
+
+    public RelayCommand SearchCommand { get; }
+    public RelayCommand UpdateCommand { get; }
+
+    public SearchSalesViewModel(
+        IRepository<Rack> rackRepository,
+        IRepository<Sale> saleRepository,
+        IDialogService dialogService,
+        ISecureAreaService secureAreaService)
+    {
+        _rackRepository = rackRepository;
+        _saleRepository = saleRepository;
+
+        Lock = new LockScreenViewModel(secureAreaService, dialogService);
+
+        SearchCommand = new RelayCommand(_ => Search());
+        UpdateCommand = new RelayCommand(_ => Update());
+    }
+
+    private void Search()
+    {
+        SaleResults.Clear();
+
+        var racks = _rackRepository.GetAll().ToList();
+
+        foreach (var sale in _saleRepository.GetAll())
+        {
+            var rack = racks.FirstOrDefault(r => r.RackId == sale.RackId);
+            if (rack == null)
+                continue;
+
+            if (SearchRackNumber.HasValue && rack.Number != SearchRackNumber.Value)
+                continue;
+
+            if (SearchDate.HasValue && sale.Date.Date != SearchDate.Value.Date)
+                continue;
+
+            SaleResults.Add(new SaleDisplayItem
+            {
+                SaleId = sale.SaleId,
+                RackNumber = rack.Number,
+                Date = sale.Date,
+                Amount = sale.Amount,
+                Description = sale.Description ?? string.Empty
+            });
+        }
+    }
+
+    private void Update()
+    {
+        foreach (var item in SaleResults)
+        {
+            var sale = _saleRepository.GetById(item.SaleId);
+            if (sale == null)
+                continue;
+
+            sale.Amount = item.Amount;
+            sale.Description = string.IsNullOrWhiteSpace(item.Description) ? null : item.Description;
+            _saleRepository.Update(sale);
+        }
+    }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\Views\LockScreenView.xaml.cs
+================================================
+using System.Windows;
+using System.Windows.Controls;
+using ReolmarkedetG12.UI.ViewModels;
+
+namespace ReolmarkedetG12.UI.Views;
+
+/// <summary>
+/// Interaction logic for LockScreenView.xaml
+/// </summary>
+public partial class LockScreenView : UserControl
+{
+    public LockScreenView()
+    {
+        InitializeComponent();
+    }
+
+    private void PasswordInputBox_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is LockScreenViewModel viewModel)
+            viewModel.PasswordInput = PasswordInputBox.Password;
+    }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\Views\MainWindow.xaml.cs
+================================================
+using System.Windows;
+
+namespace ReolmarkedetG12.UI.Views;
+
+/// <summary>
+/// Interaction logic for MainWindow.xaml
+/// </summary>
+public partial class MainWindow : Window
+{
+    public MainWindow()
+    {
+        InitializeComponent();
+    }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\Views\MonthlyStatementView.xaml.cs
+================================================
+using System.Windows.Controls;
+
+namespace ReolmarkedetG12.UI.Views;
+
+/// <summary>
+/// Interaction logic for MonthlyStatementView.xaml
+/// </summary>
+public partial class MonthlyStatementView : UserControl
+{
+    public MonthlyStatementView()
+    {
+        InitializeComponent();
+    }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\Views\RackView.xaml.cs
+================================================
+using System.Windows.Controls;
+
+namespace ReolmarkedetG12.UI.Views;
+
+/// <summary>
+/// Interaction logic for RackView.xaml
+/// </summary>
+public partial class RackView : UserControl
+{
+    public RackView()
+    {
+        InitializeComponent();
+    }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\Views\RenterView.xaml.cs
+================================================
+using System.Windows.Controls;
+using ReolmarkedetG12.Core.Repositories;
+using ReolmarkedetG12.UI.ViewModels;
+
+namespace ReolmarkedetG12.UI.Views;
+
+/// <summary>
+/// Interaction logic for RenterView.xaml
+/// </summary>
+public partial class RenterView : UserControl
+{
+    public RenterView()
+    {
+        InitializeComponent();
+
+    }
+}
+
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\Views\SalesView.xaml.cs
+================================================
+using System.Windows.Controls;
+
+namespace ReolmarkedetG12.UI.Views;
+
+/// <summary>
+/// Interaction logic for SalesView.xaml
+/// </summary>
+public partial class SalesView : UserControl
+{
+    public SalesView()
+    {
+        InitializeComponent();
+    }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\Views\SearchSalesView.xaml.cs
+================================================
+using System.Windows.Controls;
+
+namespace ReolmarkedetG12.UI.Views;
+
+/// <summary>
+/// Interaction logic for SearchSalesView.xaml
+/// </summary>
+public partial class SearchSalesView : UserControl
+{
+    public SearchSalesView()
+    {
+        InitializeComponent();
+    }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\App.xaml.cs
+================================================
+using System.Windows;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
+using ReolmarkedetG12.Core.Exceptions;
+using ReolmarkedetG12.Core.Repositories;
+using ReolmarkedetG12.UI.Services;
+using ReolmarkedetG12.UI.ViewModels;
+using ReolmarkedetG12.UI.Views;
+
+namespace ReolmarkedetG12.UI;
+
+/// <summary>
+/// Interaction logic for App.xaml
+/// </summary>
+public partial class App : Application
+{
+    protected override void OnStartup(StartupEventArgs e)
+    {
+        base.OnStartup(e);
+
+        var dialogService = new MessageBoxDialogService();
+
+        IConfigurationRoot config;
+        string connectionString;
+        string searchSalesPassword;
+
+        try
+        {
+            config = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json")
+                .Build();
+
+            connectionString = config.GetConnectionString("DefaultConnection")
+                ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found in appsettings.json");
+
+            searchSalesPassword = config["SearchSalesPassword"] ?? "1234";
+        }
+        catch (Exception ex)
+        {
+            dialogService.ShowError(
+                $"Kunne ikke lÃ¦se konfigurationen (appsettings.json).\n\nDetaljer: {ex.Message}",
+                "Opstartsfejl");
+            Shutdown();
+            return;
+        }
+
+        var secureAreaService = new SecureAreaService(searchSalesPassword);
+
+        var rackRepository = new RackRepository(connectionString);
+        var renterRepository = new RenterRepository(connectionString);
+        var rentalRepository = new RentalRepository(connectionString);
+        var rentalPriceTierRepository = new RentalPriceTierRepository(connectionString);
+        var paymentRepository = new PaymentRepository(connectionString);
+        var saleRepository = new SaleRepository(connectionString);
+
+        try
+        {
+            // Et hurtigt, uskyldigt kald der beviser, om databaseforbindelsen reelt virker,
+            // fÃ¸r vi bygger resten af applikationen op omkring den.
+            rackRepository.GetAll();
+        }
+        catch (DatabaseConnectionException ex)
+        {
+            dialogService.ShowError(
+                "Kunne ikke forbinde til databasen. Tjek at SQL Server kÃ¸rer, og at connection string'en i appsettings.json er korrekt.\n\n" +
+                $"Teknisk besked: {ex.InnerException?.Message ?? ex.Message}",
+                "Databasefejl");
+            Shutdown();
+            return;
+        }
+        catch (SqlException ex)
+        {
+            dialogService.ShowError(
+                $"Der opstod en fejl i databasen. Tjek at databasen er oprettet (database/schema.sql).\n\nTeknisk besked: {ex.Message}",
+                "Databasefejl");
+            Shutdown();
+            return;
+        }
+
+        var mainViewModel = new MainViewModel(
+            new RackViewModel(rackRepository, renterRepository, rentalRepository, rentalPriceTierRepository, paymentRepository, dialogService),
+            new RenterViewModel(renterRepository, rentalRepository, dialogService),
+            new SalesViewModel(rackRepository, rentalRepository, saleRepository, dialogService),
+            new SearchSalesViewModel(rackRepository, saleRepository, dialogService, secureAreaService),
+            new MonthlyStatementViewModel(secureAreaService, dialogService));
+
+        var mainWindow = new MainWindow { DataContext = mainViewModel };
+        this.MainWindow = mainWindow;
+        mainWindow.Show();
+    }
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\appsettings.example.json
+================================================
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=YOUR_SERVER_NAME;Database=Reolmarkedet;Trusted_Connection=True;TrustServerCertificate=True;"
+  },
+  "SearchSalesPassword": "1234"
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\appsettings.json
+================================================
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost;Database=Reolmarkedet;Trusted_Connection=True;TrustServerCertificate=True;"
+  },
+  "SearchSalesPassword": "1234"
+}
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\AssemblyInfo.cs
+================================================
+using System.Windows;
+
+[assembly:ThemeInfo(
+    ResourceDictionaryLocation.None,            //where theme specific resource dictionaries are located
+                                                //(used if a resource is not found in the page,
+                                                // or application resource dictionaries)
+    ResourceDictionaryLocation.SourceAssembly   //where the generic resource dictionary is located
+                                                //(used if a resource is not found in the page,
+                                                // app, or any theme specific resource dictionaries)
+)]
+
+
+
+================================================
+FIL: src\ReolmarkedetG12.UI\ReolmarkedetG12.UI.csproj
+================================================
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ReolmarkedetG12.Core\ReolmarkedetG12.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+      <None Update="appsettings.json">
+	      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+</Project>
+
+
+

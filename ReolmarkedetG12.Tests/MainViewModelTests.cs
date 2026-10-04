@@ -17,9 +17,9 @@ public class MainViewModelTests
             new FakePriceTierRepository(), new FakePaymentRepository(), dialog);
         var renterViewModel = new RenterViewModel(new FakeRenterRepository(), new FakeRentalRepository(), dialog);
         var salesViewModel = new SalesViewModel(
-            new FakeRackRepository(), new FakeRentalRepository(), new FakeSaleRepository(), dialog);
+            new FakeRackRepository(), new FakeRentalRepository(), new FakeSaleRepository(), new FakeRenterRepository(), dialog);
         var searchSalesViewModel = new SearchSalesViewModel(
-            new FakeRackRepository(), new FakeSaleRepository(), dialog, new SecureAreaService("1234"));
+            new FakeRackRepository(), new FakeSaleRepository(), new FakeRenterRepository(), dialog, new SecureAreaService("1234"));
         var monthlyStatementViewModel = new MonthlyStatementViewModel(new SecureAreaService("1234"), dialog);
 
         // Act

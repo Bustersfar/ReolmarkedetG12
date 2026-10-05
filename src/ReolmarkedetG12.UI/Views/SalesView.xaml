@@ -40,52 +40,55 @@
                 BorderThickness="1" 
                 CornerRadius="8" 
                 Padding="20">
+            
             <StackPanel>
-                <TextBlock Text="1. Indtast vare" 
+                
+                <TextBlock Text="1. Find vare" 
                            FontSize="18" 
                            FontWeight="Bold" 
                            Foreground="#1F2937" 
                            Margin="0,0,0,16"/>
 
-                <!-- Reolnummer -->
-                <TextBlock Text="Reolnummer *" Style="{StaticResource LabelStyle}"/>
-                <TextBox x:Name="RackNumberBox" 
-                         Text="{Binding NewRackNumber, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}" />
+                <!-- Indtast Varenummer -->
+                <TextBlock Text="Varenummer *" Style="{StaticResource LabelStyle}"/>
 
-                <!-- Valideringstekst for lejer -->
-                <TextBlock Text="{Binding RackValidationMessage}" 
-                           Margin="0,-6,0,12" 
-                           FontWeight="Medium"
-                           TextWrapping="Wrap">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="#DC2626"/>
-                            <!-- Rød ved fejl -->
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsRackValid}" Value="True">
-                                    <Setter Property="Foreground" Value="#16A34A"/>
-                                    <!-- Grøn ved gyldig lejer -->
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding RackValidationMessage}" Value="">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
+                <TextBox Text ="{Binding ItemNumber, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
 
-                <!-- Pris -->
-                <TextBlock Text="Pris (kr.) *" Style="{StaticResource LabelStyle}"/>
-                <TextBox Text="{Binding NewPrice, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0.##}, TargetNullValue=''}">
-                    <!-- Tryk Enter i Pris-feltet tilføjer automatisk varen -->
-                    <TextBox.InputBindings>
-                        <KeyBinding Key="Enter" Command="{Binding AddItemCommand}"/>
-                    </TextBox.InputBindings>
-                </TextBox>
+                <TextBlock Text="{Binding ItemStatusMessage}" Foreground="Red" Margin="0,5,0,0"/>
 
-                <!-- Beskrivelse / Note -->
-                <TextBlock Text="Beskrivelse / note (valgfri)" Style="{StaticResource LabelStyle}"/>
-                <TextBox Text="{Binding NewRemark, UpdateSourceTrigger=PropertyChanged}" Height="50" TextWrapping="Wrap"/>
+                <Border Margin="0,10,0,10"
+                        Padding="10"
+                        BorderBrush="#D1D5DB"
+                        BorderThickness="1">
+
+                    <StackPanel>
+
+                        <TextBlock Text="Vareinformation" Style="{StaticResource LabelStyle}"/>
+                        
+                        <TextBlock>
+                            <Run Text="Varenavn: "/>
+                            <Run Text="{Binding SelectedItem.Name}"/>
+                        </TextBlock>
+                        
+                        <TextBlock>
+                            <Run Text="Varenummer: "/>
+                            <Run Text="{Binding SelectedItem.ItemNumber}"/>
+                        </TextBlock>
+                        
+                        <TextBlock Margin="0,5,0,0">
+                            <Run Text="Pris: "/>
+                            <Run Text="{Binding SelectedItem.Price, StringFormat={}{0:0.00} kr.}"/>
+                        </TextBlock>
+                        
+                        <TextBlock Margin="0,5,0,0">
+                             <Run Text="Reol: "/>
+                             <Run Text="{Binding SelectedItem.RackId}"/>
+                        </TextBlock>
+                        
+                    </StackPanel>
+                </Border>
+
+
 
                 <!-- Knap: Tilføj vare -->
                 <Button Content="Tilføj vare til kurv"
@@ -136,7 +139,7 @@
                                    Foreground="#1F2937" 
                                    DockPanel.Dock="Left"/>
 
-                        <TextBlock Text="{Binding CurrentSaleItems.Count, StringFormat='{}{0} vare(r) i kurv'}" 
+                        <TextBlock Text="{Binding CartItems.Count, StringFormat='{}{0} vare(r) i kurv'}" 
                                    Foreground="#6B7280" 
                                    VerticalAlignment="Center" 
                                    HorizontalAlignment="Right"/>
@@ -144,7 +147,7 @@
 
                     <!-- Tabel over varer -->
                     <DataGrid Grid.Row="1" 
-                              ItemsSource="{Binding CurrentSaleItems}" 
+                              ItemsSource="{Binding CartItems}" 
                               AutoGenerateColumns="False" 
                               CanUserAddRows="False"
                               IsReadOnly="True"
@@ -154,30 +157,22 @@
                               BorderBrush="#E5E7EB"
                               RowHeight="36">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Reol" Binding="{Binding RackNumber, StringFormat='Reol {0}'}" Width="90"/>
-                            <DataGridTextColumn Header="Beskrivelse" Binding="{Binding Remark}" Width="*"/>
-                            <DataGridTextColumn Header="Pris" Binding="{Binding Amount, StringFormat='{}{0:0.00} kr.'}" Width="110"/>
+                            <DataGridTextColumn Header="Varenummer" Binding="{Binding ItemNumber}" Width="100"/>
+                            <DataGridTextColumn Header="Vare" Binding="{Binding ItemName}" Width="*"/>
+                            <DataGridTextColumn Header="Pris" Binding="{Binding Price, StringFormat='{}{0:0.00} kr.'}" Width="110"/>
 
                             <!-- Slet / Ret handlinger -->
-                            <DataGridTemplateColumn Width="110">
+                            <DataGridTemplateColumn Width="80">
                                 <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                            <Button Content="Ret" 
-                                                    Command="{Binding DataContext.EditItemCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
-                                                    CommandParameter="{Binding}" 
-                                                    Margin="0,0,6,0" 
-                                                    Padding="8,2" 
-                                                    FontSize="12"/>
-                                            <Button Content="Slet" 
-                                                    Command="{Binding DataContext.DeleteItemCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                                            <DataTemplate>
+                                                <Button Content="Slet" 
+                                                    Command="{Binding DataContext.RemoveItemCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
                                                     CommandParameter="{Binding}" 
                                                     Foreground="#DC2626" 
                                                     Padding="8,2" 
                                                     FontSize="12"/>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
@@ -193,6 +188,7 @@
                             Foreground="#6B7280" 
                             BorderBrush="#D1D5DB" 
                             Cursor="Hand"/>
+
                 </Grid>
             </Border>
 
@@ -214,7 +210,7 @@
                     <StackPanel Grid.Column="0" Margin="0,0,20,0">
                         <TextBlock Text="Betalingsform" Style="{StaticResource LabelStyle}"/>
                         <ComboBox ItemsSource="{Binding PaymentMethods}" 
-                                  SelectedItem="{Binding PaymentMethod}" 
+                                  SelectedItem="{Binding SelectedPaymentMethod}" 
                                   Height="32" 
                                   Margin="0,4,0,12"/>
 
@@ -267,4 +263,5 @@
             </Border>
         </Grid>
     </Grid>
+    
 </UserControl>

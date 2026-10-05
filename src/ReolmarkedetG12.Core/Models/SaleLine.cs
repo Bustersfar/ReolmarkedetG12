@@ -8,8 +8,7 @@ namespace ReolmarkedetG12.Core.Models
     {
         public int SaleLineId { get; set; }
         public int SaleId { get; set; }
-        public int ItemNumber { get; set; }
-        public int Quantity { get; set; }
-        public decimal UnitPrice { get; set; }
+        public int ItemId { get; set; }
+        public decimal SalePrice { get; set; }
     }
 }

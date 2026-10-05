@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using Microsoft.Data.SqlClient;
 using ReolmarkedetG12.Core.Exceptions;
@@ -14,103 +15,63 @@ namespace ReolmarkedetG12.UI.ViewModels;
 
 public class SalesViewModel : ViewModelBase
 {
-    private readonly IRepository<Rack> _rackRepository;
-    private readonly IRepository<Rental> _rentalRepository;
+    private readonly IItemRepository _itemRepository;
+    private readonly IRepository<SaleLine> _saleLineRepository;
     private readonly IRepository<Sale> _saleRepository;
-    private readonly IRepository<Renter> _renterRepository;
     private readonly IDialogService _dialogService;
 
-    // --- 1. Indtast vare ---
+    public ObservableCollection<Item> Items { get; }
 
-    private int? _newRackNumber;
-    public int? NewRackNumber
+    public ObservableCollection<CartLineItem> CartItems { get;  } = new();
+
+    private Item? _selectedItem;
+    public Item? SelectedItem
     {
-        get => _newRackNumber;
+        get => _selectedItem;
         set
         {
-            if (SetProperty(ref _newRackNumber, value))
+            if (SetProperty(ref _selectedItem, value))
             {
-                ValidateEnteredRack();
+                OnPropertyChanged(nameof(SelectedItem));
                 CommandManager.InvalidateRequerySuggested();
             }
         }
     }
 
-    private string _rackValidationMessage = string.Empty;
-    public string RackValidationMessage
+    private int? _itemNumber;
+    public int? ItemNumber
     {
-        get => _rackValidationMessage;
-        private set => SetProperty(ref _rackValidationMessage, value);
-    }
-
-    private bool _isRackValid;
-    public bool IsRackValid
-    {
-        get => _isRackValid;
-        private set => SetProperty(ref _isRackValid, value);
-    }
-
-    private int? _activeRenterId;
-
-    private string _newRemark = string.Empty;
-    public string NewRemark
-    {
-        get => _newRemark;
-        set => SetProperty(ref _newRemark, value);
-    }
-
-    // Nullable (ligesom NewRackNumber), så feltet kan vises helt tomt i stedet for "0"
-    // efter man har tilføjet en vare (se AddItem).
-    private decimal? _newPrice;
-    public decimal? NewPrice
-    {
-        get => _newPrice;
+        get => _itemNumber;
         set
         {
-            if (SetProperty(ref _newPrice, value))
+            if (SetProperty(ref _itemNumber, value))
             {
-                CommandManager.InvalidateRequerySuggested();
+                LookupItem();
             }
         }
     }
-
-    public RelayCommand AddItemCommand { get; }
-
-    // --- 2. Aktuelt salg (kurv) ---
-
-    public ObservableCollection<CartLineItem> CurrentSaleItems { get; } = new();
 
     private decimal _totalAmount;
     public decimal TotalAmount
     {
         get => _totalAmount;
-        private set => SetProperty(ref _totalAmount, value);
+        set => SetProperty(ref _totalAmount, value);
     }
 
-    public RelayCommand EditItemCommand { get; }
-    public RelayCommand DeleteItemCommand { get; }
-    public RelayCommand ClearCartCommand { get; }
-
-    // --- 3. Betaling & afslutning ---
-
-    public IEnumerable<PaymentMethod> PaymentMethods => Enum.GetValues<PaymentMethod>();
-
-    private PaymentMethod _paymentMethod = PaymentMethod.Cash;
-    public PaymentMethod PaymentMethod
+    private PaymentMethod _selectedPaymentMethod = PaymentMethod.Cash;
+    public PaymentMethod SelectedPaymentMethod
     {
-        get => _paymentMethod;
+        get => _selectedPaymentMethod;
         set
         {
-            if (SetProperty(ref _paymentMethod, value))
+            if (SetProperty(ref _selectedPaymentMethod, value))
             {
                 OnPropertyChanged(nameof(IsCashPayment));
-                RecalculateChange();
                 CommandManager.InvalidateRequerySuggested();
+                RecalculateChange();
             }
         }
     }
-
-    public bool IsCashPayment => PaymentMethod == PaymentMethod.Cash;
 
     private decimal? _cashReceived;
     public decimal? CashReceived
@@ -126,250 +87,173 @@ public class SalesViewModel : ViewModelBase
         }
     }
 
-    private decimal _change;
-    public decimal Change
+    private decimal? _change;
+    public decimal? Change
     {
         get => _change;
-        private set => SetProperty(ref _change, value);
+        set => SetProperty(ref _change, value);
     }
 
-    public RelayCommand RegisterSaleCommand { get; }
+    private string _itemStatusMessage = string.Empty;
+    public string ItemStatusMessage 
+    { 
+        get => _itemStatusMessage;
+        set => SetProperty(ref _itemStatusMessage, value);
+    }
 
-    public SalesViewModel(
-        IRepository<Rack> rackRepository,
-        IRepository<Rental> rentalRepository,
-        IRepository<Sale> saleRepository,
-        IRepository<Renter> renterRepository,
-        IDialogService dialogService)
-        : base(dialogService)
+    public RelayCommand AddItemCommand { get; }
+    public RelayCommand RemoveItemCommand { get; }
+    public RelayCommand RegisterSaleCommand { get; }
+    public RelayCommand ClearCartCommand { get; }
+
+    public SalesViewModel(IItemRepository itemRepository, IRepository<SaleLine> saleLineRepository, IRepository<Sale> saleRepository, IDialogService dialogService)
     {
-        _rackRepository = rackRepository;
-        _rentalRepository = rentalRepository;
+        _itemRepository = itemRepository;
+        _saleLineRepository = saleLineRepository;
         _saleRepository = saleRepository;
-        _renterRepository = renterRepository;
         _dialogService = dialogService;
 
-        AddItemCommand = new RelayCommand(
-            _ => AddItem(),
-            _ => IsRackValid && NewPrice.HasValue && NewPrice > 0 && NewRackNumber.HasValue);
+        Items = new ObservableCollection<Item>(_itemRepository.GetAll());
 
-        EditItemCommand = new RelayCommand(param => EditItem(param as CartLineItem));
-        DeleteItemCommand = new RelayCommand(param => DeleteItem(param as CartLineItem));
-        ClearCartCommand = new RelayCommand(_ => ClearCart(), _ => CurrentSaleItems.Count > 0);
+        AddItemCommand = new RelayCommand(_=> AddItem(), _=> SelectedItem != null);
+        ClearCartCommand = new RelayCommand(_=> CartItems.Clear(), _=> CartItems.Any());
 
-        RegisterSaleCommand = new RelayCommand(
-            _ => SafeExecute(RegisterSale),
-            _ => CanRegisterSale());
+        RemoveItemCommand = new RelayCommand(item => RemoveItem(item as CartLineItem));
 
-        CurrentSaleItems.CollectionChanged += (_, _) => RecalculateTotals();
+        RegisterSaleCommand = new RelayCommand(_=>RegisterSale(), _=> CanRegisterSale());
+
+        CartItems.CollectionChanged += (_, _) => 
+        {
+            RecalculateTotalAmount();
+            CommandManager.InvalidateRequerySuggested();
+        };
     }
 
-    private void ValidateEnteredRack()
-    {
-        _activeRenterId = null;
+    public IEnumerable<PaymentMethod> PaymentMethods => Enum.GetValues<PaymentMethod>();
 
-        if (!NewRackNumber.HasValue)
-        {
-            RackValidationMessage = string.Empty;
-            IsRackValid = false;
-            return;
-        }
-
-        // Reol 0 er butikkens eget salg (poser, mærker mv.)
-        if (NewRackNumber.Value == 0)
-        {
-            RackValidationMessage = "Butikken (poser/mærker)";
-            IsRackValid = true;
-            _activeRenterId = null;
-            return;
-        }
-
-        SafeExecute(() =>
-        {
-            var rack = _rackRepository.GetAll().FirstOrDefault(r => r.Number == NewRackNumber.Value);
-            if (rack == null)
-            {
-                RackValidationMessage = $"Reol {NewRackNumber.Value} findes ikke.";
-                IsRackValid = false;
-                return;
-            }
-
-            // UTC her, fordi StartDate/EndDate på et lejemål sættes i UTC (se RackViewModel),
-            // og databasens egne tjek bruger SYSUTCDATETIME(). Lokal tid (DateTime.Now) ville
-            // kunne give et "forkert" svar på om lejemålet er aktivt lige nu, i et par timers
-            // vindue omkring midnat pga. tidszoneforskellen.
-            var nowUtc = DateTime.UtcNow;
-            var activeRental = _rentalRepository.GetAll()
-                .Where(r => r.RackId == rack.RackId && r.StartDate <= nowUtc && (r.EndDate == null || r.EndDate > nowUtc))
-                .OrderByDescending(r => r.StartDate)
-                .FirstOrDefault();
-
-            if (activeRental == null)
-            {
-                RackValidationMessage = $"Reol {NewRackNumber.Value} har ingen aktiv lejer!";
-                IsRackValid = false;
-                return;
-            }
-
-            var renter = _renterRepository.GetById(activeRental.RenterId);
-            if (renter != null)
-            {
-                RackValidationMessage = $"Lejer: {renter.FirstName} {renter.LastName}";
-                _activeRenterId = renter.RenterId;
-                IsRackValid = true;
-            }
-            else
-            {
-                RackValidationMessage = "Ukendt lejer tilknyttet reolen.";
-                IsRackValid = false;
-            }
-        });
-    }
+    public bool IsCashPayment => SelectedPaymentMethod == PaymentMethod.Cash;
 
     private void AddItem()
     {
-        if (!IsRackValid || !NewRackNumber.HasValue || !NewPrice.HasValue || NewPrice <= 0)
+        if (SelectedItem == null)
             return;
 
-        CurrentSaleItems.Add(new CartLineItem
+        CartItems.Add(new CartLineItem
         {
-            RackNumber = NewRackNumber.Value,
-            Remark = string.IsNullOrWhiteSpace(NewRemark) ? string.Empty : NewRemark.Trim(),
-            Amount = NewPrice.Value
+            ItemId = SelectedItem.ItemId,
+            ItemNumber = SelectedItem.ItemNumber,
+            ItemName = SelectedItem.Name,
+            RackId = SelectedItem.RackId,
+            Price = SelectedItem.Price
         });
-
-        NewRackNumber = null;
-        NewRemark = string.Empty;
-        NewPrice = null;
-        RackValidationMessage = string.Empty;
-        IsRackValid = false;
-        _activeRenterId = null;
+        
+        SelectedItem = null;
+        ItemNumber = null;
     }
 
-    private void EditItem(CartLineItem? item)
-    {
-        if (item == null)
-            return;
-
-        NewRackNumber = item.RackNumber;
-        NewRemark = item.Remark;
-        NewPrice = item.Amount;
-        CurrentSaleItems.Remove(item);
-    }
-
-    private void DeleteItem(CartLineItem? item)
+    private void RemoveItem(CartLineItem? item)
     {
         if (item != null)
-            CurrentSaleItems.Remove(item);
-    }
-
-    private void ClearCart()
-    {
-        if (_dialogService.Confirm("Vil du annullere det igangværende salg og tømme kurven?", "Annuller salg"))
         {
-            CurrentSaleItems.Clear();
-            CashReceived = null;
+            CartItems.Remove(item);
         }
     }
 
-    private void RecalculateTotals()
+    private void RecalculateTotalAmount()
     {
-        TotalAmount = CurrentSaleItems.Sum(i => i.Amount);
+        TotalAmount = CartItems.Sum(item => item.Price);
         RecalculateChange();
-        CommandManager.InvalidateRequerySuggested();
     }
 
     private void RecalculateChange()
     {
-        if (PaymentMethod == PaymentMethod.Cash && CashReceived.HasValue)
+        if (SelectedPaymentMethod == PaymentMethod.Cash && CashReceived.HasValue)
         {
             Change = CashReceived.Value - TotalAmount;
         }
         else
         {
-            Change = 0m;
+            Change = 0;
         }
-    }
-
-    private bool CanRegisterSale()
-    {
-        if (CurrentSaleItems.Count == 0)
-            return false;
-
-        if (PaymentMethod == PaymentMethod.Cash)
-        {
-            return CashReceived.HasValue && CashReceived.Value >= TotalAmount;
-        }
-
-        return true;
     }
 
     private void RegisterSale()
     {
-        var now = DateTime.Now; // tidsstempel på selve salget - lokal tid, så søgning på dato (SearchSalesViewModel) matcher butikkens åbningstid
-        var nowUtc = DateTime.UtcNow; // bruges til at afgøre om lejemålet stadig er aktivt, se forklaring i ValidateEnteredRack
-        var salesToInsert = new List<Sale>();
-
-        foreach (var item in CurrentSaleItems)
+        try
         {
-            int? rackId = null;
-            int? renterId = null;
-
-            if (item.RackNumber == 0)
+            var sale = new Sale
             {
-                // Find reol 0 i databasen hvis oprettet, ellers forbliver den null
-                var internalRack = _rackRepository.GetAll().FirstOrDefault(r => r.Number == 0);
-                rackId = internalRack?.RackId;
-                renterId = null;
+                SaleDate = DateTime.Now,
+                TotalAmount = TotalAmount,
+                PaymentMethod = SelectedPaymentMethod
+            };
+
+            _saleRepository.Add(sale);
+            foreach (var item in CartItems)
+            {
+                _saleLineRepository.Add(new SaleLine
+                {
+                    SaleId = sale.SaleId,
+                    ItemId = item.ItemId,
+                    SalePrice = item.Price
+                });
+            }
+
+            _dialogService.ShowInfo($"Salg registreret. \nTotalbeløb: {TotalAmount:C}", "Salg registreret");
+
+            CartItems.Clear();
+
+            CashReceived = null;
+            Change = 0;
+            TotalAmount = 0;
+            SelectedItem = null;
+            ItemNumber = null;
+            SelectedPaymentMethod = PaymentMethod.Cash;
+        }
+        catch (Exception ex)
+        {
+            _dialogService.ShowError(ex.Message, "Fejl ved registrering af salg");
+        }
+    }
+
+
+    private bool CanRegisterSale()
+    {
+        if (!CartItems.Any())
+        return false;
+
+        if (SelectedPaymentMethod == PaymentMethod.Cash)
+        {
+            return CashReceived.HasValue && CashReceived.Value >= TotalAmount;
+        }
+        return true;
+    }
+
+    private void LookupItem()
+    {
+        if (ItemNumber.HasValue)
+        {
+            SelectedItem = _itemRepository.GetByItemNumber(ItemNumber.Value);
+
+            if (SelectedItem == null)
+            {
+                ItemStatusMessage = "Varen blev ikke fundet";
             }
             else
             {
-                var rack = _rackRepository.GetAll().FirstOrDefault(r => r.Number == item.RackNumber);
-                if (rack == null)
-                    throw new InvalidOperationException($"Reol {item.RackNumber} blev ikke fundet.");
-
-                var activeRental = _rentalRepository.GetAll()
-                    .Where(r => r.RackId == rack.RackId && r.StartDate <= nowUtc && (r.EndDate == null || r.EndDate > nowUtc))
-                    .OrderByDescending(r => r.StartDate)
-                    .FirstOrDefault();
-
-                if (activeRental == null)
-                    throw new InvalidOperationException($"Reol {item.RackNumber} har ikke længere et aktivt lejemål.");
-
-                rackId = rack.RackId;
-                renterId = activeRental.RenterId;
+                ItemStatusMessage = string.Empty;
             }
-
-            salesToInsert.Add(new Sale
-            {
-                RackId = rackId,
-                RenterId = renterId,
-                Date = now,
-                Amount = item.Amount,
-                Description = string.IsNullOrWhiteSpace(item.Remark) ? string.Empty : item.Remark.Trim(),
-                PaymentMethod = PaymentMethod
-            });
-        }
-
-        // Transaktionsstyret indsættelse af hele kurven
-        if (_saleRepository is SaleRepository concreteRepo)
-        {
-            concreteRepo.AddMany(salesToInsert);
         }
         else
         {
-            foreach (var sale in salesToInsert)
-            {
-                _saleRepository.Add(sale);
-            }
+            SelectedItem = null;
+            ItemStatusMessage = string.Empty;
         }
-
-        _dialogService.ShowInfo($"Salget på {TotalAmount:0.00} kr. er gennemført!", "Salg afsluttet");
-
-        CurrentSaleItems.Clear();
-        CashReceived = null;
-        Change = 0;
     }
 
-    // SafeExecute ligger nu i ViewModelBase og deles af alle ViewModels.
 }
+
+
+
+
+   

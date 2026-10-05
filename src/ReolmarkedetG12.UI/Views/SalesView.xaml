@@ -65,22 +65,22 @@
 
                         <TextBlock Text="Vareinformation" Style="{StaticResource LabelStyle}"/>
                         
-                        <TextBlock>
+                        <TextBlock Foreground="Black">
                             <Run Text="Varenavn: "/>
                             <Run Text="{Binding SelectedItem.Name}"/>
                         </TextBlock>
                         
-                        <TextBlock>
+                        <TextBlock Foreground="Black">
                             <Run Text="Varenummer: "/>
                             <Run Text="{Binding SelectedItem.ItemNumber}"/>
                         </TextBlock>
                         
-                        <TextBlock Margin="0,5,0,0">
+                        <TextBlock Foreground="Black" Margin="0,5,0,0">
                             <Run Text="Pris: "/>
                             <Run Text="{Binding SelectedItem.Price, StringFormat={}{0:0.00} kr.}"/>
                         </TextBlock>
                         
-                        <TextBlock Margin="0,5,0,0">
+                        <TextBlock Foreground="Black" Margin="0,5,0,0">
                              <Run Text="Reol: "/>
                              <Run Text="{Binding SelectedItem.RackId}"/>
                         </TextBlock>

@@ -6,7 +6,7 @@ using ReolmarkedetG12.Core.Models;
 
 namespace ReolmarkedetG12.Core.Repositories
 {
-    public class RentalRepository : IRepository<Rental>
+    public class RentalRepository : IRentalRepository
     {
         private readonly string _connectionString;
 

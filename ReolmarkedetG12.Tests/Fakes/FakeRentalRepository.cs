@@ -7,7 +7,7 @@ using ReolmarkedetG12.Core.Repositories;
 
 namespace ReolmarkedetG12.Tests.Fakes;
 
-public class FakeRentalRepository : IRepository<Rental>
+public class FakeRentalRepository : IRentalRepository
 {
     public List<Rental> Rentals { get; } = new();
     public bool SimulateDatabaseDown { get; set; }
@@ -24,6 +24,14 @@ public class FakeRentalRepository : IRepository<Rental>
         CheckDatabase();
         rental.RentalId = _nextId++;
         Rentals.Add(rental);
+    }
+
+    public void AddRentalWithRackStatus(Rental rental, int rackStatus = 1)
+    {
+        // Den rigtige repository sætter også reolens status i databasen. I testene deler
+        // ViewModel'en Rack-objekterne med FakeRackRepository, og ViewModel'en sætter selv
+        // status på dem bagefter, så her er det nok at oprette lejemålet.
+        Add(rental);
     }
 
     public Rental? GetById(int id)

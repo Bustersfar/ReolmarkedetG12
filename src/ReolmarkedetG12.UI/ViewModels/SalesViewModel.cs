@@ -16,7 +16,7 @@ public class SalesViewModel : ViewModelBase
 {
     private readonly IRepository<Rack> _rackRepository;
     private readonly IRepository<Rental> _rentalRepository;
-    private readonly IRepository<Sale> _saleRepository;
+    private readonly ISaleRepository _saleRepository;
     private readonly IRepository<Renter> _renterRepository;
     private readonly IDialogService _dialogService;
 
@@ -138,7 +138,7 @@ public class SalesViewModel : ViewModelBase
     public SalesViewModel(
         IRepository<Rack> rackRepository,
         IRepository<Rental> rentalRepository,
-        IRepository<Sale> saleRepository,
+        ISaleRepository saleRepository,
         IRepository<Renter> renterRepository,
         IDialogService dialogService)
         : base(dialogService)
@@ -352,17 +352,7 @@ public class SalesViewModel : ViewModelBase
         }
 
         // Transaktionsstyret indsættelse af hele kurven
-        if (_saleRepository is SaleRepository concreteRepo)
-        {
-            concreteRepo.AddMany(salesToInsert);
-        }
-        else
-        {
-            foreach (var sale in salesToInsert)
-            {
-                _saleRepository.Add(sale);
-            }
-        }
+        _saleRepository.AddMany(salesToInsert);
 
         _dialogService.ShowInfo($"Salget på {TotalAmount:0.00} kr. er gennemført!", "Salg afsluttet");
 

@@ -41,7 +41,7 @@ public class RackViewModel : ViewModelBase, IDisposable
 
     private readonly IRepository<Rack> _rackRepository;
     private readonly IRepository<Renter> _renterRepository;
-    private readonly IRepository<Rental> _rentalRepository;
+    private readonly IRentalRepository _rentalRepository;
     private readonly IRentalPriceTierRepository? _priceTierRepository;
     private readonly IRepository<Payment>? _paymentRepository;
     private readonly IDialogService _dialogService;
@@ -117,7 +117,7 @@ public class RackViewModel : ViewModelBase, IDisposable
     public RackViewModel(
         IRepository<Rack> rackRepository,
         IRepository<Renter> renterRepository,
-        IRepository<Rental> rentalRepository,
+        IRentalRepository rentalRepository,
         IRentalPriceTierRepository? priceTierRepository,
         IRepository<Payment>? paymentRepository,
         IDialogService dialogService)
@@ -358,17 +358,7 @@ public class RackViewModel : ViewModelBase, IDisposable
     {
         RackHistory.Clear();
 
-        IEnumerable<Rental> completedRentals;
-        if (_rentalRepository is RentalRepository concreteRentalRepo)
-        {
-            completedRentals = concreteRentalRepo.GetCompletedRentalsByRackId(rackId);
-        }
-        else
-        {
-            completedRentals = _rentalRepository.GetAll()
-                .Where(r => r.RackId == rackId && r.EndDate != null && r.EndDate <= DateTime.UtcNow)
-                .OrderByDescending(r => r.EndDate);
-        }
+        var completedRentals = _rentalRepository.GetCompletedRentalsByRackId(rackId);
 
         var renters = _renterRepository.GetAll().ToDictionary(r => r.RenterId);
 
@@ -473,16 +463,7 @@ public class RackViewModel : ViewModelBase, IDisposable
         {
             var (item, rental) = rentalsToCreate[i];
 
-            if (_rentalRepository is RentalRepository concreteRepo)
-            {
-                concreteRepo.AddRentalWithRackStatus(rental, (int)RackStatus.Rented);
-            }
-            else
-            {
-                _rentalRepository.Add(rental);
-                item.Rack.Status = RackStatus.Rented;
-                _rackRepository.Update(item.Rack);
-            }
+            _rentalRepository.AddRentalWithRackStatus(rental, (int)RackStatus.Rented);
 
             if (_paymentRepository != null)
             {

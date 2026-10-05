@@ -7,7 +7,7 @@ using ReolmarkedetG12.Core.Repositories;
 
 namespace ReolmarkedetG12.Tests.Fakes;
 
-public class FakeSaleRepository : IRepository<Sale>
+public class FakeSaleRepository : ISaleRepository
 {
     public List<Sale> Sales { get; } = new();
     public List<SaleAuditLog> AuditLogs { get; } = new();

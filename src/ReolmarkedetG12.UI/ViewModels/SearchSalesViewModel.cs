@@ -15,7 +15,7 @@ namespace ReolmarkedetG12.UI.ViewModels;
 public class SearchSalesViewModel : ViewModelBase
 {
     private readonly IRepository<Rack> _rackRepository;
-    private readonly IRepository<Sale> _saleRepository;
+    private readonly ISaleRepository _saleRepository;
     private readonly IRepository<Renter> _renterRepository;
     private readonly IDialogService _dialogService;
     private readonly ISecureAreaService? _secureAreaService;
@@ -66,7 +66,7 @@ public class SearchSalesViewModel : ViewModelBase
     // Konstruktør med 4 parametre (til enhedstests)
     public SearchSalesViewModel(
         IRepository<Rack> rackRepository,
-        IRepository<Sale> saleRepository,
+        ISaleRepository saleRepository,
         IRepository<Renter> renterRepository,
         IDialogService dialogService)
         : this(rackRepository, saleRepository, renterRepository, dialogService, null)
@@ -76,7 +76,7 @@ public class SearchSalesViewModel : ViewModelBase
     // Konstruktør med 5 parametre (anvendes af App.xaml.cs)
     public SearchSalesViewModel(
         IRepository<Rack> rackRepository,
-        IRepository<Sale> saleRepository,
+        ISaleRepository saleRepository,
         IRepository<Renter> renterRepository,
         IDialogService dialogService,
         ISecureAreaService? secureAreaService)
@@ -179,13 +179,10 @@ public class SearchSalesViewModel : ViewModelBase
         if (SelectedSaleItem == null)
             return;
 
-        if (_saleRepository is SaleRepository concreteRepo)
+        var logs = _saleRepository.GetAuditLogsForSale(SelectedSaleItem.SaleId);
+        foreach (var log in logs)
         {
-            var logs = concreteRepo.GetAuditLogsForSale(SelectedSaleItem.SaleId);
-            foreach (var log in logs)
-            {
-                AuditLogs.Add(log);
-            }
+            AuditLogs.Add(log);
         }
     }
 
@@ -248,14 +245,7 @@ public class SearchSalesViewModel : ViewModelBase
             sale.Amount = item.Amount;
             sale.Description = trimmedDescription;
 
-            if (_saleRepository is SaleRepository concreteRepo)
-            {
-                concreteRepo.UpdateWithAudit(sale, originalSale);
-            }
-            else
-            {
-                _saleRepository.Update(sale);
-            }
+            _saleRepository.UpdateWithAudit(sale, originalSale);
         }
 
         _dialogService.ShowInfo($"{changedItems.Count} salg er opdateret i databasen.", "Gemt");
@@ -276,17 +266,10 @@ public class SearchSalesViewModel : ViewModelBase
         if (!confirm)
             return;
 
-        if (_saleRepository is SaleRepository concreteRepo)
+        var sale = _saleRepository.GetById(target.SaleId);
+        if (sale != null)
         {
-            var sale = concreteRepo.GetById(target.SaleId);
-            if (sale != null)
-            {
-                concreteRepo.DeleteWithAudit(sale);
-            }
-            else
-            {
-                concreteRepo.Delete(target.SaleId);
-            }
+            _saleRepository.DeleteWithAudit(sale);
         }
         else
         {

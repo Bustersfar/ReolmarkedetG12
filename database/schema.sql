@@ -82,7 +82,7 @@ CREATE TABLE dbo.PAYMENT (
     Date DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     Amount DECIMAL(18,2) NOT NULL,
     Type INT NOT NULL DEFAULT 0,   -- 0 = FirstMonthPayment, 1 = RegularMonthlyRent
-        PaymentMethod INT NOT NULL DEFAULT 0, -- 0 = MobilePay, 1 = Bank, 2 = Cash
+    PaymentMethod INT NOT NULL DEFAULT 0, -- 0 = MobilePay, 1 = Bank, 2 = Cash
     CONSTRAINT FK_PAYMENT_RENTER FOREIGN KEY (RenterId) REFERENCES dbo.RENTER(RenterId)
 );
 GO

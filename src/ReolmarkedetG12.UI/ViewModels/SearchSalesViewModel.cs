@@ -14,18 +14,10 @@ namespace ReolmarkedetG12.UI.ViewModels;
 
 public class SearchSalesViewModel : ViewModelBase
 {
-    private readonly IRepository<Rack> _rackRepository;
     private readonly IRepository<Sale> _saleRepository;
-    private readonly IRepository<Renter> _renterRepository;
     private readonly IDialogService _dialogService;
     private readonly ISecureAreaService? _secureAreaService;
 
-    private int? _searchRackNumber;
-    public int? SearchRackNumber
-    {
-        get => _searchRackNumber;
-        set => SetProperty(ref _searchRackNumber, value);
-    }
 
     private DateTime? _searchDate;
     public DateTime? SearchDate
@@ -42,16 +34,12 @@ public class SearchSalesViewModel : ViewModelBase
         {
             if (SetProperty(ref _selectedSaleItem, value))
             {
-                LoadAuditLogsForSelectedSale();
                 CommandManager.InvalidateRequerySuggested();
             }
         }
     }
 
-    public ObservableCollection<SaleDisplayItem> SaleResults { get; } = [];
-
-    // Punkt 17: Liste over ændringer (audit logs) for det markerede salg
-    public ObservableCollection<SaleAuditLog> AuditLogs { get; } = [];
+    public ObservableCollection<SaleDisplayItem> SaleResults { get; } = new();
 
     // Kodeords-lås (samme SecureAreaService som Månedsopgørelse, se ISecureAreaService).
     // Null, hvis ViewModel'en er oprettet uden en ISecureAreaService (bruges af nogle tests),
@@ -60,31 +48,24 @@ public class SearchSalesViewModel : ViewModelBase
 
     public RelayCommand SearchCommand { get; }
     public RelayCommand ResetSearchCommand { get; }
-    public RelayCommand UpdateCommand { get; }
     public RelayCommand DeleteCommand { get; }
 
     // Konstruktør med 4 parametre (til enhedstests)
     public SearchSalesViewModel(
-        IRepository<Rack> rackRepository,
         IRepository<Sale> saleRepository,
-        IRepository<Renter> renterRepository,
         IDialogService dialogService)
-        : this(rackRepository, saleRepository, renterRepository, dialogService, null)
+        : this(saleRepository, dialogService, null)
     {
     }
 
     // Konstruktør med 5 parametre (anvendes af App.xaml.cs)
     public SearchSalesViewModel(
-        IRepository<Rack> rackRepository,
         IRepository<Sale> saleRepository,
-        IRepository<Renter> renterRepository,
         IDialogService dialogService,
         ISecureAreaService? secureAreaService)
         : base(dialogService)
     {
-        _rackRepository = rackRepository;
         _saleRepository = saleRepository;
-        _renterRepository = renterRepository;
         _dialogService = dialogService;
         _secureAreaService = secureAreaService;
 
@@ -94,67 +75,29 @@ public class SearchSalesViewModel : ViewModelBase
 
         SearchCommand = new RelayCommand(_ => SafeExecute(Search));
         ResetSearchCommand = new RelayCommand(_ => ResetSearch());
-        UpdateCommand = new RelayCommand(_ => SafeExecute(Update), _ => SaleResults.Count > 0);
         DeleteCommand = new RelayCommand(param => SafeExecute(() => Delete(param as SaleDisplayItem)));
     }
 
     private void Search()
     {
         SaleResults.Clear();
-        AuditLogs.Clear();
-
-        var racks = _rackRepository.GetAll().ToDictionary(r => r.RackId, r => r.Number);
-        var renters = _renterRepository.GetAll().ToDictionary(r => r.RenterId, r => $"{r.FirstName} {r.LastName}");
 
         var sales = _saleRepository.GetAll();
 
-        if (SearchRackNumber.HasValue)
-        {
-            if (SearchRackNumber.Value == 0)
-            {
-                sales = sales.Where(s => !s.RackId.HasValue || s.RackId.Value == 0 || (racks.TryGetValue(s.RackId.Value, out int num) && num == 0));
-            }
-            else
-            {
-                var matchingRackIds = racks.Where(r => r.Value == SearchRackNumber.Value).Select(r => r.Key).ToHashSet();
-                sales = sales.Where(s => s.RackId.HasValue && matchingRackIds.Contains(s.RackId.Value));
-            }
-        }
-
         if (SearchDate.HasValue)
         {
-            sales = sales.Where(s => s.Date.Date == SearchDate.Value.Date);
+            sales = sales.Where(s => s.SaleDate.Date == SearchDate.Value.Date);
         }
 
-        var orderedSales = sales.OrderByDescending(s => s.Date);
-
-        foreach (var sale in orderedSales)
+        foreach (var sale in sales.OrderByDescending(s => s.SaleDate))
         {
-            int rackNumber = 0;
-            if (sale.RackId.HasValue && racks.TryGetValue(sale.RackId.Value, out int num))
-            {
-                rackNumber = num;
-            }
-
-            string renterName;
-            if (sale.RenterId.HasValue && renters.TryGetValue(sale.RenterId.Value, out string? name))
-            {
-                renterName = name;
-            }
-            else
-            {
-                renterName = (rackNumber == 0) ? "Butikken" : "Ukendt lejer";
-            }
-
-            SaleResults.Add(new SaleDisplayItem
-            {
-                SaleId = sale.SaleId,
-                RackNumber = rackNumber,
-                RenterName = renterName,
-                Date = sale.Date,
-                Amount = sale.Amount,
-                Description = sale.Description ?? string.Empty
-            });
+                SaleResults.Add(new SaleDisplayItem
+                {
+                    SaleId = sale.SaleId,
+                    SaleDate = sale.SaleDate,
+                    TotalAmount = sale.TotalAmount,
+                    PaymentMethod = sale.PaymentMethod,
+                });
         }
 
         if (SaleResults.Count == 0)
@@ -165,138 +108,26 @@ public class SearchSalesViewModel : ViewModelBase
 
     private void ResetSearch()
     {
-        SearchRackNumber = null;
         SearchDate = null;
         SaleResults.Clear();
-        AuditLogs.Clear();
         SelectedSaleItem = null;
-    }
-
-    private void LoadAuditLogsForSelectedSale()
-    {
-        AuditLogs.Clear();
-
-        if (SelectedSaleItem == null)
-            return;
-
-        if (_saleRepository is SaleRepository concreteRepo)
-        {
-            var logs = concreteRepo.GetAuditLogsForSale(SelectedSaleItem.SaleId);
-            foreach (var log in logs)
-            {
-                AuditLogs.Add(log);
-            }
-        }
-    }
-
-    private void Update()
-    {
-        // Find kun de salg, hvor beløb eller beskrivelse faktisk er ændret i
-        // DataGrid'en - uden dette ville ALLE viste salg blive gemt og logget
-        // i revisionslisten igen, også dem brugeren ikke har rørt.
-        var changedItems = new List<(SaleDisplayItem Item, Sale Original, string TrimmedDescription)>();
-
-        foreach (var item in SaleResults)
-        {
-            if (item.Amount <= 0)
-            {
-                _dialogService.ShowError($"Beløb for salg ID {item.SaleId} skal være større end 0 kr.", "Ugyldigt beløb");
-                return;
-            }
-
-            var sale = _saleRepository.GetById(item.SaleId);
-            if (sale == null)
-                continue;
-
-            string trimmedDescription = string.IsNullOrWhiteSpace(item.Description) ? string.Empty : item.Description.Trim();
-
-            bool amountChanged = sale.Amount != item.Amount;
-            bool descriptionChanged = (sale.Description ?? string.Empty) != trimmedDescription;
-
-            if (amountChanged || descriptionChanged)
-            {
-                changedItems.Add((item, sale, trimmedDescription));
-            }
-        }
-
-        if (changedItems.Count == 0)
-        {
-            _dialogService.ShowInfo("Ingen ændringer at gemme.", "Intet opdateret");
-            return;
-        }
-
-        bool confirmed = _dialogService.Confirm(
-            $"Gem ændringer til {changedItems.Count} salg?",
-            "Bekræft opdatering af salg");
-
-        if (!confirmed)
-            return;
-
-        foreach (var (item, sale, trimmedDescription) in changedItems)
-        {
-            var originalSale = new Sale
-            {
-                SaleId = sale.SaleId,
-                RackId = sale.RackId,
-                RenterId = sale.RenterId,
-                Amount = sale.Amount,
-                Description = sale.Description,
-                Date = sale.Date,
-                PaymentMethod = sale.PaymentMethod
-            };
-
-            sale.Amount = item.Amount;
-            sale.Description = trimmedDescription;
-
-            if (_saleRepository is SaleRepository concreteRepo)
-            {
-                concreteRepo.UpdateWithAudit(sale, originalSale);
-            }
-            else
-            {
-                _saleRepository.Update(sale);
-            }
-        }
-
-        _dialogService.ShowInfo($"{changedItems.Count} salg er opdateret i databasen.", "Gemt");
-
-        LoadAuditLogsForSelectedSale();
     }
 
     private void Delete(SaleDisplayItem? item)
     {
         var target = item ?? SelectedSaleItem;
-        if (target == null)
+
+        if (target == null) 
             return;
 
         bool confirm = _dialogService.Confirm(
-            $"Er du sikker på, at du vil slette salget på {target.Amount:0.00} kr. fra Reol {target.RackNumber} ({target.Date:dd-MM-yyyy})?",
-            "Bekræft sletning af salg");
+            $"Er du sikker på, at du vil slette salget med ID {target.SaleId}?",
+            "Bekræft sletning");
 
-        if (!confirm)
-            return;
+        if (!confirm) return;
 
-        if (_saleRepository is SaleRepository concreteRepo)
-        {
-            var sale = concreteRepo.GetById(target.SaleId);
-            if (sale != null)
-            {
-                concreteRepo.DeleteWithAudit(sale);
-            }
-            else
-            {
-                concreteRepo.Delete(target.SaleId);
-            }
-        }
-        else
-        {
-            _saleRepository.Delete(target.SaleId);
-        }
-
+        _saleRepository.Delete(target.SaleId);
         SaleResults.Remove(target);
-        AuditLogs.Clear();
-
-        _dialogService.ShowInfo("Salget er blevet slettet.", "Slettet");
     }
 
     // SafeExecute ligger nu i ViewModelBase og deles af alle ViewModels.

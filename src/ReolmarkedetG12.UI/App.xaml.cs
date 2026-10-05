@@ -57,6 +57,8 @@ public partial class App : Application
         var rentalPriceTierRepository = new RentalPriceTierRepository(connectionString);
         var paymentRepository = new PaymentRepository(connectionString);
         var saleRepository = new SaleRepository(connectionString);
+        var saleLineRepository = new SaleLineRepository(connectionString);
+        var itemRepository = new ItemRepository(connectionString);
 
         try
         {
@@ -83,8 +85,8 @@ public partial class App : Application
         var mainViewModel = new MainViewModel(
             new RackViewModel(rackRepository, renterRepository, rentalRepository, rentalPriceTierRepository, paymentRepository, dialogService),
             new RenterViewModel(renterRepository, rentalRepository, dialogService, paymentRepository),
-            new SalesViewModel(rackRepository, rentalRepository, saleRepository, renterRepository, dialogService),
-            new SearchSalesViewModel(rackRepository, saleRepository, renterRepository, dialogService, secureAreaService),
+            new SalesViewModel(itemRepository, saleLineRepository, saleRepository, dialogService),
+            new SearchSalesViewModel(saleRepository, dialogService, secureAreaService),
             new MonthlyStatementViewModel(secureAreaService, dialogService));
 
         var mainWindow = new MainWindow { DataContext = mainViewModel };

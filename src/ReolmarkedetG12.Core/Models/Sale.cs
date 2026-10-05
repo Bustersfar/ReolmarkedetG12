@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Text;
 
 namespace ReolmarkedetG12.Core.Models
 {
@@ -15,6 +17,9 @@ namespace ReolmarkedetG12.Core.Models
         public Sale()
         {
         }
+        public DateTime SaleDate { get; set; }
+        public decimal TotalAmount { get; set; }
+        public List<SaleLine> SaleLines { get; set; } = new List<SaleLine>();
 
         public Sale(int? rackId, int? renterId, decimal amount, string description, PaymentMethod paymentMethod, DateTime? date = null)
         {

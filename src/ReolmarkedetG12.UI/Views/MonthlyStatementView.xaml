@@ -36,9 +36,141 @@
             <views:LockScreenView DataContext="{Binding Lock}"/>
         </Grid>
 
-        <!--Indhold: tomt skelet for nu, vist først når Lock.IsUnlocked er true-->
-        <Grid Style="{StaticResource UnlockedContentStyle}" Margin="15">
-            <TextBlock Text="MÅNEDSOPGØRELSE" FontSize="24" FontWeight="Bold" VerticalAlignment="Top"/>
+        <!--Indhold: vist først når Lock.IsUnlocked er true-->
+        <!--TextElement.Foreground: ellers arver teksten den hvide skriftfarve fra den valgte fane (TopNavTabItemStyle)-->
+        <Grid Style="{StaticResource UnlockedContentStyle}" Background="#F4F6F9" Margin="24"
+              TextElement.Foreground="{StaticResource TextPrimary}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- 1. Valg af måned -->
+            <Border Grid.Row="0" Background="White" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.1"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="140"/>
+                        <ColumnDefinition Width="24"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="100"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="Måned:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding MonthNames}" SelectedIndex="{Binding SelectedMonthIndex}"
+                              Height="32" VerticalContentAlignment="Center"/>
+
+                    <TextBlock Grid.Column="3" Text="År:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                    <ComboBox Grid.Column="4" ItemsSource="{Binding Years}" SelectedItem="{Binding SelectedYear}"
+                              Height="32" VerticalContentAlignment="Center"/>
+                </Grid>
+            </Border>
+
+            <!-- 2. Status pr. lejer -->
+            <Border Grid.Row="1" Background="White" CornerRadius="8" Padding="16" Margin="0,0,0,12">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.1"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Text="Månedsopgørelse pr. lejer" FontWeight="Bold" FontSize="14" Foreground="#2D3748"/>
+                        <TextBlock Text=" (Salg i måneden minus 10% provision og leje for næste måned)" Foreground="#718096" Margin="6,0,0,0"/>
+                        <TextBlock Text="FORELØBIG - måneden er ikke afsluttet" FontWeight="Bold" Margin="16,0,0,0"
+                                   Foreground="{StaticResource DangerRed}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsPreliminary}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding Lines}"
+                              AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                              GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                              RowHeight="36" SelectionMode="Single" Background="Transparent" BorderThickness="0">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Lejer" Binding="{Binding RenterName}" Width="*"/>
+                            <DataGridTextColumn Header="E-mail" Binding="{Binding RenterEmail}" Width="*"/>
+                            <DataGridTextColumn Header="Reoler" Binding="{Binding RackCount}" Width="70"/>
+                            <DataGridTextColumn Header="Reolleje (kr.)" Binding="{Binding Rent, StringFormat='0.00'}" Width="130"/>
+                            <DataGridTextColumn Header="Salg (kr.)" Binding="{Binding Sales, StringFormat='0.00'}" Width="130"/>
+                            <DataGridTextColumn Header="Provision 10% (kr.)" Binding="{Binding Commission, StringFormat='0.00'}" Width="140"/>
+                            <DataGridTextColumn Header="Til udbetaling (kr.)" Binding="{Binding Payout, StringFormat='0.00'}" Width="140">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsPayoutNegative}" Value="True">
+                                                <Setter Property="Foreground" Value="{StaticResource DangerRed}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Border>
+
+            <!-- 3. Total for alle lejere -->
+            <Border Grid.Row="2" Background="White" CornerRadius="8" Padding="16">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.1"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="130"/>
+                        <ColumnDefinition Width="130"/>
+                        <ColumnDefinition Width="140"/>
+                        <ColumnDefinition Width="140"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Total" FontWeight="Bold" FontSize="14" Foreground="#2D3748"/>
+
+                    <TextBlock Grid.Row="0" Grid.Column="1" Text="Reolleje" Foreground="#718096"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding TotalRent, StringFormat='0.00 kr.'}" FontWeight="Bold" FontSize="16"/>
+
+                    <TextBlock Grid.Row="0" Grid.Column="2" Text="Salg" Foreground="#718096"/>
+                    <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding TotalSales, StringFormat='0.00 kr.'}" FontWeight="Bold" FontSize="16"/>
+
+                    <TextBlock Grid.Row="0" Grid.Column="3" Text="Provision 10%" Foreground="#718096"/>
+                    <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding TotalCommission, StringFormat='0.00 kr.'}" FontWeight="Bold" FontSize="16"/>
+
+                    <TextBlock Grid.Row="0" Grid.Column="4" Text="Til udbetaling" Foreground="#718096"/>
+                    <TextBlock Grid.Row="1" Grid.Column="4" Text="{Binding TotalPayout, StringFormat='0.00 kr.'}" FontWeight="Bold" FontSize="16">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsTotalPayoutNegative}" Value="True">
+                                        <Setter Property="Foreground" Value="{StaticResource DangerRed}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+            </Border>
         </Grid>
     </Grid>
 </UserControl>

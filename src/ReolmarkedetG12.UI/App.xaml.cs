@@ -85,7 +85,7 @@ public partial class App : Application
             new RenterViewModel(renterRepository, rentalRepository, dialogService, paymentRepository),
             new SalesViewModel(rackRepository, rentalRepository, saleRepository, renterRepository, dialogService),
             new SearchSalesViewModel(rackRepository, saleRepository, renterRepository, dialogService, secureAreaService),
-            new MonthlyStatementViewModel(secureAreaService, dialogService));
+            new MonthlyStatementViewModel(renterRepository, rentalRepository, saleRepository, secureAreaService, dialogService));
 
         var mainWindow = new MainWindow { DataContext = mainViewModel };
         this.MainWindow = mainWindow;

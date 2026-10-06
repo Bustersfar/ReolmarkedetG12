@@ -1,4 +1,4 @@
-using ReolmarkedetG12.Core.Models;
+ï»¿using ReolmarkedetG12.Core.Models;
 using ReolmarkedetG12.Core.Repositories;
 using ReolmarkedetG12.UI.MVVM;
 using System.Collections.ObjectModel;
@@ -16,8 +16,8 @@ public class RenterViewModel : ViewModelBase
     private readonly IRepository<Renter> _renterRepository;
     private readonly IRepository<Rental> _rentalRepository;
     private readonly IDialogService _dialogService;
-    // Valgfri: bruges kun til at tjekke om en lejer har betalingshistorik, før den slettes.
-    // Nullable, så eksisterende tests der opretter RenterViewModel uden den stadig virker.
+    // Valgfri: bruges kun til at tjekke om en lejer har betalingshistorik, fÃ¸r den slettes.
+    // Nullable, sÃ¥ eksisterende tests der opretter RenterViewModel uden den stadig virker.
     private readonly IRepository<Payment>? _paymentRepository;
 
     public ObservableCollection<Renter> Renters { get; }
@@ -174,7 +174,7 @@ public class RenterViewModel : ViewModelBase
         // Danske postnumre er altid 4 cifre (1000-9999).
         if (PostalCode < 1000 || PostalCode > 9999)
         {
-            _dialogService.ShowError("Postnummer skal være 4 cifre (f.eks. 4200).", "Fejl");
+            _dialogService.ShowError("Postnummer skal vÃ¦re 4 cifre (f.eks. 4200).", "Fejl");
             return;
         }
 
@@ -185,14 +185,14 @@ public class RenterViewModel : ViewModelBase
             return;
         }
 
-        // Telefon er valgfri, men hvis den er udfyldt, skal det være 8 cifre (dansk mobil/fastnet).
+        // Telefon er valgfri, men hvis den er udfyldt, skal det vÃ¦re 8 cifre (dansk mobil/fastnet).
         if (!string.IsNullOrWhiteSpace(Phone) && !Regex.IsMatch(Phone, @"^\d{8}$"))
         {
-            _dialogService.ShowError("Telefonnummer skal være 8 cifre (f.eks. 12345678).", "Fejl");
+            _dialogService.ShowError("Telefonnummer skal vÃ¦re 8 cifre (f.eks. 12345678).", "Fejl");
             return;
         }
 
-        // Tjek om lejeren allerede findes (samme navn og adresse), så vi ikke får dubletter.
+        // Tjek om lejeren allerede findes (samme navn og adresse), sÃ¥ vi ikke fÃ¥r dubletter.
         var findesAllerede = _renterRepository.GetAll().Any(r =>
             r.RenterId != RenterId &&
             string.Equals(r.FirstName, FirstName, System.StringComparison.OrdinalIgnoreCase) &&
@@ -201,7 +201,7 @@ public class RenterViewModel : ViewModelBase
 
         if (findesAllerede)
         {
-            _dialogService.ShowError($"{FirstName} {LastName} findes allerede på adressen {Address}.", "Lejer findes allerede");
+            _dialogService.ShowError($"{FirstName} {LastName} findes allerede pÃ¥ adressen {Address}.", "Lejer findes allerede");
             return;
         }
 
@@ -243,12 +243,12 @@ public class RenterViewModel : ViewModelBase
         if (harLejemaal || harBetalinger)
         {
             _dialogService.ShowError(
-                $"{SelectedRenter.FirstName} {SelectedRenter.LastName} har (eller har haft) lejemål eller betalinger registreret og kan derfor ikke slettes.",
+                $"{SelectedRenter.FirstName} {SelectedRenter.LastName} har (eller har haft) lejemÃ¥l eller betalinger registreret og kan derfor ikke slettes.",
                 "Kan ikke slette lejer");
             return;
         }
 
-        if (_dialogService.Confirm($"Er du sikker på, at du vil slette lejer: {SelectedRenter.FirstName} {SelectedRenter.LastName}?", "Bekræft sletning"))
+        if (_dialogService.Confirm($"Er du sikker pÃ¥, at du vil slette lejer: {SelectedRenter.FirstName} {SelectedRenter.LastName}?", "BekrÃ¦ft sletning"))
         {
             _renterRepository.Delete(SelectedRenter.RenterId);
             LoadRenters();

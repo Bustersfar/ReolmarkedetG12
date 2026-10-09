@@ -16,21 +16,6 @@ Systemdokumentationen (klassediagram, ER-diagram, sekvensdiagrammer, sporbarhed 
 2. Tryk **Code**, og vælg **Download ZIP**.
 3. Højreklik på ZIP-filen, og vælg **Udpak alle**.
 
-## Kør testene (kræver ikke database)
-Dobbeltklik på **koer-tests.bat** i den udpakkede mappe.
-
-Hvis Windows viser en blå besked, "Windows beskyttede din pc", så tryk **Flere oplysninger** og derefter **Kør alligevel**. Det er normalt for filer, der er hentet fra internettet.
-
-Der åbner et sort vindue. Når det er færdigt, skal der stå `Alle tests bestod`, og testoversigten skal vise `failed: 0`. Den kører de 94 tests, der ikke kræver en database.
-
-## Valgfrit: kør alle 115 tests (kræver SQL Server)
-De sidste 21 tests prøver SQL-koden mod en rigtig database.
-1. Åbn `database/schema.sql` i SQL Server Management Studio.
-2. Åbn en ny Query (Ctrl+N), og kopiér hele teksten fra `schema.sql` ind i den.
-3. Erstat `Reolmarkedet` med `ReolmarkedetTest` (3 steder), og kør scriptet.
-4. Hedder din server ikke `localhost`, så ret navnet i `ReolmarkedetG12.Tests/TestDatabase.cs`.
-5. Dobbeltklik på **koer-alle-tests.bat**.
-
 ## Kør selve programmet (kræver SQL Server og Visual Studio)
 1. Åbn `database/schema.sql` i SQL Server Management Studio, og kør scriptet. Det opretter databasen `Reolmarkedet` med reoler og priser.
 2. Valgfrit: kør `database/testdata.sql` bagefter. Det lægger 10 eksempellejere, lejemål og salg ind, så du kan se månedsopgørelsen med det samme.

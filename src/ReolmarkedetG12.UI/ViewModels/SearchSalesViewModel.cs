@@ -50,7 +50,7 @@ public class SearchSalesViewModel : ViewModelBase
 
     public ObservableCollection<SaleDisplayItem> SaleResults { get; } = [];
 
-    // Punkt 17: Liste over ændringer (audit logs) for det markerede salg
+    // Liste over ændringer (audit logs) for det markerede salg
     public ObservableCollection<SaleAuditLog> AuditLogs { get; } = [];
 
     // Kodeords-lås (samme SecureAreaService som Månedsopgørelse, se ISecureAreaService).

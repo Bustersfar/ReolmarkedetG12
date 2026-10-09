@@ -91,7 +91,7 @@ namespace ReolmarkedetG12.Core.Repositories
             }
         }
 
-        // Punkt 1: Transaktionsstyret oprettelse af lejemål + opdatering af reol-status
+        // Transaktionsstyret oprettelse af lejemål + opdatering af reol-status
         public void AddRentalWithRackStatus(Rental rental, int rackStatus = 1)
         {
             using (SqlConnection connection = OpenConnection())
@@ -137,7 +137,7 @@ namespace ReolmarkedetG12.Core.Repositories
             }
         }
 
-        // Punkt 3: Hent aktivt lejemål for en bestemt reol
+        // Hent aktivt lejemål for en bestemt reol
         public Rental? GetActiveRentalByRackId(int rackId)
         {
             Rental? rental = null;
@@ -164,7 +164,7 @@ namespace ReolmarkedetG12.Core.Repositories
             return rental;
         }
 
-        // Punkt 3: Hent alle lejemål tilhørende en bestemt lejer
+        // Hent alle lejemål tilhørende en bestemt lejer
         public IEnumerable<Rental> GetByRenterId(int renterId)
         {
             var rentals = new List<Rental>();
@@ -191,7 +191,7 @@ namespace ReolmarkedetG12.Core.Repositories
             return rentals;
         }
 
-        // Punkt 14: Historik for en specifik reol (afsluttede lejemål)
+        // Historik for en specifik reol (afsluttede lejemål)
         public IEnumerable<Rental> GetCompletedRentalsByRackId(int rackId)
         {
             var rentals = new List<Rental>();

@@ -37,7 +37,7 @@ namespace ReolmarkedetG12.Core.Repositories
             entity.SaleId = (int)command.ExecuteScalar();
         }
 
-        // Punkt 1: Transaktionsstyret oprettelse af en hel kurv (kassesalg)
+        // Transaktionsstyret oprettelse af en hel kurv (kassesalg)
         public void AddMany(IEnumerable<Sale> sales)
         {
             using var connection = new SqlConnection(_connectionString);
@@ -113,7 +113,7 @@ namespace ReolmarkedetG12.Core.Repositories
             return result;
         }
 
-        // Punkt 3: Målrettede forespørgsler med SQL WHERE-klausuler
+        // Målrettede forespørgsler med SQL WHERE-klausuler
         public IEnumerable<Sale> GetByDateRange(DateTime fromUtc, DateTime toUtc)
         {
             var result = new List<Sale>();
@@ -193,7 +193,7 @@ namespace ReolmarkedetG12.Core.Repositories
             command.ExecuteNonQuery();
         }
 
-        // Punkt 17: Update med audit-log transaktion
+        // Update med audit-log transaktion
         public void UpdateWithAudit(Sale updatedSale, Sale originalSale)
         {
             using var connection = new SqlConnection(_connectionString);
@@ -254,7 +254,7 @@ namespace ReolmarkedetG12.Core.Repositories
             }
         }
 
-        // Punkt 17: Sletning med audit-log transaktion
+        // Sletning med audit-log transaktion
         public void DeleteWithAudit(Sale saleToDelete)
         {
             using var connection = new SqlConnection(_connectionString);

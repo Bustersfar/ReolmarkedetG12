@@ -364,6 +364,41 @@ public class RackViewModelTests
     }
 
     [TestMethod]
+    public void CancelTerminationCommand_RackWithEarlierRental_ReopensOnlyCurrentRental()
+    {
+        // Arrange: reolen har et gammelt, afsluttet lejemål og et aktuelt, der er opsagt til en fremtidig dato
+        var renter = AddRenter();
+        var rack = AddRackWithStatus(1, RackStatus.Terminated);
+        var earlierRental = AddRental(rack, renter, new DateTime(2000, 1, 1));
+        var currentRental = AddRental(rack, renter, new DateTime(2100, 1, 1));
+        var viewModel = CreateViewModel();
+        viewModel.SelectRackCommand.Execute(viewModel.Racks[0]);
+
+        // Act
+        viewModel.CancelTerminationCommand.Execute(null);
+
+        // Assert
+        Assert.AreEqual(new DateTime(2000, 1, 1), earlierRental.EndDate);
+        Assert.IsNull(currentRental.EndDate);
+    }
+
+    [TestMethod]
+    public void Constructor_TerminatedRackWithEarlierRental_StaysTerminatedUntilCurrentRentalEnds()
+    {
+        // Arrange: et gammelt, afsluttet lejemål må ikke frigive en reol, der stadig er udlejet
+        var renter = AddRenter();
+        var rack = AddRackWithStatus(1, RackStatus.Terminated);
+        AddRental(rack, renter, new DateTime(2000, 1, 1));
+        AddRental(rack, renter, new DateTime(2100, 1, 1));
+
+        // Act
+        _ = CreateViewModel();
+
+        // Assert
+        Assert.AreEqual(RackStatus.Terminated, rack.Status);
+    }
+
+    [TestMethod]
     public void Constructor_TerminationDateHasPassed_MakesRackAvailable()
     {
         // Arrange: en opsagt reol, hvor slutdatoen er overskredet for længe siden

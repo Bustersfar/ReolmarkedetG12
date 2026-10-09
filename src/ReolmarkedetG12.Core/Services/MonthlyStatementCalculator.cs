@@ -16,13 +16,18 @@ public static class MonthlyStatementCalculator
     // Lejen betales en måned forud: opgørelsen for f.eks. oktober trækker den fulde
     // leje for november for hver reol, lejeren stadig har pr. 1. november. En reol,
     // der er opsagt til den 1., tæller derfor ikke med.
+    // Lejen beregnes ud fra, hvor mange reoler lejeren har pr. den 1. i næste måned
+    // (ikke ud fra den pris, der blev gemt på hvert lejemål ved oprettelsen), så en
+    // opsagt reol ikke efterlader de øvrige reoler med en forkert pris.
     public static List<MonthlyStatementLine> Calculate(
         int year,
         int month,
         IEnumerable<Renter> renters,
         IEnumerable<Rental> rentals,
-        IEnumerable<Sale> sales)
+        IEnumerable<Sale> sales,
+        IEnumerable<RentalPriceTier> priceTiers)
     {
+        var tiers = priceTiers.ToList();
         var monthStart = new DateTime(year, month, 1);
         var nextMonthStart = monthStart.AddMonths(1);
 
@@ -45,13 +50,17 @@ public static class MonthlyStatementCalculator
             if (renterRentals.Count == 0 && renterSales == 0)
                 continue;
 
+            decimal rent = renterRentals.Count == 0
+                ? 0m
+                : RentalPriceCalculator.CalculateMonthlyRent(renterRentals.Count, tiers);
+
             lines.Add(new MonthlyStatementLine
             {
                 RenterId = renter.RenterId,
                 RenterName = $"{renter.FirstName} {renter.LastName}",
                 RenterEmail = renter.Email,
                 RackCount = renterRentals.Count,
-                Rent = renterRentals.Sum(r => r.MonthlyRent),
+                Rent = rent,
                 Sales = renterSales,
                 Commission = CalculateCommission(renterSales)
             });

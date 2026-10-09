@@ -13,6 +13,7 @@ public class MonthlyStatementViewModel : ViewModelBase
     private readonly IRepository<Renter> _renterRepository;
     private readonly IRentalRepository _rentalRepository;
     private readonly ISaleRepository _saleRepository;
+    private readonly IRentalPriceTierRepository _priceTierRepository;
 
     public LockScreenViewModel Lock { get; }
 
@@ -93,6 +94,7 @@ public class MonthlyStatementViewModel : ViewModelBase
         IRepository<Renter> renterRepository,
         IRentalRepository rentalRepository,
         ISaleRepository saleRepository,
+        IRentalPriceTierRepository priceTierRepository,
         ISecureAreaService secureAreaService,
         IDialogService dialogService)
         : base(dialogService)
@@ -100,6 +102,7 @@ public class MonthlyStatementViewModel : ViewModelBase
         _renterRepository = renterRepository;
         _rentalRepository = rentalRepository;
         _saleRepository = saleRepository;
+        _priceTierRepository = priceTierRepository;
 
         Lock = new LockScreenViewModel(secureAreaService, dialogService);
 
@@ -131,7 +134,8 @@ public class MonthlyStatementViewModel : ViewModelBase
             SelectedMonthIndex + 1,
             _renterRepository.GetAll(),
             _rentalRepository.GetAll(),
-            _saleRepository.GetAll());
+            _saleRepository.GetAll(),
+            _priceTierRepository.GetAll());
 
         Lines.Clear();
         foreach (var line in lines)

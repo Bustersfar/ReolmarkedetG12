@@ -330,7 +330,7 @@
                 </StackPanel>
             </Border>
 
-            <!-- Punkt 14: Lejemålshistorik -->
+            <!-- Lejemålshistorik -->
             <Border Grid.Row="1" Style="{StaticResource CardPanel}">
                 <Grid>
                     <Grid.RowDefinitions>

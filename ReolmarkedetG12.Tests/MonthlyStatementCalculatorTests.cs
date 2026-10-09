@@ -15,6 +15,16 @@ public class MonthlyStatementCalculatorTests
         };
     }
 
+    private static List<RentalPriceTier> GetTiers()
+    {
+        return new List<RentalPriceTier>
+        {
+            new RentalPriceTier { TierId = 1, MinRacks = 1, MaxRacks = 1, PricePerRack = 850m },
+            new RentalPriceTier { TierId = 2, MinRacks = 2, MaxRacks = 3, PricePerRack = 825m },
+            new RentalPriceTier { TierId = 3, MinRacks = 4, MaxRacks = null, PricePerRack = 800m }
+        };
+    }
+
     [TestMethod]
     public void CalculateCommission_Sales1000_Returns100()
     {
@@ -50,7 +60,7 @@ public class MonthlyStatementCalculatorTests
         };
 
         // Act
-        var lines = MonthlyStatementCalculator.Calculate(2026, 10, GetRenters(), rentals, sales);
+        var lines = MonthlyStatementCalculator.Calculate(2026, 10, GetRenters(), rentals, sales, GetTiers());
 
         // Assert
         Assert.AreEqual(1, lines.Count);
@@ -79,7 +89,7 @@ public class MonthlyStatementCalculatorTests
         };
 
         // Act
-        var lines = MonthlyStatementCalculator.Calculate(2026, 10, GetRenters(), rentals, sales);
+        var lines = MonthlyStatementCalculator.Calculate(2026, 10, GetRenters(), rentals, sales, GetTiers());
 
         // Assert
         Assert.AreEqual(200m, lines[0].Sales);
@@ -95,7 +105,7 @@ public class MonthlyStatementCalculatorTests
         };
 
         // Act
-        var lines = MonthlyStatementCalculator.Calculate(2026, 10, GetRenters(), rentals, new List<Sale>());
+        var lines = MonthlyStatementCalculator.Calculate(2026, 10, GetRenters(), rentals, new List<Sale>(), GetTiers());
 
         // Assert
         Assert.AreEqual(850m, lines[0].Rent);
@@ -119,7 +129,7 @@ public class MonthlyStatementCalculatorTests
         };
 
         // Act
-        var lines = MonthlyStatementCalculator.Calculate(2026, 10, GetRenters(), rentals, sales);
+        var lines = MonthlyStatementCalculator.Calculate(2026, 10, GetRenters(), rentals, sales, GetTiers());
 
         // Assert
         Assert.AreEqual(1, lines.Count);
@@ -138,12 +148,34 @@ public class MonthlyStatementCalculatorTests
         };
 
         // Act
-        var lines = MonthlyStatementCalculator.Calculate(2026, 10, GetRenters(), rentals, new List<Sale>());
+        var lines = MonthlyStatementCalculator.Calculate(2026, 10, GetRenters(), rentals, new List<Sale>(), GetTiers());
 
         // Assert
         Assert.AreEqual(2, lines[0].RackCount);
         Assert.AreEqual(1675m, lines[0].Rent);
         Assert.AreEqual(-1675m, lines[0].Payout);
+    }
+
+    [TestMethod]
+    public void Calculate_FirstRackTerminated_RemainingRackIsChargedAsSingleRack()
+    {
+        // Arrange: lejeren har to reoler (850 + 825), og den første er opsagt til den 1. november
+        var rentals = new List<Rental>
+        {
+            new Rental
+            {
+                RenterId = 1, RackId = 5, StartDate = new DateTime(2026, 8, 10),
+                EndDate = new DateTime(2026, 11, 1), MonthlyRent = 850m
+            },
+            new Rental { RenterId = 1, RackId = 6, StartDate = new DateTime(2026, 8, 10), MonthlyRent = 825m }
+        };
+
+        // Act
+        var lines = MonthlyStatementCalculator.Calculate(2026, 10, GetRenters(), rentals, new List<Sale>(), GetTiers());
+
+        // Assert: én reol tilbage koster 850 kr., ikke de 825 kr. der står på lejemålet
+        Assert.AreEqual(1, lines[0].RackCount);
+        Assert.AreEqual(850m, lines[0].Rent);
     }
 
     [TestMethod]
@@ -156,7 +188,7 @@ public class MonthlyStatementCalculatorTests
         };
 
         // Act
-        var lines = MonthlyStatementCalculator.Calculate(2026, 10, GetRenters(), new List<Rental>(), sales);
+        var lines = MonthlyStatementCalculator.Calculate(2026, 10, GetRenters(), new List<Rental>(), sales, GetTiers());
 
         // Assert
         Assert.AreEqual(0, lines.Count);
@@ -172,7 +204,7 @@ public class MonthlyStatementCalculatorTests
         };
 
         // Act
-        var lines = MonthlyStatementCalculator.Calculate(2026, 10, GetRenters(), rentals, new List<Sale>());
+        var lines = MonthlyStatementCalculator.Calculate(2026, 10, GetRenters(), rentals, new List<Sale>(), GetTiers());
 
         // Assert
         Assert.AreEqual(1, lines.Count);

@@ -124,7 +124,7 @@
                     Width="180" Height="34" Background="#38A169" Foreground="White" FontWeight="Bold" BorderThickness="0" Cursor="Hand"/>
             </StackPanel>
 
-            <!-- 4. Revisionslog (Punkt 17) -->
+            <!-- 4. Revisionslog -->
             <Border Grid.Row="3" Background="White" CornerRadius="8" Padding="16">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.1"/>

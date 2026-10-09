@@ -25,7 +25,7 @@ public class MonthlyStatementViewModelTests
         _secureAreaService = new SecureAreaService("1234");
 
         _viewModel = new MonthlyStatementViewModel(
-            _renterRepository, _rentalRepository, _saleRepository, _secureAreaService, _dialog);
+            _renterRepository, _rentalRepository, _saleRepository, new FakePriceTierRepository(), _secureAreaService, _dialog);
     }
 
     [TestMethod]

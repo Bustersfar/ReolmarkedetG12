@@ -22,7 +22,7 @@ public class MainViewModelTests
         var searchSalesViewModel = new SearchSalesViewModel(
             new FakeRackRepository(), new FakeSaleRepository(), new FakeRenterRepository(), dialog, new SecureAreaService("1234"));
         var monthlyStatementViewModel = new MonthlyStatementViewModel(
-            new FakeRenterRepository(), new FakeRentalRepository(), new FakeSaleRepository(), new SecureAreaService("1234"), dialog);
+            new FakeRenterRepository(), new FakeRentalRepository(), new FakeSaleRepository(), new FakePriceTierRepository(), new SecureAreaService("1234"), dialog);
 
         // Act
         var mainViewModel = new MainViewModel(rackViewModel, renterViewModel, salesViewModel, searchSalesViewModel, monthlyStatementViewModel);
@@ -48,7 +48,7 @@ public class MainViewModelTests
         rentalRepository.Add(new Rental { RenterId = 1, RackId = 5, StartDate = new DateTime(2026, 8, 10), MonthlyRent = 850m });
 
         var monthlyStatementViewModel = new MonthlyStatementViewModel(
-            renterRepository, rentalRepository, saleRepository, secureAreaService, dialog);
+            renterRepository, rentalRepository, saleRepository, new FakePriceTierRepository(), secureAreaService, dialog);
         var mainViewModel = new MainViewModel(
             new RackViewModel(
                 new FakeRackRepository(), new FakeRenterRepository(), new FakeRentalRepository(),

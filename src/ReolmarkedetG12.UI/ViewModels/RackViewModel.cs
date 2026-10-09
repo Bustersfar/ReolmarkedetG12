@@ -70,7 +70,7 @@ public class RackViewModel : ViewModelBase, IDisposable
     public ObservableCollection<Renter> SearchResults { get; } = [];
     public ObservableCollection<RenterRackDisplayItem> RenterRacks { get; } = [];
 
-    // --- Lejemålshistorik (Punkt 14) ---
+    // --- Lejemålshistorik ---
     public ObservableCollection<RackHistoryDisplayItem> RackHistory { get; } = [];
 
     private string _searchQuery = string.Empty;
@@ -204,8 +204,10 @@ public class RackViewModel : ViewModelBase, IDisposable
 
         foreach (var rack in terminatedRacks)
         {
-            var rental = rentals.FirstOrDefault(r => r.RackId == rack.RackId && r.EndDate.HasValue && r.EndDate.Value <= now);
-            if (rental != null)
+            // Reolen frigives først, når ingen lejemål på den er aktive længere. Et gammelt,
+            // afsluttet lejemål fra en tidligere lejer må ikke frigive en reol, der stadig er udlejet.
+            bool stillRented = rentals.Any(r => r.RackId == rack.RackId && (r.EndDate == null || r.EndDate > now));
+            if (!stillRented)
             {
                 rack.Status = RackStatus.Available;
                 _rackRepository.Update(rack);
@@ -285,7 +287,7 @@ public class RackViewModel : ViewModelBase, IDisposable
         item.IsSelected = true;
         SelectedRacks.Add(item);
 
-        // Hent lejemålshistorik for den valgte reol (Punkt 14)
+        // Hent lejemålshistorik for den valgte reol
         LoadRackHistory(item.Rack.RackId, item.Rack.Number);
 
         // Håndtering af tilknyttet lejer, hvis reolen er udlejet
@@ -537,7 +539,8 @@ public class RackViewModel : ViewModelBase, IDisposable
 
         foreach (var item in SelectedRacks.ToList())
         {
-            var rental = rentals.FirstOrDefault(r => r.RackId == item.Rack.RackId && r.EndDate.HasValue);
+            // Kun det lejemål, hvis opsigelse endnu ikke er trådt i kraft - ikke et gammelt, afsluttet lejemål på samme reol.
+            var rental = rentals.FirstOrDefault(r => r.RackId == item.Rack.RackId && r.EndDate > DateTime.UtcNow);
             if (rental != null)
             {
                 rental.EndDate = null;
